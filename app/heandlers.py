@@ -1,7 +1,12 @@
 # from email.policy import default
 # from sys import exception
-
+import phonenumbers
 import Texts
+import os
+import re
+import asyncio
+
+from phonenumbers import NumberParseException, PhoneNumberFormat
 from aiogram import F, Router, types, Bot
 # from aiogram.client.default import Default
 from aiogram.exceptions import TelegramBadRequest
@@ -14,9 +19,7 @@ from aiogram.enums import ContentType
 #Импортировали тексты из отдельного файла
 from Texts import Messages, Buttons, StatesText
 
-import os
-import re
-import asyncio
+
 
 import app.keyboards as kb
 import app.database.requests as rq
@@ -84,6 +87,16 @@ async def cmd_start(message: Message, state: FSMContext):
 #-----------------------------------------------------------------------------------------------------------------------
 #Проверяем новые функции
 #-----------------------------------------------------------------------------------------------------------------------
+# Функция валидации номера телефона
+async def format_phone(phone: str) -> str:
+    try:
+        parsed = phonenumbers.parse(phone, "RU")
+        if phonenumbers.is_valid_number(parsed):
+            return phonenumbers.format_number(parsed, PhoneNumberFormat.E164)
+        return None
+    except NumberParseException:
+        return None
+
 #Функция получения инициалов
 async def get_initials(nameEn: str) -> str:
     return ''.join([part[0].upper() for part in nameEn.split() if part])
@@ -282,11 +295,9 @@ async  def fio(callback: CallbackQuery):
 @router.message(StateFilter('*'), Command("отмена"))
 @router.message(StateFilter('*'), F.text.casefold() == "отмена")
 async def cancel_heandler(message: types.Message, state: FSMContext) -> None:
-
     current_state = await  state.get_state()
     if current_state is None:
         return
-
     await  state.clear()
     await message.answer("Отмена регистрации", reply_markup=kb.main)
 
@@ -301,6 +312,9 @@ async def cancel_heandler(message: types.Message, state: FSMContext) -> None:
     print(current_state)
     if current_state == Register.nameRu:
         await message.answer('Предыдушего шага нет, введите  ФИО на русском или отмените полностью регистрацию и напишите "отмена"')
+        return
+    if current_state == Register.mailcontact:
+        await message.answer('Возвращаемся к вводу ФИО, введите  ФИО на русском или отмените полностью регистрацию и напишите "отмена"')
         return
 
     previous = None
@@ -317,6 +331,9 @@ async def cancel_heandler(message: types.Message, state: FSMContext) -> None:
 
 @router.message(StateFilter(None), Command('register'))
 async def register(message: Message, state: FSMContext):
+    await state.clear()
+    await message.answer('Начнём регистрацию.')
+    await asyncio.sleep(1)
     await state.set_state(Register.nameRu)
     await message.answer('Введите ваше ФИО на русском языке', reply_markup=ReplyKeyboardRemove())
 
@@ -396,25 +413,41 @@ async def register_mailcontact(message: Message, state: FSMContext):
 #         await message.answer("❌ Неверный формат номера. Попробуйте еще раз или используйте кнопку:",
 #                              reply_markup=kb.get_tel)
 
-@router.message(Register.tel, F.contains)
+@router.message(Register.tel, F.contact)
 async def register_tel(message: Message, state: FSMContext):
-    phone_text = message.text
-    # Убедиться, что у объекта message.contact есть атрибут 'phone_number'
-    if message.contact and hasattr(message.contact, 'phone_number'):
-        phone_key = message.contact.phone_number
-    else:
-        phone_key = None
-    # Проверка на корректный номер телефона с помощью регулярного выражения
-    if re.match(r'^\+7\d{10}$', phone_text or phone_key):
-        if message.contact:  # Добавлено условие для проверки наличия объекта message.contact
-            await state.update_data(tel=message.contact.phone_number)
-        else:
-            await state.update_data(tel=message.text)
+    phone = message.contact.phone_number
+    await message.answer(f"Номер из контакта: {phone}", reply_markup=types.ReplyKeyboardRemove())
+    await state.update_data(tel=phone)
+    await state.set_state(Register.role)
+    await message.answer('Выберите вашу роль, фотограф или редактор', reply_markup=await kb.roles())
+
+
+@router.message(Register.tel, F.text)
+async def validate_phone(message: Message, state: FSMContext):
+    formatted = await format_phone(message.text)
+    if formatted:
+        await message.answer(f"Валидный номер: {formatted}", reply_markup=ReplyKeyboardRemove())
+    # phone_text = message.text
+    # # Убедиться, что у объекта message.contact есть атрибут 'phone_number'
+    # if message.contact and hasattr(message.contact, 'phone_number'):
+    #     phone_key = message.contact.phone_number
+    # else:
+    #     phone_key = None
+    # # Проверка на корректный номер телефона с помощью регулярного выражения
+    # if re.match(r'^\+7\d{10}$', phone_text or phone_key):
+    #     if message.contact:  # Добавлено условие для проверки наличия объекта message.contact
+    #         await state.update_data(tel=message.contact.phone_number)
+    #     else:
+    #         await state.update_data(tel=message.text)
         await state.set_state(Register.role)
         await message.answer('Спасибо',reply_markup=ReplyKeyboardRemove())
         await message.answer('Выберите вашу роль, фотограф или редактор', reply_markup=await kb.roles())
     else:
-        await message.answer('Пожалуйста, введите корректный номер телефона в формате +71234567890, или поделитись контактом нажав на кнопку')
+        await message.answer("❌ Неверный формат номера", reply_markup=kb.get_tel)
+        await state.update_data(tel={formatted})
+    # else:
+    #     await message.answer(f'❌ Неверный формат номера.\n'
+    #                          f'Пожалуйста, введите корректный номер телефона в формате +71234567890, или поделитесь контактом нажав на кнопку', reply_markup=kb.get_tel)
 
 #Если выбрана роль не фотограф
 @router.callback_query(Register.role, F.data != 'Фотограф')
