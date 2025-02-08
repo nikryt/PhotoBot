@@ -1,15 +1,15 @@
-from email.policy import default
-from sys import exception
+# from email.policy import default
+# from sys import exception
 
 import Texts
 from aiogram import F, Router, types, Bot
-from aiogram.client.default import Default
+# from aiogram.client.default import Default
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, ReplyKeyboardRemove, Update
 from aiogram.filters import CommandStart, Command, StateFilter
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
-from aiogram.methods import SendMessage, ForwardMessage
+# from aiogram.methods import SendMessage, ForwardMessage
 from aiogram.enums import ContentType
 #Импортировали тексты из отдельного файла
 from Texts import Messages, Buttons, StatesText
@@ -61,7 +61,7 @@ class Register(StatesGroup):
     texts = StatesText.REGISTER
 
 @router.message(CommandStart())
-# аснихронная функция cmd_start которая принимает в себя объект Massage
+# асинхронная функция cmd_start которая принимает в себя объект Massage
 async def cmd_start(message: Message, state: FSMContext):
 # внутри функции cmd_start обращаемся к методу answer, он позволяет отвечать этому же пользователю
 #     await message.answer('Привет!', reply_markup=kb.main)
