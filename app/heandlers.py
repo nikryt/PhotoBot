@@ -36,6 +36,10 @@ from requests import session
 #Объект класса router Router
 router = Router()
 
+class StartState(StatesGroup):
+    active = State()  # Состояние, в котором будем удалять сообщения
+
+
 class Register(StatesGroup):
     last_bot_message_id = State()
     tg_id = State()
@@ -69,11 +73,18 @@ async def cmd_start(message: Message, state: FSMContext):
 # внутри функции cmd_start обращаемся к методу answer, он позволяет отвечать этому же пользователю
 #     await message.answer('Привет!', reply_markup=kb.main)
 # отправляем на команлу старт фотографию с подписью и клавиатуру main
-    await  state.clear()
+#     await  state.clear()
+    await state.set_state(StartState.active)
     await message.answer_photo(photo='AgACAgIAAxkBAAPgZ361se9D_xn8AwRI7Y1gBmdmTiwAAgfrMRsQmvlLUMXQ9_Z9HXABAAMCAAN5AAM2BA',
                                caption=Messages.START.format(name=message.from_user.full_name), reply_markup=kb.main)
+    await message.answer(
+        "Вы в режиме самого начала. Все сообщения кроме команд будут удаляться!\n"
+        "Доступные команды:\n"
+        "/help - справка\n"
+        "/register - регистрация"
+    )
 # отправляем методом ответа на сообщение стикер по его ID
-    await message.reply_sticker(sticker='CAACAgIAAxkBAAPYZ36b1AUNHQg55cEEfzilVTX1lCYAArkRAAJClVFLVmGP6JmH07A2BA', reply_markup=ReplyKeyboardRemove())
+#     await message.reply_sticker(sticker='CAACAgIAAxkBAAPYZ36b1AUNHQg55cEEfzilVTX1lCYAArkRAAJClVFLVmGP6JmH07A2BA', reply_markup=ReplyKeyboardRemove())
 # Получаем ID пользователя и Имя из самого первого сообщения
 #    await message.reply(f'Привет :) \nТвой ID: {message.from_user.id}\nИмя: {message.from_user.first_name}\n'
 #                        f'Фамилия: {message.from_user.last_name}\nНик: @{message.from_user.username}')
@@ -82,12 +93,82 @@ async def cmd_start(message: Message, state: FSMContext):
     await rq.set_user(message.from_user.id)
 #   await message.reply('Как дела?')
 
+@router.message(Command('help'))
+async def  cmd_help(message: Message):
+    await message.answer('Вы попали в раздел помощи 😴😱😜😂😝')
 
+@router.message(StateFilter('*'), Command('register'))
+async def register(message: Message, state: FSMContext):
+    await state.clear()
+    await message.answer('Начнём регистрацию.')
+    # await asyncio.sleep(1)
+
+    # Инициализируем историю сообщений
+    await state.update_data(message_history=[])
+    # Отправляем первое сообщение и добавляем его в историю
+    msg = await message.answer('Введите ваше ФИО на русском языке', reply_markup=ReplyKeyboardRemove())
+    await state.update_data(message_history=[msg.message_id])
+        # Активируем состояние диалога
+    await state.set_state(Register.nameRu)
 
 #-----------------------------------------------------------------------------------------------------------------------
 #Проверяем новые функции
 #-----------------------------------------------------------------------------------------------------------------------
-# Функция для безопасного удаления сообщений
+
+# Главный обработчик для состояния StartState
+@router.message(StateFilter(StartState.active), ~F.command)
+async def handle_start_state(message: types.Message, bot: Bot):
+    if not message.text or not message.text.startswith('/'):
+    # """Удаляем все сообщения кроме команд"""
+        try:
+            # Удаляем сообщение пользователя
+            await message.delete()
+
+            # Отправляем уведомление и удаляем его через 3 секунды
+            notify = await message.answer("⚠️ Разрешены только команды!")
+            await asyncio.sleep(3)
+            await notify.delete()
+
+        except Exception as e:
+            print(f"Ошибка при обработке сообщения: {e}")
+
+# # Удаляем любые сообщения вне активного диалога.
+# @router.message()
+# async def handle_other_messages(message: types.Message, bot: Bot):
+#     # Если сообщение не команда и состояние не установлено
+#     if not message.text.startswith('/'):
+#         await asyncio.sleep(1)
+#         await delete_message_safe(message.chat.id, message.message_id, bot)
+#         msg = await message.answer("ℹ️ Для начала работы используйте /команды")
+#         await asyncio.sleep(2)
+#         await msg.delete()
+# # Обработчик для сообщений В АКТИВНОМ диалоге
+# @router.message(StateFilter(None))
+# async def handle_dialog(message: Message, state: FSMContext, bot: Bot):
+#     # Здесь обработка сообщений в состоянии registered
+#     await message.delete()
+#     # ... ваша логика обработки ...
+#     await message.answer("✅ Сообщение получено")
+
+# Функция для безопасного удаления списка сообщений
+async def delete_message_safe(chat_id: int, message_id: int, bot: Bot):
+    """Безопасное удаление одного сообщения"""
+    try:
+        await bot.delete_message(chat_id=chat_id, message_id=message_id)
+    except Exception as e:
+        print(f"Ошибка при удалении сообщения: {e}")
+
+async def delete_all_previous_messages(chat_id: int, state: FSMContext, bot: Bot):
+    """Удаление всех сообщений из истории и очистка хранилища"""
+    data = await state.get_data()
+    messages_to_delete = data.get("message_history", [])
+    # Удаляем все сообщения из истории
+    for msg_id in messages_to_delete:
+        await delete_message_safe(chat_id, msg_id, bot)
+    # Очищаем историю
+    await state.update_data(message_history=[])
+
+# Функция для безопасного удаления последнего сообщения
 async def delete_message_safe(chat_id, message_id, bot: Bot):
     try:
         await bot.delete_message(chat_id=chat_id, message_id=message_id)
@@ -285,10 +366,6 @@ async def save_document(message: types.Message, bot: Bot):
 # async def process_document(message: types.Message, bot: Bot):
 #     await save_document(message, bot)
 
-@router.message(Command('help'))
-async def  cmd_help(message: Message):
-    await message.answer('Вы попали в раздел помощи 😴😱😜😂😝')
-
 # @router.message(F.text == 'ФИО')
 # async def fio(message: Message):
 #     await message.answer('Выберие что изменить', reply_markup=kb.fio)
@@ -305,7 +382,7 @@ async def cancel_heandler(message: types.Message, state: FSMContext) -> None:
     current_state = await  state.get_state()
     if current_state is None:
         return
-    await  state.clear()
+    await state.clear()
     await message.answer("Отмена регистрации", reply_markup=kb.main)
 
 
@@ -333,19 +410,33 @@ async def cancel_heandler(message: types.Message, state: FSMContext) -> None:
         previous = step
 
 
-
 # Вопросы для регистрации пользователя
 
-@router.message(StateFilter(None), Command('register'))
-async def register(message: Message, state: FSMContext):
-    await state.clear()
-    await message.answer('Начнём регистрацию.')
-    await asyncio.sleep(1)
-    await state.set_state(Register.nameRu)
-    new_message = await message.answer('Введите ваше ФИО на русском языке', reply_markup=ReplyKeyboardRemove())
-    await state.update_data(last_bot_message_id=new_message.message_id)
+#Тестирую удаление всех сообщений, оставил прошлую версию
+# @router.message(StateFilter(None), Command('register'))
+# async def register(message: Message, state: FSMContext):
+#     await state.clear()
+#     await message.answer('Начнём регистрацию.')
+#     await asyncio.sleep(1)
+#     await state.set_state(Register.nameRu)
+#     new_message = await message.answer('Введите ваше ФИО на русском языке', reply_markup=ReplyKeyboardRemove())
+#     await state.update_data(last_bot_message_id=new_message.message_id)
 
-
+# @router.message(DialogState.active)
+# async def handle_dialog(message: types.Message, state: FSMContext):
+#     # Добавляем сообщение пользователя в историю
+#     data = await state.get_data()
+#     history = data["message_history"] + [message.message_id]
+#
+#     # Удаляем ВСЕ предыдущие сообщения
+#     await delete_all_previous_messages(message.chat.id, state)
+#     # Показываем анимацию печати
+#     await bot.send_chat_action(message.chat.id, ChatActions.TYPING)
+#     await asyncio.sleep(1)
+#     # Отправляем новое сообщение бота
+#     new_msg = await message.answer(f"✅ Принято: {message.text}")
+#     # Обновляем историю только новым сообщением бота
+#     await state.update_data(message_history=[new_msg.message_id])
 
 @router.message(Register.nameRu)
 async def register_nameRu(message: Message, state: FSMContext, bot: Bot):
@@ -356,12 +447,22 @@ async def register_nameRu(message: Message, state: FSMContext, bot: Bot):
         nameEn = await transliterate_russian_to_eng(message.text)
         initials = await get_initials(nameEn)
         await state.update_data(nameRu=nameRu, tg_id=message.from_user.id, nameEn=nameEn, idn=initials)
+
+        # Добавляем сообщение пользователя в историю
         data = await state.get_data()
-        last_bot_message_id = data.get("last_bot_message_id")
-        if last_bot_message_id:
-            await delete_message_safe(message.chat.id, last_bot_message_id, bot)
-        # Удаляем сообщение пользователя
-        await delete_message_safe(message.chat.id, message.message_id, bot)
+        history = data["message_history"] + [message.message_id]
+        print(data)
+
+        # Удаляем ВСЕ предыдущие сообщения
+        await delete_all_previous_messages(message.chat.id, state, bot)
+        # Показываем анимацию печати
+        await bot.send_chat_action(message.chat.id, ChatAction.TYPING)
+        await asyncio.sleep(1)
+        # Отправляем новое сообщение бота
+        new_msg = await message.answer(f"✅ Принято: {message.text}")
+        # Обновляем историю только новым сообщением бота
+        await state.update_data(message_history=[new_msg.message_id])
+
         # Показываем анимацию "печатается"
         await bot.send_chat_action(chat_id=message.chat.id, action=ChatAction.TYPING)
         await asyncio.sleep(1)  # Имитация задержки печати
@@ -373,9 +474,38 @@ async def register_nameRu(message: Message, state: FSMContext, bot: Bot):
             f'Введите контакты  по которым с вами можно связаться, почта или социальные сети'
         )
         # Обновляем message_id последнего сообщения бота в состоянии
-        await state.update_data(last_bot_message_id=new_message.message_id)
         await state.set_state(Register.mailcontact)
 
+#Тестирую удаление всех сообщений, оставил прошлую версию
+# @router.message(Register.nameRu)
+# async def register_nameRu(message: Message, state: FSMContext, bot: Bot):
+#     if not re.match(r"^[А-Яа-яЁё\-\' ]+$", message.text):
+#         return await message.answer("Недопустимые символы в имени, исправьте и введтие корректно имя")
+#     else:
+#         nameRu = await registr_fio(message.text)
+#         nameEn = await transliterate_russian_to_eng(message.text)
+#         initials = await get_initials(nameEn)
+#         await state.update_data(nameRu=nameRu, tg_id=message.from_user.id, nameEn=nameEn, idn=initials)
+#         data = await state.get_data()
+#         last_bot_message_id = data.get("last_bot_message_id")
+#         if last_bot_message_id:
+#             await delete_message_safe(message.chat.id, last_bot_message_id, bot)
+#         # Удаляем сообщение пользователя
+#         await delete_message_safe(message.chat.id, message.message_id, bot)
+#         # Показываем анимацию "печатается"
+#         await bot.send_chat_action(chat_id=message.chat.id, action=ChatAction.TYPING)
+#         await asyncio.sleep(1)  # Имитация задержки печати
+#         # Отправляем новое сообщение
+#         new_message = await message.answer(
+#             f'Ваше имя RU: {nameRu}\n'
+#             f'Ваше имя EN: {nameEn}\n'
+#             f'Ваши инициалы: {initials}\n\n'
+#             f'Введите контакты  по которым с вами можно связаться, почта или социальные сети'
+#         )
+#         # Обновляем message_id последнего сообщения бота в состоянии
+#         await state.update_data(last_bot_message_id=new_message.message_id)
+#         await state.set_state(Register.mailcontact)
+#
 
 #-----------------------------------------------------------------------------------------------------------------------
 # @router.message(Register.nameEn)
@@ -806,7 +936,8 @@ async def proverka_yes(callback: CallbackQuery, state: FSMContext, bot: Bot):
 
 # Записываем в БД пользоватлея с его id
 #     await rq.set_item(data)
-    await state.clear()
+#     await state.clear()
+    await state.set_state(StartState.active)
 
 
 #Выводим данные из базы по запросу
