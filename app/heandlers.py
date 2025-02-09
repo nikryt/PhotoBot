@@ -15,7 +15,7 @@ from aiogram.filters import CommandStart, Command, StateFilter
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 # from aiogram.methods import SendMessage, ForwardMessage
-from aiogram.enums import ContentType
+from aiogram.enums import ContentType, ChatAction
 #Импортировали тексты из отдельного файла
 from Texts import Messages, Buttons, StatesText
 
@@ -36,11 +36,8 @@ from requests import session
 #Объект класса router Router
 router = Router()
 
-PHONE_REGEX = r'^(\+7|7|8)?[\s\-]?\(?[489][0-9]{2}\)?[\s\-]?[0-9]{3}[\s\-]?[0-9]{2}[\s\-]?[0-9]{2}$'
-
-
-
 class Register(StatesGroup):
+    last_bot_message_id = State()
     tg_id = State()
     nameRu = State()
     nameEn = State()
@@ -62,6 +59,9 @@ class Register(StatesGroup):
     tel2 = State()
     role2 = State()
     texts = StatesText.REGISTER
+
+# Переменная для хранения message_id последнего сообщения бота
+last_bot_message_id = None
 
 @router.message(CommandStart())
 # асинхронная функция cmd_start которая принимает в себя объект Massage
@@ -87,6 +87,13 @@ async def cmd_start(message: Message, state: FSMContext):
 #-----------------------------------------------------------------------------------------------------------------------
 #Проверяем новые функции
 #-----------------------------------------------------------------------------------------------------------------------
+# Функция для безопасного удаления сообщений
+async def delete_message_safe(chat_id, message_id, bot: Bot):
+    try:
+        await bot.delete_message(chat_id=chat_id, message_id=message_id)
+    except Exception as e:
+        print(f"Не удалось удалить сообщение: {e}")
+
 # Функция валидации номера телефона
 async def format_phone(phone: str) -> str:
     try:
@@ -335,12 +342,13 @@ async def register(message: Message, state: FSMContext):
     await message.answer('Начнём регистрацию.')
     await asyncio.sleep(1)
     await state.set_state(Register.nameRu)
-    await message.answer('Введите ваше ФИО на русском языке', reply_markup=ReplyKeyboardRemove())
+    new_message = await message.answer('Введите ваше ФИО на русском языке', reply_markup=ReplyKeyboardRemove())
+    await state.update_data(last_bot_message_id=new_message.message_id)
 
 
 
 @router.message(Register.nameRu)
-async def register_nameRu(message: Message, state: FSMContext):
+async def register_nameRu(message: Message, state: FSMContext, bot: Bot):
     if not re.match(r"^[А-Яа-яЁё\-\' ]+$", message.text):
         return await message.answer("Недопустимые символы в имени, исправьте и введтие корректно имя")
     else:
@@ -348,11 +356,26 @@ async def register_nameRu(message: Message, state: FSMContext):
         nameEn = await transliterate_russian_to_eng(message.text)
         initials = await get_initials(nameEn)
         await state.update_data(nameRu=nameRu, tg_id=message.from_user.id, nameEn=nameEn, idn=initials)
-        # await message.answer(f'Ваше имя на Английском: {nameEn}\n'
-        #                      f'Ваши инициалы: {initials}')
+        data = await state.get_data()
+        last_bot_message_id = data.get("last_bot_message_id")
+        if last_bot_message_id:
+            await delete_message_safe(message.chat.id, last_bot_message_id, bot)
+        # Удаляем сообщение пользователя
+        await delete_message_safe(message.chat.id, message.message_id, bot)
+        # Показываем анимацию "печатается"
+        await bot.send_chat_action(chat_id=message.chat.id, action=ChatAction.TYPING)
+        await asyncio.sleep(1)  # Имитация задержки печати
+        # Отправляем новое сообщение
+        new_message = await message.answer(
+            f'Ваше имя RU: {nameRu}\n'
+            f'Ваше имя EN: {nameEn}\n'
+            f'Ваши инициалы: {initials}\n\n'
+            f'Введите контакты  по которым с вами можно связаться, почта или социальные сети'
+        )
+        # Обновляем message_id последнего сообщения бота в состоянии
+        await state.update_data(last_bot_message_id=new_message.message_id)
         await state.set_state(Register.mailcontact)
-        await message.answer('Введите контакты  по которым с вами можно связаться, почта или социальные сети')
-    # await message.answer('Введите ваше ФИО на англиском языке')
+
 
 #-----------------------------------------------------------------------------------------------------------------------
 # @router.message(Register.nameEn)
@@ -381,10 +404,29 @@ async def register_nameRu(message: Message, state: FSMContext):
 #-----------------------------------------------------------------------------------------------------------------------
 
 @router.message(Register.mailcontact)
-async def register_mailcontact(message: Message, state: FSMContext):
+async def register_mailcontact(message: Message, state: FSMContext, bot: Bot):
     await state.update_data(mailcontact=message.text)
     await state.set_state(Register.tel)
-    await message.answer('Поделитесь своим телефоном нажав на кнопку ниже.', reply_markup=kb.get_tel)
+    data = await state.get_data()
+    last_bot_message_id = data.get("last_bot_message_id")
+    if last_bot_message_id:
+        await delete_message_safe(message.chat.id, last_bot_message_id, bot)
+    # Удаляем сообщение пользователя
+    await delete_message_safe(message.chat.id, message.message_id, bot)
+    # Показываем анимацию "печатается"
+    await bot.send_chat_action(chat_id=message.chat.id, action=ChatAction.TYPING)
+    await asyncio.sleep(1)  # Имитация задержки печати
+    # Отправляем новое сообщение
+    new_message = await message.answer(
+        f'Ваше имя RU: {data["nameRu"]}\n'
+        f'Ваше имя EN: {data["nameEn"]}\n'
+        f'Ваши инициалы: {data["idn"]}\n'
+        f'Ваши контакты: {data["mailcontact"]}\n\n'
+        f'Поделитесь своим телефоном нажав на кнопку ниже.', reply_markup=kb.get_tel
+    )
+    # Обновляем message_id последнего сообщения бота в состоянии
+    await state.update_data(last_bot_message_id=new_message.message_id)
+
 
 
 # @router.message(Register.tel, F.contact)
