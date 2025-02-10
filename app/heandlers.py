@@ -65,7 +65,7 @@ class Register(StatesGroup):
     texts = StatesText.REGISTER
 
 # Переменная для хранения message_id последнего сообщения бота
-last_bot_message_id = None
+# last_bot_message_id = None
 
 @router.message(CommandStart())
 # асинхронная функция cmd_start которая принимает в себя объект Massage
@@ -78,7 +78,7 @@ async def cmd_start(message: Message, state: FSMContext):
     await message.answer_photo(photo='AgACAgIAAxkBAAPgZ361se9D_xn8AwRI7Y1gBmdmTiwAAgfrMRsQmvlLUMXQ9_Z9HXABAAMCAAN5AAM2BA',
                                caption=Messages.START.format(name=message.from_user.full_name), reply_markup=kb.main)
     await message.answer(
-        "Вы в режиме самого начала. Все сообщения кроме команд будут удаляться!\n"
+        "Вы в режиме Start. Все сообщения кроме команд будут удаляться!\n"
         "Доступные команды:\n"
         "/help - справка\n"
         "/register - регистрация"
@@ -88,26 +88,37 @@ async def cmd_start(message: Message, state: FSMContext):
 # Получаем ID пользователя и Имя из самого первого сообщения
 #    await message.reply(f'Привет :) \nТвой ID: {message.from_user.id}\nИмя: {message.from_user.first_name}\n'
 #                        f'Фамилия: {message.from_user.last_name}\nНик: @{message.from_user.username}')
-#
 # Записываем в БД пользоватлея с его id
     await rq.set_user(message.from_user.id)
 #   await message.reply('Как дела?')
 
 @router.message(Command('help'))
 async def  cmd_help(message: Message):
-    await message.answer('Вы попали в раздел помощи 😴😱😜😂😝')
+    await message.answer('Вы попали в раздел помощи, он пока в разработке 😴😱😜😂😝')
 
 @router.message(StateFilter('*'), Command('register'))
-async def register(message: Message, state: FSMContext):
+async def register(message: Message, state: FSMContext, bot: Bot):
     await state.clear()
-    await message.answer('Начнём регистрацию.')
+    await send_typing_and_message(
+        message.chat.id, bot,
+        f'✅ Начнём регистрацию.\n\n',
+        state, reply_markup=ReplyKeyboardRemove()
+    )
+    await send_typing_and_message(
+        message.chat.id, bot,
+        f'Введите ваше ФИО на русском языке',
+        state
+    )
+
+
+    # await message.answer('Начнём регистрацию.')
     # await asyncio.sleep(1)
 
     # Инициализируем историю сообщений
-    await state.update_data(message_history=[])
+    # await state.update_data(message_history=[])
     # Отправляем первое сообщение и добавляем его в историю
-    msg = await message.answer('Введите ваше ФИО на русском языке', reply_markup=ReplyKeyboardRemove())
-    await state.update_data(message_history=[msg.message_id])
+    # msg = await message.answer('Введите ваше ФИО на русском языке', reply_markup=ReplyKeyboardRemove())
+    # await state.update_data(message_history=[msg.message_id])
         # Активируем состояние диалога
     await state.set_state(Register.nameRu)
 
@@ -162,18 +173,31 @@ async def delete_all_previous_messages(chat_id: int, state: FSMContext, bot: Bot
     """Удаление всех сообщений из истории и очистка хранилища"""
     data = await state.get_data()
     messages_to_delete = data.get("message_history", [])
+    print(messages_to_delete)
     # Удаляем все сообщения из истории
     for msg_id in messages_to_delete:
         await delete_message_safe(chat_id, msg_id, bot)
     # Очищаем историю
     await state.update_data(message_history=[])
 
-# Функция для безопасного удаления последнего сообщения
-async def delete_message_safe(chat_id, message_id, bot: Bot):
-    try:
-        await bot.delete_message(chat_id=chat_id, message_id=message_id)
-    except Exception as e:
-        print(f"Не удалось удалить сообщение: {e}")
+# Функция анимации печати и обновления State с внесением сообщения в историю.
+async def send_typing_and_message(chat_id: int, bot: Bot, text: str, state: FSMContext = None, reply_markup=None):
+    """Отправка анимации печати и сообщения с обновлением истории."""
+    await bot.send_chat_action(chat_id, ChatAction.TYPING)
+    await asyncio.sleep(2)  # Имитация задержки печати
+    message = await bot.send_message(chat_id, text, reply_markup=reply_markup)
+    # if state:
+    #     await state.update_data(message_history=[message.message_id])
+    # Обновление истории сообщений
+    if state:
+        data = await state.get_data()
+        message_history = data.get('message_history', [])
+        message_history.append(message.message_id)
+        await state.update_data(message_history=message_history)
+        print(message_history)
+    return message
+
+
 
 # Функция валидации номера телефона
 async def format_phone(phone: str) -> str:
@@ -214,7 +238,6 @@ async def transliterate_russian_to_eng(name_ru: str) -> str:
 async def registr_fio(name_ru: str) -> str:
     # Инициализация списка
     translated = []
-
     # Обработка каждой части имени
     for part in name_ru.split():
         # Форматирование (первая буква заглавная, остальные строчные)
@@ -225,7 +248,6 @@ async def registr_fio(name_ru: str) -> str:
     return " ".join(translated) if translated else "Ошибка: пустое имя"
 
 
-
 # Обработчик для медиа групп (документов или фото)
 # Временное хранилище для медиа групп (лучше использовать Redis или БД в продакшене)
 media_groups_cache = {}
@@ -233,12 +255,10 @@ media_groups_cache = {}
 async def process_documents(documents: list, username: int, bot: Bot) -> list:
     user_dir = f"downloads/{username}"
     os.makedirs(user_dir, exist_ok=True)
-
     saved_files = []
     for doc in documents:
         file_id = doc["file_id"]
         file_name = doc["file_name"] or f"file_{file_id[:6]}"
-
         file = await bot.get_file(file_id)
         file_path = f"{user_dir}/{file_name}"
         await bot.download_file(file.file_path, file_path)
@@ -374,42 +394,60 @@ async def cancel_heandler(message: types.Message, state: FSMContext) -> None:
 #     # Обновляем историю только новым сообщением бота
 #     await state.update_data(message_history=[new_msg.message_id])
 
+
+async  def mes_user_history(message: Message, state: FSMContext):
+    data = await state.get_data()
+    message_history = data.get('message_history', [])
+    message_history.append(message.message_id)
+    await state.update_data(message_history=message_history)
+
 @router.message(Register.nameRu)
 async def register_nameRu(message: Message, state: FSMContext, bot: Bot):
+    await mes_user_history(message, state)
     if not re.match(r"^[А-Яа-яЁё\-\' ]+$", message.text):
-        return await message.answer("Недопустимые символы в имени, исправьте и введите корректно имя")
+        return await send_typing_and_message(
+            message.chat.id, bot,
+            "Недопустимые символы в имени, исправьте и введите корректно имя",
+            state)
     else:
         nameRu = await registr_fio(message.text)
         nameEn = await transliterate_russian_to_eng(message.text)
         initials = await get_initials(nameEn)
-        await state.update_data(nameRu=nameRu, tg_id=message.from_user.id, nameEn=nameEn, idn=initials)
+        await state.update_data(
+            nameRu=nameRu,
+            tg_id=message.from_user.id,
+            nameEn=nameEn,
+            idn=initials,
+        )
+        # # Добавляем сообщение пользователя в историю
+        # data = await state.get_data()
+        # history = data["message_history"] + [message.message_id]
+        # print(data)
 
-        # Добавляем сообщение пользователя в историю
-        data = await state.get_data()
-        history = data["message_history"] + [message.message_id]
-        print(data)
+             # Показываем анимацию печати
+        # await bot.send_chat_action(message.chat.id, ChatAction.TYPING)
+        # await asyncio.sleep(2)
+        # # Отправляем новое сообщение бота
+        # new_msg = await message.answer(f"✅ Принято: {message.text}")
+        # # Обновляем историю только новым сообщением бота
+        # await state.update_data(message_history=[new_msg.message_id])
+
+        # Показываем анимацию "печатается"
+        # await bot.send_chat_action(chat_id=message.chat.id, action=ChatAction.TYPING)
+        # await asyncio.sleep(1)  # Имитация задержки печати
 
         # Удаляем ВСЕ предыдущие сообщения
         await delete_all_previous_messages(message.chat.id, state, bot)
-        # Показываем анимацию печати
-        await bot.send_chat_action(message.chat.id, ChatAction.TYPING)
-        await asyncio.sleep(1)
-        # Отправляем новое сообщение бота
-        new_msg = await message.answer(f"✅ Принято: {message.text}")
-        # Обновляем историю только новым сообщением бота
-        await state.update_data(message_history=[new_msg.message_id])
-
-        # Показываем анимацию "печатается"
-        await bot.send_chat_action(chat_id=message.chat.id, action=ChatAction.TYPING)
-        await asyncio.sleep(1)  # Имитация задержки печати
         # Отправляем новое сообщение
-        new_message = await message.answer(
-            f'Ваше имя RU: {nameRu}\n'
-            f'Ваше имя EN: {nameEn}\n'
-            f'Ваши инициалы: {initials}\n\n'
-            f'Введите контакты  по которым с вами можно связаться, почта или социальные сети'
+        await send_typing_and_message(
+            message.chat.id, bot,
+            f"✅ Принято: {nameRu}\n\n"
+            f"Ваше имя RU: {nameRu}\n"
+            f"Ваше имя EN: {nameEn}\n"
+            f"Ваши инициалы: {initials}\n\n"
+            f"Введите контакты для связи (почта или соцсети):",
+            state, reply_markup=ReplyKeyboardRemove()
         )
-        # Обновляем message_id последнего сообщения бота в состоянии
         await state.set_state(Register.mailcontact)
 
 #Тестирую удаление всех сообщений, оставил прошлую версию
@@ -471,28 +509,26 @@ async def register_nameRu(message: Message, state: FSMContext, bot: Bot):
 
 @router.message(Register.mailcontact)
 async def register_mailcontact(message: Message, state: FSMContext, bot: Bot):
+    await delete_all_previous_messages(message.chat.id, state, bot)
     await state.update_data(mailcontact=message.text)
-    await state.set_state(Register.tel)
-    data = await state.get_data()
-    last_bot_message_id = data.get("last_bot_message_id")
-    if last_bot_message_id:
-        await delete_message_safe(message.chat.id, last_bot_message_id, bot)
-    # Удаляем сообщение пользователя
-    await delete_message_safe(message.chat.id, message.message_id, bot)
-    # Показываем анимацию "печатается"
-    await bot.send_chat_action(chat_id=message.chat.id, action=ChatAction.TYPING)
-    await asyncio.sleep(1)  # Имитация задержки печати
+
+    # # Удаляем сообщение пользователя
+    # await delete_message_safe(message.chat.id, message.message_id, bot)
+    # # Показываем анимацию "печатается"
+    # await bot.send_chat_action(chat_id=message.chat.id, action=ChatAction.TYPING)
+    # await asyncio.sleep(1)  # Имитация задержки печати
     # Отправляем новое сообщение
-    new_message = await message.answer(
+    data = await state.get_data()
+    await send_typing_and_message(
+        message.chat.id, bot,
+        f"✅ Принято: {message.text}\n\n"
         f'Ваше имя RU: {data["nameRu"]}\n'
         f'Ваше имя EN: {data["nameEn"]}\n'
         f'Ваши инициалы: {data["idn"]}\n'
         f'Ваши контакты: {data["mailcontact"]}\n\n'
         f'Поделитесь своим телефоном нажав на кнопку ниже.', reply_markup=kb.get_tel
     )
-    # Обновляем message_id последнего сообщения бота в состоянии
-    await state.update_data(last_bot_message_id=new_message.message_id)
-
+    await state.set_state(Register.tel)
 
 
 # @router.message(Register.tel, F.contact)
@@ -522,7 +558,9 @@ async def register_mailcontact(message: Message, state: FSMContext, bot: Bot):
 #                              reply_markup=kb.get_tel)
 
 @router.message(Register.tel, F.contact)
-async def register_tel(message: Message, state: FSMContext):
+async def register_tel(message: Message, state: FSMContext, bot: Bot):
+    await delete_all_previous_messages(message.chat.id, state, bot)
+    await mes_user_history(message, state)
     phone = message.contact.phone_number
     await message.answer(f"Номер из контакта: {phone}", reply_markup=types.ReplyKeyboardRemove())
     await state.update_data(tel=phone)
