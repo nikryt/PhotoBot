@@ -226,8 +226,8 @@ async def registr_fio(name_ru: str) -> str:
 
 
 
-# Обработчик для медиагрупп (документов или фото)
-# Временное хранилище для медиагрупп (лучше использовать Redis или БД в продакшене)
+# Обработчик для медиа групп (документов или фото)
+# Временное хранилище для медиа групп (лучше использовать Redis или БД в продакшене)
 media_groups_cache = {}
 
 async def process_documents(documents: list, username: int, bot: Bot) -> list:
@@ -246,74 +246,10 @@ async def process_documents(documents: list, username: int, bot: Bot) -> list:
 
     return saved_files
 
-# async def handle_media_group(message: Message, bot: Bot, state: FSMContext):
-#     media_group_id = message.media_group_id
-#     username = message.from_user.username
-#
-#     try:
-#         # Проверяем существование группы в кеше
-#         if media_group_id not in media_groups_cache:
-#             media_groups_cache[media_group_id] = {
-#                 "username": username,
-#                 "documents": [],
-#                 "processed": False,
-#                 "invalid": False
-#             }
-#
-#         group_data = media_groups_cache[media_group_id]
-#
-#         # Если группа помечена как недействительная или обработанная
-#         if group_data["processed"] or group_data["invalid"]:
-#             return
-#
-#         # Добавляем файл в группу
-#         if message.document:
-#             group_data["documents"].append({
-#                 "file_id": message.document.file_id,
-#                 "file_name": message.document.file_name
-#             })
-#         elif message.photo:
-#             group_data["documents"].append({
-#                 "file_id": message.photo[-1].file_id,
-#                 "file_name": None
-#             })
-#
-#         # Проверка на превышение лимита
-#         if len(group_data["documents"]) > 3:
-#             group_data["invalid"] = True
-#             await message.answer(f'❌ Максимум 3 файла в группе!\nОтправьте пожалуйста не более ТРЁХ файлов :)')
-#             return
-#
-#         # Ждем 3 секунды для сбора всех частей группы
-#         await asyncio.sleep(3)
-#
-#         # Проверяем валидность группы после ожидания
-#         if not group_data["invalid"] and not group_data["processed"]:
-#             group_data["processed"] = True
-#             saved_files = await process_documents(group_data["documents"], username, bot)
-#
-#             # Обработка серийных номеров
-#             results = []
-#             for file_path in saved_files:
-#                 serial = await sn.async_get_camera_serial_number(file_path)
-#                 await rq.set_item_sn(serial)
-#                 results.append(f"📁 {os.path.basename(file_path)}\n🔢 Серийный номер: {serial}")
-#             print(results)
-#             await message.answer("\n\n".join(results))
-#
-#     except KeyError:
-#         # Группа уже удалена, игнорируем
-#         pass
-#
-#     finally:
-#         # Всегда удаляем группу из кеша после обработки
-#         if media_group_id in media_groups_cache:
-#             del media_groups_cache[media_group_id]
+
 #-----------------------------------------------------------------------------------------------------------------------
 #Проверяем новые функции
 #-----------------------------------------------------------------------------------------------------------------------
-
-
 
 
 @router.message(F.photo)
@@ -345,7 +281,7 @@ async def forward_message(message: Message, bot: Bot):
 # async def process_document(message: types.Message, bot: Bot):
 #     await save_document(message, bot)
 
-#Функция для сохранения полученных документов в папке Download. Вызывается 3 раза в момент полученя фотографий
+#Функция для сохранения полученных документов в папке Download. Вызывается 3 раза в момент получения фотографий.
 async def save_document(message: types.Message, bot: Bot):
     document = message.document
     file_id = document.file_id  # Получаем id документа
@@ -361,21 +297,21 @@ async def save_document(message: types.Message, bot: Bot):
     # await sn.main(message)
     # await message.answer('Документ успешно сохранен')
 
-# Отдельный Роутер для вызова функции созранения лдокумента
+# Отдельный Роутер для вызова функции сохранения документа
 # @router.message(F.document)
 # async def process_document(message: types.Message, bot: Bot):
 #     await save_document(message, bot)
 
 # @router.message(F.text == 'ФИО')
 # async def fio(message: Message):
-#     await message.answer('Выберие что изменить', reply_markup=kb.fio)
+#     await message.answer('Выберите что изменить', reply_markup=kb.fio)
 
 @router.callback_query(F.data == 'ru')
 async  def fio(callback: CallbackQuery):
     await callback.answer('Вы выбрали изменить фамилию на русском языке.', show_alert=True)
     await callback.message.answer('Вы выбрали изменить фамилию на русском языке.')
 
-# Отмена состояния пользвателя по команде Отмена
+# Отмена состояния пользователя по команде Отмена
 @router.message(StateFilter('*'), Command("отмена"))
 @router.message(StateFilter('*'), F.text.casefold() == "отмена")
 async def cancel_heandler(message: types.Message, state: FSMContext) -> None:
@@ -395,7 +331,7 @@ async def cancel_heandler(message: types.Message, state: FSMContext) -> None:
     current_state = await  state.get_state()
     print(current_state)
     if current_state == Register.nameRu:
-        await message.answer('Предыдушего шага нет, введите  ФИО на русском или отмените полностью регистрацию и напишите "отмена"')
+        await message.answer('Предыдущего шага нет, введите  ФИО на русском или отмените полностью регистрацию и напишите "отмена"')
         return
     if current_state == Register.mailcontact:
         await message.answer('Возвращаемся к вводу ФИО, введите  ФИО на русском или отмените полностью регистрацию и напишите "отмена"')
@@ -441,7 +377,7 @@ async def cancel_heandler(message: types.Message, state: FSMContext) -> None:
 @router.message(Register.nameRu)
 async def register_nameRu(message: Message, state: FSMContext, bot: Bot):
     if not re.match(r"^[А-Яа-яЁё\-\' ]+$", message.text):
-        return await message.answer("Недопустимые символы в имени, исправьте и введтие корректно имя")
+        return await message.answer("Недопустимые символы в имени, исправьте и введите корректно имя")
     else:
         nameRu = await registr_fio(message.text)
         nameEn = await transliterate_russian_to_eng(message.text)
@@ -717,7 +653,7 @@ async def handle_media_group(message: Message, bot: Bot, state: FSMContext):
             # Обновляем FSM
             await state.update_data(fsm_data)
             await message.answer("\n\n".join(results))
-            await message.answer(f'Спасибо, вы отправили {i + 1} фотографий, этого достаточно, завершите регистраию нажав на кнопку внизу.', reply_markup=kb.getphoto)
+            await message.answer(f'Спасибо, вы отправили {i + 1} фотографий, этого достаточно, завершите регистрацию нажав на кнопку внизу.', reply_markup=kb.getphoto)
 
     except Exception as e:
         await message.answer(f"⚠️ Ошибка, программист хочет денег: {str(e)}")
@@ -733,8 +669,8 @@ async def register_photofile(message: types.Message, state: FSMContext, bot: Bot
     await state.update_data(photofile1=message.document.file_id)
     await state.update_data(serial1=serial)
     await state.set_state(Register.photofile2)
-    await message.answer('Вы отправили один файл.\nОтправьте фотографию  с другой камеры так же файлом, или завершите отправку фотоагфрий '
-                         'нажав на кновку ниже.',
+    await message.answer('Вы отправили один файл.\nОтправьте фотографию  с другой камеры так же файлом, или завершите отправку фотографий '
+                         'нажав на кнопку ниже.',
                          reply_markup=kb.getphoto)
 
 
@@ -747,7 +683,7 @@ async def register_photofile(message: types.Message, state: FSMContext, bot: Bot
     await state.set_state(Register.photofile3)
     await save_document(message, bot)
     await message.answer('Вы отправили 2 файла.\nВсего принимается 3 файла. Отправьте фотографию  с другой камеры так же файлом, или '
-                         'завершите отправку фотоагфрий нажав на кнопку ниже.',
+                         'завершите отправку фотографий нажав на кнопку ниже.',
                          reply_markup=kb.getphoto)
 
 @router.message(Register.photofile3, F.document)
@@ -763,7 +699,7 @@ async def register_photofile(message: types.Message, state: FSMContext, bot: Bot
 
 @router.message(Register.verefy, F.text == 'Завершить отправку')
 async  def verefy(message: types.Message, state: FSMContext, bot: Bot):
-        # старый ответ до того как начал принимать фотогарфии
+        # старый ответ до того как начал принимать фотографии
         await bot.send_message(message.chat.id, 'Спасибо, проверьте ваши данные:', reply_markup=ReplyKeyboardRemove())
         await state.set_state(Register.verefy)
         data = await state.get_data()
@@ -823,7 +759,7 @@ async def register_nameRu2(callback_query: types.CallbackQuery, state: FSMContex
     # удаляем инлайн клавиатуру по callback_query
     await bot.edit_message_reply_markup(chat_id=callback_query.from_user.id, message_id=callback_query.message.message_id, reply_markup=None)
     await state.set_state(Register.nameRu2)
-    await callback_query.message.answer(text='Введите испраленния в ваше ФИО на русском языке')
+    await callback_query.message.answer(text='Введите исправления в ваше ФИО на русском языке')
 
 @router.message(Register.nameRu2)
 async def register_nameRu2(message: Message, state: FSMContext):
@@ -838,7 +774,7 @@ async def register_nameEn2(callback_query: types.CallbackQuery, state: FSMContex
     await bot.edit_message_reply_markup(chat_id=callback_query.from_user.id, message_id=callback_query.message.message_id, reply_markup=None)
     await state.set_state(Register.nameEn2)
     data = await state.get_data()
-    await  callback_query.message.answer(text=f'Вы можете внести испраления в ваше имя на английском яхыке.\n'
+    await  callback_query.message.answer(text=f'Вы можете внести исправления в ваше имя на английском языке.\n'
                                               f'Сейчас оно такое: {data["nameEn"]}')
 
 @router.message(Register.nameEn2)
@@ -854,7 +790,7 @@ async  def register_idn2(callback_query: types.CallbackQuery, state: FSMContext,
     await bot.edit_message_reply_markup(chat_id=callback_query.from_user.id, message_id=callback_query.message.message_id, reply_markup=None)
     await state.set_state(Register.idn2)
     data = await state.get_data()
-    await callback_query.message.answer(text=f'Исправьте ваши инициалы на латинице, они будут подставленны в имя файла ваших фотографий, как пример вот так KNA\n'
+    await callback_query.message.answer(text=f'Исправьте ваши инициалы на латинице, они будут подставлены в имя файла ваших фотографий, как пример вот так KNA\n'
                               f'сейчас ваши инициалы такие: Ваши инициалы: {data["idn"]}')
 @router.message(Register.idn2)
 async  def register_idb2(message: Message, state: FSMContext):
