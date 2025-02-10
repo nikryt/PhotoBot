@@ -173,6 +173,7 @@ async  def mes_user_history(message: Message, state: FSMContext):
 async def delete_message_safe(chat_id: int, message_id: int, bot: Bot):
     """Безопасное удаление одного сообщения"""
     try:
+        await asyncio.sleep(1)
         await bot.delete_message(chat_id=chat_id, message_id=message_id)
     except Exception as e:
         print(f"Ошибка при удалении сообщения: {e}")
@@ -207,7 +208,7 @@ async def send_typing_and_message(chat_id: int, bot: Bot, text: str, state: FSMC
 
 
 
-# Функция валидации номера телефона
+# Функция валидации номера ☎️ Телефона
 async def format_phone(phone: str) -> str:
     try:
         parsed = phonenumbers.parse(phone, "RU")
@@ -446,8 +447,8 @@ async def register_nameRu(message: Message, state: FSMContext, bot: Bot):
             f"✅ Принято: {nameRu}\n\n"
             f"Ваше имя RU: {nameRu}\n"
             f"Ваше имя EN: {nameEn}\n"
-            f"Ваши инициалы: {initials}\n\n"
-            f"Введите контакты для связи (почта или соцсети):",
+            f"Ваши 🪪 Инициалы: {initials}\n\n"
+            f"Введите 📫 Контакты для связи (почта или соцсети):",
             state, reply_markup=ReplyKeyboardRemove()
         )
         await state.set_state(Register.mailcontact)
@@ -475,8 +476,8 @@ async def register_nameRu(message: Message, state: FSMContext, bot: Bot):
 #         new_message = await message.answer(
 #             f'Ваше имя RU: {nameRu}\n'
 #             f'Ваше имя EN: {nameEn}\n'
-#             f'Ваши инициалы: {initials}\n\n'
-#             f'Введите контакты  по которым с вами можно связаться, почта или социальные сети'
+#             f'Ваши 🪪 Инициалы: {initials}\n\n'
+#             f'Введите 📫 Контакты  по которым с вами можно связаться, почта или социальные сети'
 #         )
 #         # Обновляем message_id последнего сообщения бота в состоянии
 #         await state.update_data(last_bot_message_id=new_message.message_id)
@@ -488,7 +489,7 @@ async def register_nameRu(message: Message, state: FSMContext, bot: Bot):
 # async def register_nameEN(message: Message, state: FSMContext):
 #     await state.update_data(nameEn=message.text)
 #     await state.set_state(Register.idn)
-#     await message.answer('Введите ваши инициалы на латинице, они будут подставленны в имя файла ваших фотографий, как пример вот так KNA')
+#     await message.answer('Введите ваши 🪪 Инициалы на латинице, они будут подставленны в имя файла ваших фотографий, как пример вот так KNA')
 #
 #
 # @router.message(Register.idn)
@@ -498,7 +499,7 @@ async def register_nameRu(message: Message, state: FSMContext, bot: Bot):
 #     # Проверяем длину и наличие только букв
 #     if len(clean_idn) != 3:
 #         await message.answer(
-#             "❌ Инициалы должны состоять ровно из трёх латинских букв.\n"
+#             "❌ 🪪 Инициалы должны состоять ровно из трёх латинских букв.\n"
 #             "Пример: KNA\nПопробуйте ещё раз:"
 #         )
 #         return  # Оставляем пользователя в состоянии Register.idn
@@ -506,7 +507,7 @@ async def register_nameRu(message: Message, state: FSMContext, bot: Bot):
 #     # Сохраняем очищенные данные
 #     await state.update_data(idn=clean_idn)
 #     await state.set_state(Register.mailcontact)
-#     await message.answer('Введите контакты  по которым с вами можно связаться, почта или социальные сети')
+#     await message.answer('Введите 📫 Контакты  по которым с вами можно связаться, почта или социальные сети')
 #-----------------------------------------------------------------------------------------------------------------------
 
 @router.message(Register.mailcontact)
@@ -527,9 +528,9 @@ async def register_mailcontact(message: Message, state: FSMContext, bot: Bot):
         f"✅ Принято: {message.text}\n\n"
         f'Ваше имя RU: {data["nameRu"]}\n'
         f'Ваше имя EN: {data["nameEn"]}\n'
-        f'Ваши инициалы: {data["idn"]}\n'
-        f'Ваши контакты: {data["mailcontact"]}\n\n'
-        f'Поделитесь своим телефоном нажав на кнопку ниже.',
+        f'Ваши 🪪 Инициалы: {data["idn"]}\n'
+        f'Ваши 📫 Контакты: {data["mailcontact"]}\n\n'
+        f'Поделитесь своим ☎️ Телефоном нажав на кнопку ниже.',
         state, reply_markup=kb.get_tel
     )
     await state.set_state(Register.tel)
@@ -575,9 +576,9 @@ async def register_tel(message: Message, state: FSMContext, bot: Bot):
             f"✅ Принято: {phone}\n\n"
             f'Ваше имя RU: {data["nameRu"]}\n'
             f'Ваше имя EN: {data["nameEn"]}\n'
-            f'Ваши инициалы: {data["idn"]}\n'
-            f'Ваши контакты: {data["mailcontact"]}\n'
-            f'Ваш номер телефона {data["tel"]}\n\n'
+            f'Ваши 🪪 Инициалы: {data["idn"]}\n'
+            f'Ваши 📫 Контакты: {data["mailcontact"]}\n'
+            f'Ваш номер ☎️ Телефона {data["tel"]}\n\n'
             f'Выберите вашу роль, фотограф или редактор',
             state, reply_markup=await kb.roles()
         )
@@ -598,9 +599,9 @@ async def validate_phone(message: Message, state: FSMContext, bot: Bot):
             f"✅ Принято: {formatted}\n\n"
             f'Ваше имя RU: {data["nameRu"]}\n'
             f'Ваше имя EN: {data["nameEn"]}\n'
-            f'Ваши инициалы: {data["idn"]}\n'
-            f'Ваши контакты: {data["mailcontact"]}\n'
-            f'Ваш номер телефона {formatted}\n\n'
+            f'Ваши 🪪 Инициалы: {data["idn"]}\n'
+            f'Ваши 📫 Контакты: {data["mailcontact"]}\n'
+            f'Ваш номер ☎️ Телефона {formatted}\n\n'
             f'Выберите вашу роль, фотограф или редактор',
             state, reply_markup=await kb.roles()
         )
@@ -610,7 +611,7 @@ async def validate_phone(message: Message, state: FSMContext, bot: Bot):
     #     phone_key = message.contact.phone_number
     # else:
     #     phone_key = None
-    # # Проверка на корректный номер телефона с помощью регулярного выражения
+    # # Проверка на корректный номер ☎️ Телефона с помощью регулярного выражения
     # if re.match(r'^\+7\d{10}$', phone_text or phone_key):
     #     if message.contact:  # Добавлено условие для проверки наличия объекта message.contact
     #         await state.update_data(tel=message.contact.phone_number)
@@ -633,7 +634,7 @@ async def validate_phone(message: Message, state: FSMContext, bot: Bot):
             "❌ Неверный формат номера", state, reply_markup=kb.get_tel)
     # else:
     #     await message.answer(f'❌ Неверный формат номера.\n'
-    #                          f'Пожалуйста, введите корректный номер телефона в формате +71234567890, или поделитесь контактом нажав на кнопку', reply_markup=kb.get_tel)
+    #                          f'Пожалуйста, введите корректный номер ☎️ Телефона в формате +71234567890, или поделитесь контактом нажав на кнопку', reply_markup=kb.get_tel)
 
 
 #Если выбрана роль не фотограф
@@ -654,10 +655,10 @@ async def select_rol(callback_query: types.CallbackQuery, state: FSMContext,  bo
             f"✅ Принято: {callback_query.data}\n\n"
             f'Ваше имя RU: {data["nameRu"]}\n'
             f'Ваше имя EN: {data["nameEn"]}\n'
-            f'Ваши инициалы: {data["idn"]}\n'
-            f'Ваши контакты: {data["mailcontact"]}\n'
-            f'Ваш номер телефона {data["tel"]}\n'
-            f'Ваша роль: {data["role"]}\n\n'
+            f'Ваши 🪪 Инициалы: {data["idn"]}\n'
+            f'Ваши 📫 Контакты: {data["mailcontact"]}\n'
+            f'Ваш номер ☎️ Телефона {data["tel"]}\n'
+            f'Ваша 🪆 Роль: {data["role"]}\n\n'
             f'Спасибо подтвердите отправку данных',
             state, reply_markup=kb.getphoto
         )
@@ -795,29 +796,29 @@ async  def verefy(message: types.Message, state: FSMContext, bot: Bot):
         await bot.send_message(message.chat.id, 'Спасибо, проверьте ваши данные:', reply_markup=ReplyKeyboardRemove())
         await state.set_state(Register.verefy)
         data = await state.get_data()
-        # await message.answer(f'Ваше имя RU: {data["nameRu"]}\nВаше имя EN: {data["nameEn"]}\nВаш телефон: {data["tel"]}\n'
-        #                      f'Ваши инициалы: {data["idn"]}\nВаши контакты: {data["mailcontact"]}\nВаша роль: {data["role"]}\n'
+        # await message.answer(f'Ваше имя RU: {data["nameRu"]}\nВаше имя EN: {data["nameEn"]}\nВаш ☎️ Телефон: {data["tel"]}\n'
+        #                      f'Ваши 🪪 Инициалы: {data["idn"]}\nВаши 📫 Контакты: {data["mailcontact"]}\nВаша 🪆 Роль: {data["role"]}\n'
         #                      f'Первая фотография: {data["photofile1"]}\nВторая фотография: {data["photofile2"]}\n'
         #                      f'Третья фотография: {data["photofile3"]}\nВсе верно?')
         if data["photofile3"]  == 'Не загружена' and data["photofile2"]  == 'Не загружена' and data["photofile1"]  == 'Не загружена':
             await message.answer(
-                f'Ваше имя RU: {data["nameRu"]}\nВаше имя EN: {data["nameEn"]}\nВаш телефон: {data["tel"]}\n'
-                f'Ваши инициалы: {data["idn"]}\nВаши контакты: {data["mailcontact"]}\nВаша роль: {data["role"]}'
+                f'Ваше имя RU: {data["nameRu"]}\nВаше имя EN: {data["nameEn"]}\nВаш ☎️ Телефон: {data["tel"]}\n'
+                f'Ваши 🪪 Инициалы: {data["idn"]}\nВаши 📫 Контакты: {data["mailcontact"]}\nВаша 🪆 Роль: {data["role"]}'
                 f'\nВсе верно?', reply_markup=kb.proverka)
 
         elif data["photofile3"]  == 'Не загружена' and data["photofile2"]  == 'Не загружена':
             await message.answer_document(data["photofile1"])
             await message.answer(
-                f'Ваше имя RU: {data["nameRu"]}\nВаше имя EN: {data["nameEn"]}\nВаш телефон: {data["tel"]}\n'
-                f'Ваши инициалы: {data["idn"]}\nВаши контакты: {data["mailcontact"]}\nВаша роль: {data["role"]}\n'
+                f'Ваше имя RU: {data["nameRu"]}\nВаше имя EN: {data["nameEn"]}\nВаш ☎️ Телефон: {data["tel"]}\n'
+                f'Ваши 🪪 Инициалы: {data["idn"]}\nВаши 📫 Контакты: {data["mailcontact"]}\nВаша 🪆 Роль: {data["role"]}\n'
                 f'Серийный номер первой камеры: {data["serial1"]}\nВсе верно?', reply_markup=kb.proverka)
 
         elif data["photofile3"]  == 'Не загружена':
             await message.answer_document(data["photofile1"])
             await message.answer_document(data["photofile2"])
             await message.answer(
-                f'Ваше имя RU: {data["nameRu"]}\nВаше имя EN: {data["nameEn"]}\nВаш телефон: {data["tel"]}\n'
-                f'Ваши инициалы: {data["idn"]}\nВаши контакты: {data["mailcontact"]}\nВаша роль: {data["role"]}\n'
+                f'Ваше имя RU: {data["nameRu"]}\nВаше имя EN: {data["nameEn"]}\nВаш ☎️ Телефон: {data["tel"]}\n'
+                f'Ваши 🪪 Инициалы: {data["idn"]}\nВаши 📫 Контакты: {data["mailcontact"]}\nВаша 🪆 Роль: {data["role"]}\n'
                 f'Серийный номер первой камеры: {data["serial1"]}\nСерийный номер второй камеры: {data["serial2"]}\nВсе верно?', reply_markup=kb.proverka)
 
         else:
@@ -825,8 +826,8 @@ async  def verefy(message: types.Message, state: FSMContext, bot: Bot):
             await message.answer_document(data["photofile2"])
             await message.answer_document(data["photofile3"])
             await message.answer(
-                f'Ваше имя RU: {data["nameRu"]}\nВаше имя EN: {data["nameEn"]}\nВаш телефон: {data["tel"]}\n'
-                f'Ваши инициалы: {data["idn"]}\nВаши контакты: {data["mailcontact"]}\nВаша роль: {data["role"]}\n'
+                f'Ваше имя RU: {data["nameRu"]}\nВаше имя EN: {data["nameEn"]}\nВаш ☎️ Телефон: {data["tel"]}\n'
+                f'Ваши 🪪 Инициалы: {data["idn"]}\nВаши 📫 Контакты: {data["mailcontact"]}\nВаша 🪆 Роль: {data["role"]}\n'
                 f'Серийный номер первой камеры: {data["serial1"]}\nСерийный номер второй камеры: {data["serial2"]}\n'
                 f'Серийный номер третьей камеры: {data["serial3"]}\nВсе верно?', reply_markup=kb.proverka)
 
@@ -838,8 +839,8 @@ async  def proverka_no(callback: CallbackQuery, state: FSMContext, bot: Bot):
     await callback.answer('Что Вы хотите изменить?.', show_alert=True)
     data = await state.get_data()
     await callback.message.edit_text(
-                f'Ваше имя RU: {data["nameRu"]}\nВаше имя EN: {data["nameEn"]}\nВаш телефон: {data["tel"]}\n'
-                f'Ваши инициалы: {data["idn"]}\nВаши контакты: {data["mailcontact"]}\nВаша роль: {data["role"]}\n'
+                f'Ваше имя RU: {data["nameRu"]}\nВаше имя EN: {data["nameEn"]}\nВаш ☎️ Телефон: {data["tel"]}\n'
+                f'Ваши 🪪 Инициалы: {data["idn"]}\nВаши 📫 Контакты: {data["mailcontact"]}\nВаша 🪆 Роль: {data["role"]}\n'
                 f'Серийный номер первой камеры: {data["serial1"]}\nСерийный номер второй камеры: {data["serial2"]}\n'
                 f'Серийный номер третьей камеры: {data["serial3"]}\nВсе верно?', reply_markup=kb.edit)
 
@@ -882,8 +883,8 @@ async  def register_idn2(callback_query: types.CallbackQuery, state: FSMContext,
     await bot.edit_message_reply_markup(chat_id=callback_query.from_user.id, message_id=callback_query.message.message_id, reply_markup=None)
     await state.set_state(Register.idn2)
     data = await state.get_data()
-    await callback_query.message.answer(text=f'Исправьте ваши инициалы на латинице, они будут подставлены в имя файла ваших фотографий, как пример вот так KNA\n'
-                              f'сейчас ваши инициалы такие: Ваши инициалы: {data["idn"]}')
+    await callback_query.message.answer(text=f'Исправьте ваши 🪪 Инициалы на латинице, они будут подставлены в имя файла ваших фотографий, как пример вот так KNA\n'
+                              f'сейчас ваши 🪪 Инициалы такие: Ваши 🪪 Инициалы: {data["idn"]}')
 @router.message(Register.idn2)
 async  def register_idb2(message: Message, state: FSMContext):
         # Очищаем ввод от всех символов, кроме букв, и приводим к верхнему регистру
@@ -891,7 +892,7 @@ async  def register_idb2(message: Message, state: FSMContext):
         # Проверяем длину и наличие только букв
         if len(clean_idn) != 3:
             await message.answer(
-                "❌ Инициалы должны состоять ровно из трёх латинских букв.\n"
+                "❌ 🪪 Инициалы должны состоять ровно из трёх латинских букв.\n"
                 "Пример: KNA\nПопробуйте ещё раз:"
             )
             return  # Оставляем пользователя в состоянии Register.idn
@@ -908,8 +909,8 @@ async  def register_mailcontact2(callback_query: types.CallbackQuery, state: FSM
     await bot.edit_message_reply_markup(chat_id=callback_query.from_user.id, message_id=callback_query.message.message_id, reply_markup=None)
     await state.set_state(Register.mailcontact2)
     data = await state.get_data()
-    await callback_query.message.answer(text=f'Исправьте ваши контакты  по которым с вами можно связаться, почта или социальные сети\n'
-                              f'сейчас ваши контакты такие: Ваши контакты: {data["mailcontact"]}')
+    await callback_query.message.answer(text=f'Исправьте ваши 📫 Контакты  по которым с вами можно связаться, почта или социальные сети\n'
+                              f'сейчас ваши 📫 Контакты такие: Ваши 📫 Контакты: {data["mailcontact"]}')
 
 @router.message(Register.mailcontact2)
 async  def register_mailcontact2(message: Message, state: FSMContext):
@@ -917,7 +918,7 @@ async  def register_mailcontact2(message: Message, state: FSMContext):
     await state.set_state(Register.verefy)
     data = await state.get_data()
     await message.answer(text=f'Подтвердите изменения.\n'
-                              f'Сейчас ваши контакты такие:  {data["mailcontact"]}', reply_markup=kb.getphoto)
+                              f'Сейчас ваши 📫 Контакты такие:  {data["mailcontact"]}', reply_markup=kb.getphoto)
 
 #Возникает ошибка, проверить изменение роли
 @router.callback_query(F.data == 'role')
@@ -974,12 +975,12 @@ async def view_all_items(message: types.Message):
     for item in await rq.get_item():
         try:
             await message.answer_document(document=item.serial1,
-                                          caption=f'ФИО ru: {item.nameRU}\n'
-                                                  f'ФИО en: {item.nameEN}\n'
-                                                  f'Инициалы: {item.idn}\n'
-                                                  f'Контакты: {item.mailcontact}\n'
-                                                  f'Телефон: {item.tel}\n'
-                                                  f'Роль: {item.role}',
+                                          caption=f'🪪 ФИО ru: {item.nameRU}\n'
+                                                  f'🪪 ФИО en: {item.nameEN}\n'
+                                                  f'🪪 Инициалы: {item.idn}\n'
+                                                  f'📫 Контакты: {item.mailcontact}\n'
+                                                  f'☎️ Телефон: {item.tel}\n'
+                                                  f'🪆 Роль: {item.role}',
                                           protect_content=True,
                                           reply_markup=await kb.edit_item(btns={
                                               'Удалить': f'delete_{item.id}',
@@ -990,17 +991,17 @@ async def view_all_items(message: types.Message):
             # запись просто в последнюю свободную ячейку,но ячейка находится только при старте боета, нужно похоже ассинхронную функцию делать
             # await sh.update([[f'{item.nameRU}',f'{item.nameEN}',f'{item.idn}',f'{item.mailcontact}',f'{item.tel}',f'{item.role}']], "A{}".format(sh.next_row))
         except TelegramBadRequest:
-            await message.answer(text=f'ФИО ru: {item.nameRU}\n'
-                                      f'ФИО en: {item.nameEN}\n'
-                                      f'Инициалы: {item.idn}\n'
-                                      f'Контакты: {item.mailcontact}\n'
-                                      f'Телефон: {item.tel}\n'
-                                      f'Роль: {item.role}',
+            await message.answer(text=f'🪪 ФИО ru: {item.nameRU}\n'
+                                      f'🪪 ФИО en: {item.nameEN}\n'
+                                      f'🪪 Инициалы: {item.idn}\n'
+                                      f'📫 Контакты: {item.mailcontact}\n'
+                                      f'☎️ Телефон: {item.tel}\n'
+                                      f'🪆 Роль: {item.role}',
                                  protect_content=True,
                                  message_effect_id="5046589136895476101",
                                  reply_markup=await kb.edit_item(btns={
-                                     'Удалить': f'delete_{item.id}',
-                                     'Изменить': f'change_{item.id}'}))
+                                     '🗑️ Удалить': f'delete_{item.id}',
+                                     '✏️ Изменить': f'change_{item.id}'}))
             # запись просто в ячейку
             # sh.wks.update([[f'{item.nameRU}',f'{item.nameEN}',f'{item.idn}',f'{item.mailcontact}',f'{item.tel}',f'{item.role}']], 'A2')
             # запись просто в последнюю свободную ячейку,но ячейка находится только при старте боета, нужно похоже ассинхронную функцию делать
