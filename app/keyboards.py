@@ -1,10 +1,10 @@
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardMarkup, \
     InlineKeyboardButton, Update
-# Импортируем определенную функцию а не все для рабты функци клавиатуры из БД
+# Импортируем определенную функцию, а не все для рабаты функции клавиатуры из БД
 from app.database.requests import get_roles
 # Импортируем билдер клавиатуры
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-#Ипортируем текст для кнопок
+#Импортируем текст для кнопок
 from Texts import (Buttons)
 
 main = ReplyKeyboardMarkup(keyboard=[
