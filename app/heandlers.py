@@ -161,6 +161,13 @@ async def handle_start_state(message: types.Message, bot: Bot):
 #     # ... ваша логика обработки ...
 #     await message.answer("✅ Сообщение получено")
 
+# Функция записи сообщений пользователя в историю
+async  def mes_user_history(message: Message, state: FSMContext):
+    data = await state.get_data()
+    message_history = data.get('message_history', [])
+    message_history.append(message.message_id)
+    await state.update_data(message_history=message_history)
+
 # Функция для безопасного удаления списка сообщений
 async def delete_message_safe(chat_id: int, message_id: int, bot: Bot):
     """Безопасное удаление одного сообщения"""
@@ -394,12 +401,6 @@ async def cancel_heandler(message: types.Message, state: FSMContext) -> None:
 #     # Обновляем историю только новым сообщением бота
 #     await state.update_data(message_history=[new_msg.message_id])
 
-
-async  def mes_user_history(message: Message, state: FSMContext):
-    data = await state.get_data()
-    message_history = data.get('message_history', [])
-    message_history.append(message.message_id)
-    await state.update_data(message_history=message_history)
 
 @router.message(Register.nameRu)
 async def register_nameRu(message: Message, state: FSMContext, bot: Bot):
