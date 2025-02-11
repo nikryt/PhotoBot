@@ -653,12 +653,12 @@ async def select_rol(callback_query: types.CallbackQuery, state: FSMContext,  bo
     await send_typing_and_message(
             message.chat.id, bot,
             f"✅ Принято: {callback_query.data}\n\n"
-            f'Ваше имя RU: {data["nameRu"]}\n'
-            f'Ваше имя EN: {data["nameEn"]}\n'
-            f'Ваши 🪪 Инициалы: {data["idn"]}\n'
-            f'Ваши 📫 Контакты: {data["mailcontact"]}\n'
-            f'Ваш номер ☎️ Телефона {data["tel"]}\n'
-            f'Ваша 🪆 Роль: {data["role"]}\n\n'
+            f'🪪 Ваше имя RU: {data["nameRu"]}\n'
+            f'🪪 Ваше имя EN: {data["nameEn"]}\n'
+            f'🪪 Ваши Инициалы: {data["idn"]}\n'
+            f'📫 Ваши Контакты: {data["mailcontact"]}\n'
+            f'☎️ Ваш номер Телефона {data["tel"]}\n'
+            f'🪆 Ваша Роль: {data["role"]}\n\n'
             f'Спасибо подтвердите отправку данных',
             state, reply_markup=kb.getphoto
         )
@@ -747,6 +747,7 @@ async def handle_media_group(message: Message, bot: Bot, state: FSMContext):
             await state.update_data(fsm_data)
             await message.answer("\n\n".join(results))
             await message.answer(f'Спасибо, вы отправили {i + 1} фотографий, этого достаточно, завершите регистрацию нажав на кнопку внизу.', reply_markup=kb.getphoto)
+            await state.set_state(Register.photofile3)
 
     except Exception as e:
         await message.answer(f"⚠️ Ошибка, программист хочет денег: {str(e)}")
@@ -757,38 +758,45 @@ async def handle_media_group(message: Message, bot: Bot, state: FSMContext):
 
 @router.message(Register.photofile1, F.document)
 async def register_photofile(message: types.Message, state: FSMContext, bot: Bot):
-    await save_document(message, bot)
-    serial = await sn.main(message)
-    await state.update_data(photofile1=message.document.file_id)
-    await state.update_data(serial1=serial)
-    await state.set_state(Register.photofile2)
-    await message.answer('Вы отправили один файл.\nОтправьте фотографию  с другой камеры так же файлом, или завершите отправку фотографий '
-                         'нажав на кнопку ниже.',
-                         reply_markup=kb.getphoto)
+        await save_document(message, bot)
+        serial = await sn.main(message)
+        await state.update_data(photofile1=message.document.file_id)
+        await state.update_data(serial1=serial)
+        await message.answer('Вы отправили один файл.\nОтправьте фотографию  с другой камеры так же файлом, или завершите отправку фотографий '
+                             'нажав на кнопку ниже.',
+                             reply_markup=kb.getphoto)
+        await state.set_state(Register.photofile2)
+
 
 
 @router.message(Register.photofile2, F.document)
 async def register_photofile(message: types.Message, state: FSMContext, bot: Bot):
-    await save_document(message, bot)
-    serial = await sn.main(message)
-    await state.update_data(serial2=serial)
-    await state.update_data(photofile2=message.document.file_id)
-    await state.set_state(Register.photofile3)
-    await save_document(message, bot)
-    await message.answer('Вы отправили 2 файла.\nВсего принимается 3 файла. Отправьте фотографию  с другой камеры так же файлом, или '
-                         'завершите отправку фотографий нажав на кнопку ниже.',
-                         reply_markup=kb.getphoto)
+        await save_document(message, bot)
+        serial = await sn.main(message)
+        await state.update_data(serial2=serial)
+        await state.update_data(photofile2=message.document.file_id)
+        await state.set_state(Register.photofile3)
+        await save_document(message, bot)
+        await message.answer('Вы отправили 2 файла.\nВсего принимается 3 файла. Отправьте фотографию  с другой камеры так же файлом, или '
+                             'завершите отправку фотографий нажав на кнопку ниже.',
+                             reply_markup=kb.getphoto)
+        await state.set_state(Register.photofile3)
 
 @router.message(Register.photofile3, F.document)
 async def register_photofile(message: types.Message, state: FSMContext, bot: Bot):
-    await save_document(message, bot)
-    serial = await sn.main(message)
-    await state.update_data(serial3=serial)
-    await state.update_data(photofile3=message.document.file_id)
-    await state.set_state(Register.verefy)
-    await save_document(message, bot)
-    await message.answer('Спасибо вы отправили 3 фотографии, этого достаточно',
-                         reply_markup=kb.getphoto)
+    data = await state.get_data()
+    print(data)
+    if data["serial3"] == None or data["serial3"] == 'NoSerial':
+        await save_document(message, bot)
+        serial = await sn.main(message)
+        await state.update_data(serial3=serial)
+        await state.update_data(photofile3=message.document.file_id)
+        await save_document(message, bot)
+        await message.answer('Спасибо вы отправили 3 фотографии, этого достаточно',
+                             reply_markup=kb.getphoto)
+        await state.set_state(Register.verefy)
+    else:
+        await state.set_state(Register.verefy)
 
 @router.message(Register.verefy, F.text == 'Завершить отправку')
 @router.message(Register.photofile1, F.text == 'Завершить отправку')
