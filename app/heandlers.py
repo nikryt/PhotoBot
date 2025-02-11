@@ -173,7 +173,7 @@ async  def mes_user_history(message: Message, state: FSMContext):
 async def delete_message_safe(chat_id: int, message_id: int, bot: Bot):
     """Безопасное удаление одного сообщения"""
     try:
-        await asyncio.sleep(1)
+        await asyncio.sleep(0.3)
         await bot.delete_message(chat_id=chat_id, message_id=message_id)
     except Exception as e:
         print(f"Ошибка при удалении сообщения: {e}")
@@ -296,6 +296,7 @@ async def forward_message(message: Message, bot: Bot):
 # async def check_sticker(message: Message):
 #     await message.answer(f'ID стикера: {message.sticker.file_id}')
 #     await message.answer(f'id чата: {message.from_user.id, message.chat.id}')
+
 
 # # отвечаем на фото его ID
 # @router.message(F.photo)
@@ -680,6 +681,7 @@ async def select_rol(callback_query: types.CallbackQuery, state: FSMContext, bot
 async def handle_media_group(message: Message, bot: Bot, state: FSMContext):
     media_group_id = message.media_group_id
     username = message.from_user.username
+    data = await state.get_data()
 
     try:
         if media_group_id not in media_groups_cache:
@@ -716,7 +718,7 @@ async def handle_media_group(message: Message, bot: Bot, state: FSMContext):
 
         await asyncio.sleep(3)
 
-        if not group_data["invalid"] and not group_data["processed"]:
+        if not group_data["invalid"] and not group_data["processed"] and data["serial1"] == 'NoSerial':
             group_data["processed"] = True
             saved_files = await process_documents(group_data["documents"], username, bot)
 
@@ -747,7 +749,14 @@ async def handle_media_group(message: Message, bot: Bot, state: FSMContext):
             await state.update_data(fsm_data)
             await message.answer("\n\n".join(results))
             await message.answer(f'Спасибо, вы отправили {i + 1} фотографий, этого достаточно, завершите регистрацию нажав на кнопку внизу.', reply_markup=kb.getphoto)
-            await state.set_state(Register.photofile3)
+            print(f'До условия {i}')
+            if i + 1  == 2:
+                await state.set_state(Register.photofile3)
+                print(f'После условия 1 {i}')
+            else:
+                await state.set_state(Register.verefy)
+                print(f'После условия 2 {i}')
+
 
     except Exception as e:
         await message.answer(f"⚠️ Ошибка, программист хочет денег: {str(e)}")
@@ -797,6 +806,19 @@ async def register_photofile(message: types.Message, state: FSMContext, bot: Bot
         await state.set_state(Register.verefy)
     else:
         await state.set_state(Register.verefy)
+
+
+@router.message(Register.verefy, F.document)
+async def many_camer(message: types.Message, state: FSMContext, bot: Bot):
+    await mes_user_history(message, state)
+    await message.answer(f'У вас что 4 разный фотоаппарата?\n'
+                         f'Хватит отправлять фоторагфии!', reply_markup=kb.getphoto)
+    await delete_all_previous_messages(message.chat.id, state, bot)
+
+# Отвечаем на документ его ID
+# @router.message(F.document)
+# async def get_document(message: Message):
+#     await message.answer(f'ID документа: {message.document.file_id}')
 
 @router.message(Register.verefy, F.text == 'Завершить отправку')
 @router.message(Register.photofile1, F.text == 'Завершить отправку')
