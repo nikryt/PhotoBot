@@ -811,9 +811,14 @@ async def register_photofile(message: types.Message, state: FSMContext, bot: Bot
 @router.message(Register.verefy, F.document)
 async def many_camer(message: types.Message, state: FSMContext, bot: Bot):
     await mes_user_history(message, state)
-    await message.answer(f'У вас что 4 разный фотоаппарата?\n'
-                         f'Хватит отправлять фоторагфии!', reply_markup=kb.getphoto)
     await delete_all_previous_messages(message.chat.id, state, bot)
+    await send_typing_and_message(
+        message.chat.id, bot,
+        f'У вас что 4 разных фотоаппарата?\n'
+        f'Хватит отправлять фотографии!',
+        state, reply_markup=kb.getphoto
+    )
+
 
 # Отвечаем на документ его ID
 # @router.message(F.document)
@@ -826,8 +831,10 @@ async def many_camer(message: types.Message, state: FSMContext, bot: Bot):
 @router.message(Register.photofile3, F.text == 'Завершить отправку')
 async  def verefy(message: types.Message, state: FSMContext, bot: Bot):
         # старый ответ до того как начал принимать фотографии
+        await delete_all_previous_messages(message.chat.id, state, bot)
+        await mes_user_history(message, state)
         await bot.send_message(message.chat.id, 'Спасибо, проверьте ваши данные:', reply_markup=ReplyKeyboardRemove())
-        await state.set_state(Register.verefy)
+
         data = await state.get_data()
         # await message.answer(f'Ваше имя RU: {data["nameRu"]}\nВаше имя EN: {data["nameEn"]}\nВаш ☎️ Телефон: {data["tel"]}\n'
         #                      f'Ваши 🪪 Инициалы: {data["idn"]}\nВаши 📫 Контакты: {data["mailcontact"]}\nВаша 🪆 Роль: {data["role"]}\n'
