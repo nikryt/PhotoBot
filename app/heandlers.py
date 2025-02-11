@@ -675,7 +675,7 @@ async def select_rol(callback_query: types.CallbackQuery, state: FSMContext, bot
     await callback_query.message.answer('Отправьте по одной фотографии с каждой вашей камеры, обязательно файлом.',
                          reply_markup=kb.getphoto)
 
-# Если отправленны фотогарафии группой то выполняется этот
+# Если отправленны фотогарафии группой, то выполняется этот
 @router.message(Register.photofile1, F.content_type.in_({ContentType.DOCUMENT, ContentType.PHOTO}), F.media_group_id)
 async def handle_media_group(message: Message, bot: Bot, state: FSMContext):
     media_group_id = message.media_group_id
@@ -791,6 +791,9 @@ async def register_photofile(message: types.Message, state: FSMContext, bot: Bot
                          reply_markup=kb.getphoto)
 
 @router.message(Register.verefy, F.text == 'Завершить отправку')
+@router.message(Register.photofile1, F.text == 'Завершить отправку')
+@router.message(Register.photofile2, F.text == 'Завершить отправку')
+@router.message(Register.photofile3, F.text == 'Завершить отправку')
 async  def verefy(message: types.Message, state: FSMContext, bot: Bot):
         # старый ответ до того как начал принимать фотографии
         await bot.send_message(message.chat.id, 'Спасибо, проверьте ваши данные:', reply_markup=ReplyKeyboardRemove())
@@ -802,23 +805,23 @@ async  def verefy(message: types.Message, state: FSMContext, bot: Bot):
         #                      f'Третья фотография: {data["photofile3"]}\nВсе верно?')
         if data["photofile3"]  == 'Не загружена' and data["photofile2"]  == 'Не загружена' and data["photofile1"]  == 'Не загружена':
             await message.answer(
-                f'Ваше имя RU: {data["nameRu"]}\nВаше имя EN: {data["nameEn"]}\nВаш ☎️ Телефон: {data["tel"]}\n'
-                f'Ваши 🪪 Инициалы: {data["idn"]}\nВаши 📫 Контакты: {data["mailcontact"]}\nВаша 🪆 Роль: {data["role"]}'
+                f'Ваше имя RU: {data["nameRu"]}\nВаше имя EN: {data["nameEn"]}\n☎ Ваш Телефон: {data["tel"]}\n'
+                f'🪪 Ваши Инициалы: {data["idn"]}\n📫 Ваши Контакты: {data["mailcontact"]}\n🪆 Ваша Роль: {data["role"]}'
                 f'\nВсе верно?', reply_markup=kb.proverka)
 
         elif data["photofile3"]  == 'Не загружена' and data["photofile2"]  == 'Не загружена':
             await message.answer_document(data["photofile1"])
             await message.answer(
-                f'Ваше имя RU: {data["nameRu"]}\nВаше имя EN: {data["nameEn"]}\nВаш ☎️ Телефон: {data["tel"]}\n'
-                f'Ваши 🪪 Инициалы: {data["idn"]}\nВаши 📫 Контакты: {data["mailcontact"]}\nВаша 🪆 Роль: {data["role"]}\n'
+                f'Ваше имя RU: {data["nameRu"]}\nВаше имя EN: {data["nameEn"]}\n☎️ Ваш Телефон: {data["tel"]}\n'
+                f'🪪 Ваши Инициалы: {data["idn"]}\n📫 Ваши Контакты: {data["mailcontact"]}\n🪆 Ваша Роль: {data["role"]}\n'
                 f'Серийный номер первой камеры: {data["serial1"]}\nВсе верно?', reply_markup=kb.proverka)
 
         elif data["photofile3"]  == 'Не загружена':
             await message.answer_document(data["photofile1"])
             await message.answer_document(data["photofile2"])
             await message.answer(
-                f'Ваше имя RU: {data["nameRu"]}\nВаше имя EN: {data["nameEn"]}\nВаш ☎️ Телефон: {data["tel"]}\n'
-                f'Ваши 🪪 Инициалы: {data["idn"]}\nВаши 📫 Контакты: {data["mailcontact"]}\nВаша 🪆 Роль: {data["role"]}\n'
+                f'Ваше имя RU: {data["nameRu"]}\nВаше имя EN: {data["nameEn"]}\n☎️ Ваш Телефон: {data["tel"]}\n'
+                f'🪪 Ваши Инициалы: {data["idn"]}\n📫 Ваши Контакты: {data["mailcontact"]}\n🪆 Ваша Роль: {data["role"]}\n'
                 f'Серийный номер первой камеры: {data["serial1"]}\nСерийный номер второй камеры: {data["serial2"]}\nВсе верно?', reply_markup=kb.proverka)
 
         else:
@@ -826,8 +829,8 @@ async  def verefy(message: types.Message, state: FSMContext, bot: Bot):
             await message.answer_document(data["photofile2"])
             await message.answer_document(data["photofile3"])
             await message.answer(
-                f'Ваше имя RU: {data["nameRu"]}\nВаше имя EN: {data["nameEn"]}\nВаш ☎️ Телефон: {data["tel"]}\n'
-                f'Ваши 🪪 Инициалы: {data["idn"]}\nВаши 📫 Контакты: {data["mailcontact"]}\nВаша 🪆 Роль: {data["role"]}\n'
+                f'Ваше имя RU: {data["nameRu"]}\nВаше имя EN: {data["nameEn"]}\n☎️ Ваш Телефон: {data["tel"]}\n'
+                f'🪪 Ваши Инициалы: {data["idn"]}\n📫 Ваши Контакты: {data["mailcontact"]}\n🪆 Ваша Роль: {data["role"]}\n'
                 f'Серийный номер первой камеры: {data["serial1"]}\nСерийный номер второй камеры: {data["serial2"]}\n'
                 f'Серийный номер третьей камеры: {data["serial3"]}\nВсе верно?', reply_markup=kb.proverka)
 
@@ -839,8 +842,8 @@ async  def proverka_no(callback: CallbackQuery, state: FSMContext, bot: Bot):
     await callback.answer('Что Вы хотите изменить?.', show_alert=True)
     data = await state.get_data()
     await callback.message.edit_text(
-                f'Ваше имя RU: {data["nameRu"]}\nВаше имя EN: {data["nameEn"]}\nВаш ☎️ Телефон: {data["tel"]}\n'
-                f'Ваши 🪪 Инициалы: {data["idn"]}\nВаши 📫 Контакты: {data["mailcontact"]}\nВаша 🪆 Роль: {data["role"]}\n'
+                f'Ваше имя RU: {data["nameRu"]}\nВаше имя EN: {data["nameEn"]}\n☎️ Ваш Телефон: {data["tel"]}\n'
+                f'Ваши 🪪 Инициалы: {data["idn"]}\n📫 Ваши Контакты: {data["mailcontact"]}\n🪆 Ваша Роль: {data["role"]}\n'
                 f'Серийный номер первой камеры: {data["serial1"]}\nСерийный номер второй камеры: {data["serial2"]}\n'
                 f'Серийный номер третьей камеры: {data["serial3"]}\nВсе верно?', reply_markup=kb.edit)
 
@@ -909,8 +912,8 @@ async  def register_mailcontact2(callback_query: types.CallbackQuery, state: FSM
     await bot.edit_message_reply_markup(chat_id=callback_query.from_user.id, message_id=callback_query.message.message_id, reply_markup=None)
     await state.set_state(Register.mailcontact2)
     data = await state.get_data()
-    await callback_query.message.answer(text=f'Исправьте ваши 📫 Контакты  по которым с вами можно связаться, почта или социальные сети\n'
-                              f'сейчас ваши 📫 Контакты такие: Ваши 📫 Контакты: {data["mailcontact"]}')
+    await callback_query.message.answer(text=f'📫 Исправьте ваши Контакты  по которым с вами можно связаться, почта или социальные сети\n'
+                              f'сейчас ваши Контакты такие: 📫 Ваши Контакты: {data["mailcontact"]}')
 
 @router.message(Register.mailcontact2)
 async  def register_mailcontact2(message: Message, state: FSMContext):
@@ -918,7 +921,7 @@ async  def register_mailcontact2(message: Message, state: FSMContext):
     await state.set_state(Register.verefy)
     data = await state.get_data()
     await message.answer(text=f'Подтвердите изменения.\n'
-                              f'Сейчас ваши 📫 Контакты такие:  {data["mailcontact"]}', reply_markup=kb.getphoto)
+                              f'Сейчас ваши Контакты такие: 📫  {data["mailcontact"]}', reply_markup=kb.getphoto)
 
 #Возникает ошибка, проверить изменение роли
 @router.callback_query(F.data == 'role')
