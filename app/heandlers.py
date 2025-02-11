@@ -667,15 +667,19 @@ async def select_rol(callback_query: types.CallbackQuery, state: FSMContext,  bo
 #Если выбрали роль Фотограф
 @router.callback_query(Register.role, F.data == 'Фотограф')
 async def select_rol(callback_query: types.CallbackQuery, state: FSMContext, bot: Bot):
+    message = callback_query.message
+    await mes_user_history(message, state)
     await bot.edit_message_reply_markup(chat_id=callback_query.from_user.id, message_id=callback_query.message.message_id, reply_markup=None)
     await state.update_data(role=callback_query.data,
                             photofile1='Не загружена', photofile2='Не загружена', photofile3='Не загружена',
                             serial1='NoSerial', serial2='NoSerial', serial3='NoSerial'
                             )
+    await send_typing_and_message(
+        message.chat.id, bot,
+        'Отправьте по одной фотографии с каждой вашей камеры, обязательно файлом.',
+        state, reply_markup=kb.getphoto
+    )
     await state.set_state(Register.photofile1)
-    await callback_query.message.answer('Отправьте по одной фотографии с каждой вашей камеры, обязательно файлом.',
-                         reply_markup=kb.getphoto)
-
 # Если отправленны фотогарафии группой, то выполняется этот
 @router.message(Register.photofile1, F.content_type.in_({ContentType.DOCUMENT, ContentType.PHOTO}), F.media_group_id)
 async def handle_media_group(message: Message, bot: Bot, state: FSMContext):
@@ -747,15 +751,19 @@ async def handle_media_group(message: Message, bot: Bot, state: FSMContext):
 
             # Обновляем FSM
             await state.update_data(fsm_data)
-            await message.answer("\n\n".join(results))
-            await message.answer(f'Спасибо, вы отправили {i + 1} фотографий, этого достаточно, завершите регистрацию нажав на кнопку внизу.', reply_markup=kb.getphoto)
-            print(f'До условия {i}')
+            await send_typing_and_message(
+                message.chat.id, bot,
+                "\n\n".join(results),
+                state
+            )
+            await send_typing_and_message(
+            message.chat.id, bot,
+                f'Спасибо, вы отправили {i + 1} фотографий, этого достаточно, завершите регистрацию нажав на кнопку внизу.',
+                state, reply_markup=kb.getphoto)
             if i + 1  == 2:
                 await state.set_state(Register.photofile3)
-                print(f'После условия 1 {i}')
             else:
                 await state.set_state(Register.verefy)
-                print(f'После условия 2 {i}')
 
 
     except Exception as e:
