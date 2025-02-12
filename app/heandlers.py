@@ -359,7 +359,7 @@ async def cancel_heandler(message: types.Message, state: FSMContext) -> None:
 async def cancel_heandler(message: types.Message, state: FSMContext) -> None:
 
     current_state = await  state.get_state()
-    print(current_state)
+    # print(current_state)
     if current_state == Register.nameRu:
         await message.answer('Предыдущего шага нет.\nВведите  ФИО на русском или отмените полностью регистрацию и напишите "отмена"')
         return
@@ -380,15 +380,15 @@ async def cancel_heandler(message: types.Message, state: FSMContext) -> None:
         await state.set_state(Register.role)
         return
     if current_state == Register.photofile2:
-        await message.answer('Возвращаемся отправке первой фотографии.\n Отправьте файл с первой камеры или отмените полностью регистрацию и напишите "отмена"')
+        await message.answer('Возвращаемся отправке первой фотографии.\n тправьте файл с первой камеры или отмените полностью регистрацию и напишите "отмена"')
         await state.set_state(Register.photofile1)
         return
     if current_state == Register.photofile3:
-        await message.answer('Возвращаемся отправке второй фотографии.\n Отправьте файл со второй камеры или отмените полностью регистрацию и напишите "отмена"')
+        await message.answer('Возвращаемся отправке второй фотографии.\nОтправьте файл со второй камеры или отмените полностью регистрацию и напишите "отмена"')
         await state.set_state(Register.photofile2)
         return
     if current_state == Register.verefy:
-        await message.answer('Возвращаемся отправке третьей фотографии.\n Отправьте файл с третьей камеры или отмените полностью регистрацию и напишите "отмена"')
+        await message.answer('Возвращаемся отправке третьей фотографии.\nОтправьте файл с третьей камеры или отмените полностью регистрацию и напишите "отмена"')
         await state.set_state(Register.photofile3)
         return
 
@@ -475,7 +475,7 @@ async def register_nameRu(message: Message, state: FSMContext, bot: Bot):
             f"Ваше имя EN: {nameEn}\n"
             f"Ваши 🪪 Инициалы: {initials}\n\n"
             f"Введите 📫 Контакты для связи (почта или соцсети):",
-            state, reply_markup=ReplyKeyboardRemove()
+            state, reply_markup=kb.back_cancel
         )
         await state.set_state(Register.mailcontact)
 

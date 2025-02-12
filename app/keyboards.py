@@ -19,6 +19,11 @@ getphoto = ReplyKeyboardMarkup(keyboard=[
         [KeyboardButton(text=Buttons.FINISH_UPLOAD,)]],
                             resize_keyboard=True)
 
+back_cancel = InlineKeyboardMarkup(inline_keyboard=[
+    [InlineKeyboardButton(text=Buttons.BACK, callback_data='back'),
+    InlineKeyboardButton(text=Buttons.CANCEL, callback_data='cancel')]
+])
+
 # Создаем клавиатуру с роями из базы данных
 async def roles():
     all_roles = await get_roles()
