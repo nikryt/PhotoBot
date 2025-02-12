@@ -28,6 +28,14 @@ class Messages:
     Роль: {role}
     Все верно?"""
 
+    VERIFICATION1 = """f'🪪 Ваше имя RU: {data["nameRu"]}\n
+    🪪 Ваше имя EN: {data["nameEn"]}\n
+    ☎ Ваш Телефон: {data["tel"]}\n'
+    🪪 Ваши Инициалы: {data["idn"]}\n
+    📫 Ваши Контакты: {data["mailcontact"]}\n
+    🪆 Ваша Роль: {data["role"]}'\n
+    Все верно?'"""
+
     # Успешные операции
     REG_SUCCESS = "Данные добавлены в базу, спасибо за регистрацию!"
     DATA_UPDATED = "Изменения сохранены"

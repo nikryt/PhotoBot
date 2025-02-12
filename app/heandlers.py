@@ -1,6 +1,10 @@
 # from email.policy import default
 # from sys import exception
+from http.client import responses
+
 import phonenumbers
+from sqlalchemy.orm import defer
+
 import Texts
 import os
 import re
@@ -18,6 +22,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.enums import ContentType, ChatAction
 #Импортировали тексты из отдельного файла
 from Texts import Messages, Buttons, StatesText
+from app.generate import ai_generate
 
 
 
@@ -63,6 +68,9 @@ class Register(StatesGroup):
     tel2 = State()
     role2 = State()
     texts = StatesText.REGISTER
+
+class Gen(StatesGroup):
+    wait = State()
 
 # Переменная для хранения message_id последнего сообщения бота
 # last_bot_message_id = None
@@ -471,10 +479,10 @@ async def register_nameRu(message: Message, state: FSMContext, bot: Bot):
         await send_typing_and_message(
             message.chat.id, bot,
             f"✅ Принято: {nameRu}\n\n"
-            f"Ваше имя RU: {nameRu}\n"
-            f"Ваше имя EN: {nameEn}\n"
-            f"Ваши 🪪 Инициалы: {initials}\n\n"
-            f"Введите 📫 Контакты для связи (почта или соцсети):",
+            f"🪪 Ваше имя RU: {nameRu}\n"
+            f"🪪 Ваше имя EN: {nameEn}\n"
+            f"🪪 Ваши Инициалы: {initials}\n\n"
+            f"📫 Введите Контакты для связи (почта или соцсети):",
             state, reply_markup=kb.back_cancel
         )
         await state.set_state(Register.mailcontact)
@@ -552,11 +560,11 @@ async def register_mailcontact(message: Message, state: FSMContext, bot: Bot):
     await send_typing_and_message(
         message.chat.id, bot,
         f"✅ Принято: {message.text}\n\n"
-        f'Ваше имя RU: {data["nameRu"]}\n'
-        f'Ваше имя EN: {data["nameEn"]}\n'
-        f'Ваши 🪪 Инициалы: {data["idn"]}\n'
-        f'Ваши 📫 Контакты: {data["mailcontact"]}\n\n'
-        f'Поделитесь своим ☎️ Телефоном нажав на кнопку ниже.',
+        f'🪪 Ваше имя RU: {data["nameRu"]}\n'
+        f'🪪 Ваше имя EN: {data["nameEn"]}\n'
+        f'🪪 Ваши Инициалы: {data["idn"]}\n'
+        f'📫 Ваши Контакты: {data["mailcontact"]}\n\n'
+        f'☎️ Поделитесь своим Телефоном нажав на кнопку ниже.',
         state, reply_markup=kb.get_tel
     )
     await state.set_state(Register.tel)
@@ -1094,3 +1102,20 @@ async def delete_item(callback: CallbackQuery):
     await  rq.del_item(int(item_id))
     await callback.answer(text=f'Запись удалена')
     await callback.message.answer(text=f'Запись удалена')
+
+#DeepSeek
+@router.message(F.text == "поговори")
+async def deepseek(message: Message):
+    await message.answer('Напиши что ты хочешь?')
+@router.message(Gen.wait)
+async def stop_flood(message: Message):
+    await message.answer('Подожди ты, не так быстро, эй!')
+
+@router.message()
+async def generating(message: Message, state: FSMContext):
+    await state.set_state(Gen.wait)
+    responses = await ai_generate(message.text)
+    await message.answer(responses)
+    await state.clear()
+
+
