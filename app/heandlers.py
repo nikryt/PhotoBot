@@ -361,10 +361,35 @@ async def cancel_heandler(message: types.Message, state: FSMContext) -> None:
     current_state = await  state.get_state()
     print(current_state)
     if current_state == Register.nameRu:
-        await message.answer('Предыдущего шага нет, введите  ФИО на русском или отмените полностью регистрацию и напишите "отмена"')
+        await message.answer('Предыдущего шага нет.\nВведите  ФИО на русском или отмените полностью регистрацию и напишите "отмена"')
         return
     if current_state == Register.mailcontact:
+        await message.answer('Возвращаемся к вводу ФИО.\nВведите  ФИО на русском или отмените полностью регистрацию и напишите "отмена"')
+        await state.set_state(Register.nameRu)
+        return
+    if current_state == Register.tel:
+        await message.answer('Возвращаемся к вводу контактной информации.\nВведите  ваши контакты или отмените полностью регистрацию и напишите "отмена"')
+        await state.set_state(Register.mailcontact)
+        return
+    if current_state == Register.role:
+        await message.answer('Возвращаемся к вводу телефона.\nВведите  телефон или отмените полностью регистрацию и напишите "отмена"')
+        await state.set_state(Register.tel)
+        return
+    if current_state == Register.photofile1:
+        await message.answer('Возвращаемся к выбору роли.\nВыберите вновь вашу роль на проекте или отмените полностью регистрацию и напишите "отмена".')
+        await state.set_state(Register.role)
+        return
+    if current_state == Register.photofile2:
         await message.answer('Возвращаемся к вводу ФИО, введите  ФИО на русском или отмените полностью регистрацию и напишите "отмена"')
+        await state.set_state(Register.photofile1)
+        return
+    if current_state == Register.photofile3:
+        await message.answer('Возвращаемся к вводу ФИО, введите  ФИО на русском или отмените полностью регистрацию и напишите "отмена"')
+        await state.set_state(Register.photofile2)
+        return
+    if current_state == Register.verefy:
+        await message.answer('Возвращаемся к вводу ФИО, введите  ФИО на русском или отмените полностью регистрацию и напишите "отмена"')
+        await state.set_state(Register.photofile3)
         return
 
     previous = None
@@ -593,7 +618,7 @@ async def validate_phone(message: Message, state: FSMContext, bot: Bot):
     data = await state.get_data()
     if formatted:
         await delete_all_previous_messages(message.chat.id, state, bot)
-        await state.update_data(tel={formatted})
+        await state.update_data(tel=formatted)
         # await message.answer(f"Валидный номер: {formatted}", reply_markup=ReplyKeyboardRemove())
         await send_typing_and_message(
             message.chat.id, bot,
@@ -606,6 +631,7 @@ async def validate_phone(message: Message, state: FSMContext, bot: Bot):
             f'Выберите вашу роль, фотограф или редактор',
             state, reply_markup=await kb.roles()
         )
+        await state.set_state(Register.role)
     # phone_text = message.text
     # # Убедиться, что у объекта message.contact есть атрибут 'phone_number'
     # if message.contact and hasattr(message.contact, 'phone_number'):
@@ -687,6 +713,7 @@ async def handle_media_group(message: Message, bot: Bot, state: FSMContext):
     username = message.from_user.username
     data = await state.get_data()
 
+    await mes_user_history(message, state)
     try:
         if media_group_id not in media_groups_cache:
             media_groups_cache[media_group_id] = {
@@ -775,34 +802,36 @@ async def handle_media_group(message: Message, bot: Bot, state: FSMContext):
 
 @router.message(Register.photofile1, F.document)
 async def register_photofile(message: types.Message, state: FSMContext, bot: Bot):
-        await save_document(message, bot)
-        serial = await sn.main(message)
-        await state.update_data(photofile1=message.document.file_id)
-        await state.update_data(serial1=serial)
-        await message.answer('Вы отправили один файл.\nОтправьте фотографию  с другой камеры так же файлом, или завершите отправку фотографий '
-                             'нажав на кнопку ниже.',
-                             reply_markup=kb.getphoto)
-        await state.set_state(Register.photofile2)
+    await mes_user_history(message, state)
+    await save_document(message, bot)
+    serial = await sn.main(message)
+    await state.update_data(photofile1=message.document.file_id)
+    await state.update_data(serial1=serial)
+    await message.answer('Вы отправили один файл.\nОтправьте фотографию  с другой камеры так же файлом, или завершите отправку фотографий '
+                         'нажав на кнопку ниже.',
+                         reply_markup=kb.getphoto)
+    await state.set_state(Register.photofile2)
 
 
 
 @router.message(Register.photofile2, F.document)
 async def register_photofile(message: types.Message, state: FSMContext, bot: Bot):
-        await save_document(message, bot)
-        serial = await sn.main(message)
-        await state.update_data(serial2=serial)
-        await state.update_data(photofile2=message.document.file_id)
-        await state.set_state(Register.photofile3)
-        await save_document(message, bot)
-        await message.answer('Вы отправили 2 файла.\nВсего принимается 3 файла. Отправьте фотографию  с другой камеры так же файлом, или '
-                             'завершите отправку фотографий нажав на кнопку ниже.',
-                             reply_markup=kb.getphoto)
-        await state.set_state(Register.photofile3)
+    await mes_user_history(message, state)
+    await save_document(message, bot)
+    serial = await sn.main(message)
+    await state.update_data(serial2=serial)
+    await state.update_data(photofile2=message.document.file_id)
+    await state.set_state(Register.photofile3)
+    await save_document(message, bot)
+    await message.answer('Вы отправили 2 файла.\nВсего принимается 3 файла. Отправьте фотографию  с другой камеры так же файлом, или '
+                         'завершите отправку фотографий нажав на кнопку ниже.',
+                         reply_markup=kb.getphoto)
+    await state.set_state(Register.photofile3)
 
 @router.message(Register.photofile3, F.document)
 async def register_photofile(message: types.Message, state: FSMContext, bot: Bot):
     data = await state.get_data()
-    print(data)
+    await mes_user_history(message, state)
     if data["serial3"] == None or data["serial3"] == 'NoSerial':
         await save_document(message, bot)
         serial = await sn.main(message)
@@ -839,6 +868,7 @@ async def many_camer(message: types.Message, state: FSMContext, bot: Bot):
 @router.message(Register.photofile3, F.text == 'Завершить отправку')
 async  def verefy(message: types.Message, state: FSMContext, bot: Bot):
         # старый ответ до того как начал принимать фотографии
+        await mes_user_history(message, state)
         await delete_all_previous_messages(message.chat.id, state, bot)
         await mes_user_history(message, state)
         await bot.send_message(message.chat.id, 'Спасибо, проверьте ваши данные:', reply_markup=ReplyKeyboardRemove())
@@ -1011,7 +1041,7 @@ async def proverka_yes(callback: CallbackQuery, state: FSMContext, bot: Bot):
                 f"Ошибка: \n {str(e)}\nОбратитесь к программисту, он денег хочет снова",reply_markup=ReplyKeyboardRemove())
             await state.clear()
 
-# Записываем в БД пользоватлея с его id
+# Записываем в БД пользователя с его id
 #     await rq.set_item(data)
 #     await state.clear()
     await state.set_state(StartState.active)
