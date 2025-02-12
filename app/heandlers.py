@@ -380,15 +380,15 @@ async def cancel_heandler(message: types.Message, state: FSMContext) -> None:
         await state.set_state(Register.role)
         return
     if current_state == Register.photofile2:
-        await message.answer('Возвращаемся к вводу ФИО, введите  ФИО на русском или отмените полностью регистрацию и напишите "отмена"')
+        await message.answer('Возвращаемся отправке первой фотографии.\n Отправьте файл с первой камеры или отмените полностью регистрацию и напишите "отмена"')
         await state.set_state(Register.photofile1)
         return
     if current_state == Register.photofile3:
-        await message.answer('Возвращаемся к вводу ФИО, введите  ФИО на русском или отмените полностью регистрацию и напишите "отмена"')
+        await message.answer('Возвращаемся отправке второй фотографии.\n Отправьте файл со второй камеры или отмените полностью регистрацию и напишите "отмена"')
         await state.set_state(Register.photofile2)
         return
     if current_state == Register.verefy:
-        await message.answer('Возвращаемся к вводу ФИО, введите  ФИО на русском или отмените полностью регистрацию и напишите "отмена"')
+        await message.answer('Возвращаемся отправке третьей фотографии.\n Отправьте файл с третьей камеры или отмените полностью регистрацию и напишите "отмена"')
         await state.set_state(Register.photofile3)
         return
 
