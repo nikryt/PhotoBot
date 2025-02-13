@@ -999,8 +999,8 @@ async  def proverka_no(callback: CallbackQuery, state: FSMContext, bot: Bot):
     await callback.answer('Что Вы хотите изменить?.', show_alert=True)
     data = await state.get_data()
     await callback.message.edit_text(
-                f'Ваше имя RU: {data["nameRu"]}\nВаше имя EN: {data["nameEn"]}\n☎️ Ваш Телефон: {data["tel"]}\n'
-                f'Ваши 🪪 Инициалы: {data["idn"]}\n📫 Ваши Контакты: {data["mailcontact"]}\n🪆 Ваша Роль: {data["role"]}\n'
+                f'🪪 Ваше имя RU: {data["nameRu"]}\n🪪 Ваше имя EN: {data["nameEn"]}\n☎️ Ваш Телефон: {data["tel"]}\n'
+                f'🪪 Ваши инициалы: {data["idn"]}\n📫 Ваши Контакты: {data["mailcontact"]}\n🪆 Вашу Роль: {data["role"]}\n'
                 f'Серийный номер первой камеры: {data["serial1"]}\nСерийный номер второй камеры: {data["serial2"]}\n'
                 f'Серийный номер третьей камеры: {data["serial3"]}\nВсе верно?', reply_markup=kb.edit)
 
