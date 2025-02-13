@@ -892,34 +892,55 @@ async  def verefy(message: types.Message, state: FSMContext, bot: Bot):
         #                      f'Третья фотография: {data["photofile3"]}\nВсе верно?')
         if data["photofile3"]  == 'Не загружена' and data["photofile2"]  == 'Не загружена' and data["photofile1"]  == 'Не загружена':
             await message.answer(
-                f'Ваше имя RU: {data["nameRu"]}\nВаше имя EN: {data["nameEn"]}\n☎ Ваш Телефон: {data["tel"]}\n'
-                f'🪪 Ваши Инициалы: {data["idn"]}\n📫 Ваши Контакты: {data["mailcontact"]}\n🪆 Ваша Роль: {data["role"]}'
-                f'\nВсе верно?', reply_markup=kb.proverka)
+                f'🪪 Ваше имя RU: {data["nameRu"]}\n'
+                f'🪪 Ваше имя EN: {data["nameEn"]}\n'
+                f'🪪 Ваши Инициалы: {data["idn"]}\n'
+                f'📫 Ваши Контакты: {data["mailcontact"]}\n'
+                f'☎️ Ваш Телефон: {data["tel"]}\n'
+                f'🪆 Ваша Роль: {data["role"]}\n\n'
+                f'Все верно?', reply_markup=kb.proverka)
 
         elif data["photofile3"]  == 'Не загружена' and data["photofile2"]  == 'Не загружена':
             await message.answer_document(data["photofile1"])
             await message.answer(
-                f'Ваше имя RU: {data["nameRu"]}\nВаше имя EN: {data["nameEn"]}\n☎️ Ваш Телефон: {data["tel"]}\n'
-                f'🪪 Ваши Инициалы: {data["idn"]}\n📫 Ваши Контакты: {data["mailcontact"]}\n🪆 Ваша Роль: {data["role"]}\n'
-                f'Серийный номер первой камеры: {data["serial1"]}\nВсе верно?', reply_markup=kb.proverka)
+                f'🪪 Ваше имя RU: {data["nameRu"]}\n'
+                f'🪪 Ваше имя EN: {data["nameEn"]}\n'
+                f'🪪 Ваши Инициалы: {data["idn"]}\n'
+                f'📫 Ваши Контакты: {data["mailcontact"]}\n'
+                f'☎️ Ваш Телефон: {data["tel"]}\n'
+                f'🪆 Ваша Роль: {data["role"]}\n'
+                f'Серийный номер первой камеры: {data["serial1"]}\n\n'
+                f'Все верно?', reply_markup=kb.proverka)
 
         elif data["photofile3"]  == 'Не загружена':
             await message.answer_document(data["photofile1"])
             await message.answer_document(data["photofile2"])
             await message.answer(
-                f'Ваше имя RU: {data["nameRu"]}\nВаше имя EN: {data["nameEn"]}\n☎️ Ваш Телефон: {data["tel"]}\n'
-                f'🪪 Ваши Инициалы: {data["idn"]}\n📫 Ваши Контакты: {data["mailcontact"]}\n🪆 Ваша Роль: {data["role"]}\n'
-                f'Серийный номер первой камеры: {data["serial1"]}\nСерийный номер второй камеры: {data["serial2"]}\nВсе верно?', reply_markup=kb.proverka)
+                f'🪪 Ваше имя RU: {data["nameRu"]}\n'
+                f'🪪 Ваше имя EN: {data["nameEn"]}\n'
+                f'🪪 Ваши Инициалы: {data["idn"]}\n'
+                f'📫 Ваши Контакты: {data["mailcontact"]}\n'
+                f'☎️ Ваш Телефон: {data["tel"]}\n'
+                f'🪆 Ваша Роль: {data["role"]}\n'
+                f'Серийный номер первой камеры: {data["serial1"]}\n'
+                f'Серийный номер второй камеры: {data["serial2"]}\n\n'
+                f'Все верно?', reply_markup=kb.proverka)
 
         else:
             await message.answer_document(data["photofile1"])
             await message.answer_document(data["photofile2"])
             await message.answer_document(data["photofile3"])
             await message.answer(
-                f'Ваше имя RU: {data["nameRu"]}\nВаше имя EN: {data["nameEn"]}\n☎️ Ваш Телефон: {data["tel"]}\n'
-                f'🪪 Ваши Инициалы: {data["idn"]}\n📫 Ваши Контакты: {data["mailcontact"]}\n🪆 Ваша Роль: {data["role"]}\n'
-                f'Серийный номер первой камеры: {data["serial1"]}\nСерийный номер второй камеры: {data["serial2"]}\n'
-                f'Серийный номер третьей камеры: {data["serial3"]}\nВсе верно?', reply_markup=kb.proverka)
+                f'🪪 Ваше имя RU: {data["nameRu"]}\n'
+                f'🪪 Ваше имя EN: {data["nameEn"]}\n'
+                f'🪪 Ваши Инициалы: {data["idn"]}\n'
+                f'📫 Ваши Контакты: {data["mailcontact"]}\n'
+                f'☎️ Ваш Телефон: {data["tel"]}\n'
+                f'🪆 Ваша Роль: {data["role"]}\n'
+                f'Серийный номер первой камеры: {data["serial1"]}\n'
+                f'Серийный номер второй камеры: {data["serial2"]}\n'
+                f'Серийный номер третьей камеры: {data["serial3"]}\n\n'
+                f'Все верно?', reply_markup=kb.proverka)
 
 
 @router.callback_query(F.data == 'no')
