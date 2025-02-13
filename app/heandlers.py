@@ -71,9 +71,13 @@ class Register(StatesGroup):
 
 class Gen(StatesGroup):
     wait = State()
+    result = State()
 
 # Переменная для хранения message_id последнего сообщения бота
 # last_bot_message_id = None
+
+# Глобальная переменная для условия перехода в редактирования
+edit = None
 
 @router.message(CommandStart())
 # асинхронная функция cmd_start которая принимает в себя объект Massage
@@ -614,11 +618,13 @@ async def register_mailcontact(message: Message, state: FSMContext, bot: Bot):
 async def register_tel(message: Message, state: FSMContext, bot: Bot):
     await mes_user_history(message, state)
     phone = message.contact.phone_number
-    if phone:
+    global edit
+
+    if phone and edit !=1:
+        data = await state.get_data()
         await delete_all_previous_messages(message.chat.id, state, bot)
         # await message.answer(f"Номер из контакта: {phone}", reply_markup=types.ReplyKeyboardRemove())
         await state.update_data(tel=phone)
-        data = await state.get_data()
         await send_typing_and_message(
             message.chat.id, bot,
             f"✅ Принято: {phone}\n\n"
@@ -626,19 +632,35 @@ async def register_tel(message: Message, state: FSMContext, bot: Bot):
             f'Ваше имя EN: {data["nameEn"]}\n'
             f'Ваши 🪪 Инициалы: {data["idn"]}\n'
             f'Ваши 📫 Контакты: {data["mailcontact"]}\n'
-            f'Ваш номер ☎️ Телефона {data["tel"]}\n\n'
+            f'Ваш номер ☎️ Телефона {phone}\n\n'
             f'Выберите вашу роль, фотограф или редактор',
             state, reply_markup=await kb.roles()
         )
         await state.set_state(Register.role)
+    if phone and edit == 1:
+        await delete_all_previous_messages(message.chat.id, state, bot)
+        await state.update_data(tel=phone)
+        data = await state.get_data()
+        await send_typing_and_message(
+            message.chat.id, bot,
+            f'Подтвердите изменения\n'
+            f'Ваш новый телефон такой:\n'
+            f'☎️ {data["tel"]}',
+            state, reply_markup=kb.getphoto
+        )
+        await state.set_state(Register.verefy)
+        edit = 0
+
+
 
 
 @router.message(Register.tel, F.text)
 async def validate_phone(message: Message, state: FSMContext, bot: Bot):
+    global edit
     await mes_user_history(message, state)
     formatted = await format_phone(message.text)
     data = await state.get_data()
-    if formatted:
+    if formatted and edit !=1:
         await delete_all_previous_messages(message.chat.id, state, bot)
         await state.update_data(tel=formatted)
         # await message.answer(f"Валидный номер: {formatted}", reply_markup=ReplyKeyboardRemove())
@@ -654,6 +676,19 @@ async def validate_phone(message: Message, state: FSMContext, bot: Bot):
             state, reply_markup=await kb.roles()
         )
         await state.set_state(Register.role)
+    if formatted and edit == 1:
+        await delete_all_previous_messages(message.chat.id, state, bot)
+        await state.update_data(tel=formatted)
+        await state.set_state(Register.verefy)
+        await send_typing_and_message(
+            message.chat.id, bot,
+            f'Подтвердите изменения\n'
+            f'Ваш новый телефон такой:\n'
+            f'☎️ {formatted}',
+            state, reply_markup=kb.getphoto
+        )
+        edit = 0
+
     # phone_text = message.text
     # # Убедиться, что у объекта message.contact есть атрибут 'phone_number'
     # if message.contact and hasattr(message.contact, 'phone_number'):
@@ -1045,6 +1080,27 @@ async  def register_mailcontact2(message: Message, state: FSMContext):
     await message.answer(text=f'Подтвердите изменения.\n'
                               f'Сейчас ваши Контакты такие: 📫  {data["mailcontact"]}', reply_markup=kb.getphoto)
 
+@router.callback_query(F.data =='phone')
+async  def edit_tel(callback_query: types.CallbackQuery, state: FSMContext, bot: Bot):
+    global edit
+    message = callback_query.message
+    # удаляем инлайн клавиатуру по callback_query
+    await bot.edit_message_reply_markup(chat_id=callback_query.from_user.id,
+                                        message_id=callback_query.message.message_id, reply_markup=None)
+    data = await state.get_data()
+    await mes_user_history(message, state)
+    await send_typing_and_message(
+        message.chat.id, bot,
+        f'📫 Исправьте ваш телефон\n'
+             f'сейчас ваш телефон такой: ☎️ Ваши телефон: {data["tel"]}',
+        state, reply_markup=kb.get_tel
+    )
+    await state.set_state(Register.tel)
+    edit = 1
+
+# @router.message(Register.tel2)
+
+
 #Возникает ошибка, проверить изменение роли
 @router.callback_query(F.data == 'role')
 async def select_rol2(callback_query: types.CallbackQuery, state: FSMContext, bot: Bot):
@@ -1143,20 +1199,23 @@ async def delete_item(callback: CallbackQuery):
     await  rq.del_item(int(item_id))
     await callback.answer(text=f'Запись удалена')
     await callback.message.answer(text=f'Запись удалена')
+#
+# #DeepSeek
+# @router.message(F.text == "поговори", )
+# async def deepseek(message: Message, state: FSMContext):
+#     await message.answer('Напиши что ты хочешь?')
+#     await state.set_state(Gen.wait)
+#
+# @router.message()
+# async def generating(message: Message, state: FSMContext):
+#     await state.set_state(Gen.wait)
+#     responses = await ai_generate(message.text)
+#     await message.answer(responses)
+#     await state.clear()
+#
+# @router.message(Gen.wait)
+# async def stop_flood(message: Message):
+#     await message.answer('Подожди ты, не так быстро, эй!')
 
-#DeepSeek
-@router.message(F.text == "поговори")
-async def deepseek(message: Message):
-    await message.answer('Напиши что ты хочешь?')
-@router.message(Gen.wait)
-async def stop_flood(message: Message):
-    await message.answer('Подожди ты, не так быстро, эй!')
-
-@router.message(Gen.wait)
-async def generating(message: Message, state: FSMContext):
-    await state.set_state(Gen.wait)
-    responses = await ai_generate(message.text)
-    await message.answer(responses)
-    await state.clear()
 
 
