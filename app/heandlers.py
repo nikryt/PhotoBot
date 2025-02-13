@@ -1199,23 +1199,23 @@ async def delete_item(callback: CallbackQuery):
     await  rq.del_item(int(item_id))
     await callback.answer(text=f'Запись удалена')
     await callback.message.answer(text=f'Запись удалена')
-#
-# #DeepSeek
-# @router.message(F.text == "поговори", )
-# async def deepseek(message: Message, state: FSMContext):
-#     await message.answer('Напиши что ты хочешь?')
-#     await state.set_state(Gen.wait)
-#
-# @router.message()
-# async def generating(message: Message, state: FSMContext):
-#     await state.set_state(Gen.wait)
-#     responses = await ai_generate(message.text)
-#     await message.answer(responses)
-#     await state.clear()
-#
-# @router.message(Gen.wait)
-# async def stop_flood(message: Message):
-#     await message.answer('Подожди ты, не так быстро, эй!')
+
+#DeepSeek
+@router.message(F.text == "поговори", )
+async def deepseek(message: Message, state: FSMContext):
+    await message.answer('Напиши что ты хочешь?')
+    await state.set_state(Gen.result)
+
+@router.message(Gen.result)
+async def generating(message: Message, state: FSMContext):
+    await state.set_state(Gen.wait)
+    responses = await ai_generate(message.text)
+    await message.answer(responses)
+    await state.clear()
+
+@router.message(Gen.wait)
+async def stop_flood(message: Message):
+    await message.answer('Подожди ты, не так быстро, эй!')
 
 
 
