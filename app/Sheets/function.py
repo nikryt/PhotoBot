@@ -36,8 +36,22 @@ async def number_row(data: dict):
     wks = await agc.open("PhotoBot")
     sh = await wks.worksheet(title='Лист1')
     next_row = await next_available_row(sh)
-    values = [[f'{data["nameRu"]}',f'{data["nameEn"]}',f'{data["idn"]}',f'{data["mailcontact"]}',f'{data["tel"]}',f'{data["role"]}']]
-    await sh.update(values, "B{}".format(next_row))
+    if data["serial1"] == 'NoSerial':
+        values = [[f'{data["nameRu"]}',f'{data["nameEn"]}',f'{data["idn"]}',f'{data["mailcontact"]}',f'{data["tel"]}',f'{data["role"]}']]
+        await sh.update(values, "B{}".format(next_row))
+    if data ["serial1"] not in [None, 'NoSerial']:
+        values = [[f'sn{data["serial1"]}',f'{data["nameEn"]}',f'{data["idn"]}',f'{data["mailcontact"]}',f'{data["tel"]}',f'{data["role"]}']]
+        await sh.update(values, "A{}".format(next_row))
+        next_row += 1  # Вручную увеличиваем строку для следующих данных
+    if data ["serial2"] not in [None, 'NoSerial']:
+        # next_row = await next_available_row(sh)
+        values = [[f'sn{data["serial2"]}',f'{data["nameEn"]}',f'{data["idn"]}',f'{data["mailcontact"]}',f'{data["tel"]}',f'{data["role"]}']]
+        await sh.update(values, "A{}".format(next_row))
+        next_row += 1  # Вручную увеличиваем строку для следующих данных
+    if data ["serial3"] not in [None, 'NoSerial']:
+        values = [[f'sn{data["serial3"]}',f'{data["nameEn"]}',f'{data["idn"]}',f'{data["mailcontact"]}',f'{data["tel"]}',f'{data["role"]}']]
+        await sh.update(values, "A{}".format(next_row))
+
 
 # async def number_row(item: dict):
 #     agc = await agcm.authorize()
