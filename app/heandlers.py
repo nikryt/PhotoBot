@@ -698,6 +698,7 @@ async def select_rol(callback_query: types.CallbackQuery, state: FSMContext,  bo
             state, reply_markup=kb.getphoto
         )
     await state.set_state(Register.verefy)
+
 #Если выбрали роль Фотограф
 @router.callback_query(Register.role, F.data == 'Фотограф')
 async def select_rol(callback_query: types.CallbackQuery, state: FSMContext, bot: Bot):
@@ -878,8 +879,11 @@ async  def verefy(message: types.Message, state: FSMContext, bot: Bot):
         # старый ответ до того как начал принимать фотографии
         await mes_user_history(message, state)
         await delete_all_previous_messages(message.chat.id, state, bot)
-        await mes_user_history(message, state)
-        await bot.send_message(message.chat.id, 'Спасибо, проверьте ваши данные:', reply_markup=ReplyKeyboardRemove())
+        await send_typing_and_message(
+            message.chat.id, bot,
+            'Спасибо, проверьте ваши данные:',
+            state, reply_markup=ReplyKeyboardRemove()
+        )
 
         data = await state.get_data()
         # await message.answer(f'Ваше имя RU: {data["nameRu"]}\nВаше имя EN: {data["nameEn"]}\nВаш ☎️ Телефон: {data["tel"]}\n'
@@ -1033,6 +1037,8 @@ async def select_rol2(callback_query: types.CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == 'yes')
 async def proverka_yes(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    message = callback.message
+    await delete_all_previous_messages(message.chat.id, state, bot)
     # удаляем инлайн клавиатуру
     await bot.edit_message_reply_markup(chat_id=callback.from_user.id, message_id=callback.message.message_id, reply_markup=None)
     await callback.answer('Вы подтвердили верность данных.', show_alert=True)
