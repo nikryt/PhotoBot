@@ -909,7 +909,7 @@ async  def verefy(message: types.Message, state: FSMContext, bot: Bot):
                 f'📫 Ваши Контакты: {data["mailcontact"]}\n'
                 f'☎️ Ваш Телефон: {data["tel"]}\n'
                 f'🪆 Ваша Роль: {data["role"]}\n'
-                f'Серийный номер первой камеры: {data["serial1"]}\n\n'
+                f'1️⃣ Серийный номер первой камеры: {data["serial1"]}\n\n'
                 f'Все верно?', reply_markup=kb.proverka)
 
         elif data["photofile3"]  == 'Не загружена':
@@ -922,8 +922,8 @@ async  def verefy(message: types.Message, state: FSMContext, bot: Bot):
                 f'📫 Ваши Контакты: {data["mailcontact"]}\n'
                 f'☎️ Ваш Телефон: {data["tel"]}\n'
                 f'🪆 Ваша Роль: {data["role"]}\n'
-                f'Серийный номер первой камеры: {data["serial1"]}\n'
-                f'Серийный номер второй камеры: {data["serial2"]}\n\n'
+                f'1️⃣ Серийный номер первой камеры: {data["serial1"]}\n'
+                f'2️⃣ Серийный номер второй камеры: {data["serial2"]}\n\n'
                 f'Все верно?', reply_markup=kb.proverka)
 
         else:
@@ -937,9 +937,9 @@ async  def verefy(message: types.Message, state: FSMContext, bot: Bot):
                 f'📫 Ваши Контакты: {data["mailcontact"]}\n'
                 f'☎️ Ваш Телефон: {data["tel"]}\n'
                 f'🪆 Ваша Роль: {data["role"]}\n'
-                f'Серийный номер первой камеры: {data["serial1"]}\n'
-                f'Серийный номер второй камеры: {data["serial2"]}\n'
-                f'Серийный номер третьей камеры: {data["serial3"]}\n\n'
+                f'1️⃣ Серийный номер первой камеры: {data["serial1"]}\n'
+                f'2️⃣ Серийный номер второй камеры: {data["serial2"]}\n'
+                f'3️⃣ Серийный номер третьей камеры: {data["serial3"]}\n\n'
                 f'Все верно?', reply_markup=kb.proverka)
 
 
@@ -1138,7 +1138,7 @@ async def deepseek(message: Message):
 async def stop_flood(message: Message):
     await message.answer('Подожди ты, не так быстро, эй!')
 
-@router.message()
+@router.message(Gen.wait)
 async def generating(message: Message, state: FSMContext):
     await state.set_state(Gen.wait)
     responses = await ai_generate(message.text)
