@@ -350,18 +350,32 @@ async  def fio(callback: CallbackQuery):
     await callback.message.answer('Вы выбрали изменить фамилию на русском языке.')
 
 # Отмена состояния пользователя по команде Отмена
-@router.message(StateFilter('*'), Command("отмена"))
-@router.message(StateFilter('*'), F.text.casefold() == "отмена")
-async def cancel_heandler(message: types.Message, state: FSMContext) -> None:
+@router.callback_query(F.data == 'cancel')
+async def cancel_heandler(callback: CallbackQuery, state: FSMContext, bot: Bot) -> None:
+    message = callback.message
     current_state = await  state.get_state()
     if current_state is None:
         return
     await state.clear()
+    await callback.message.answer("Отмена регистрации", reply_markup=kb.main)
+    await delete_all_previous_messages(message.chat.id, state, bot)
+
+
+@router.message(StateFilter('*'), Command("отмена"))
+@router.message(StateFilter('*'), F.text.casefold() == "отмена")
+async def cancel_heandler_text(message: types.Message, callback: CallbackQuery, state: FSMContext, bot: Bot) -> None:
+    message = callback.message
+    current_state = await  state.get_state()
+    if current_state is None:
+        return
+    await state.clear()
+    await delete_all_previous_messages(message.chat.id, state, bot)
     await message.answer("Отмена регистрации", reply_markup=kb.main)
 
 
 
 # Возвращение на шаг назад по машине состояний
+@router.callback_query(F.data == 'back')
 @router.message(StateFilter('*'), Command("назад"))
 @router.message(StateFilter('*'), F.text.casefold() == "назад")
 async def cancel_heandler(message: types.Message, state: FSMContext) -> None:
