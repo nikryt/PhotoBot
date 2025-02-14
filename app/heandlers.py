@@ -370,8 +370,7 @@ async def cancel_heandler(callback: CallbackQuery, state: FSMContext, bot: Bot) 
 
 @router.message(StateFilter('*'), Command("отмена"))
 @router.message(StateFilter('*'), F.text.casefold() == "отмена")
-async def cancel_heandler_text(message: types.Message, callback: CallbackQuery, state: FSMContext, bot: Bot) -> None:
-    message = callback.message
+async def cancel_heandler_text(message: types.Message, state: FSMContext, bot: Bot) -> None:
     current_state = await  state.get_state()
     if current_state is None:
         return
