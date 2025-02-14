@@ -20,6 +20,7 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 # from aiogram.methods import SendMessage, ForwardMessage
 from aiogram.enums import ContentType, ChatAction
+from aiogram.enums import ParseMode
 #Импортировали тексты из отдельного файла
 from Texts import Messages, Buttons, StatesText
 from app.generate import ai_generate
@@ -81,20 +82,22 @@ edit = None
 
 @router.message(CommandStart())
 # асинхронная функция cmd_start которая принимает в себя объект Massage
-async def cmd_start(message: Message, state: FSMContext):
+async def cmd_start(message: Message, state: FSMContext, bot: Bot,):
 # внутри функции cmd_start обращаемся к методу answer, он позволяет отвечать этому же пользователю
 #     await message.answer('Привет!', reply_markup=kb.main)
-# отправляем на команлу старт фотографию с подписью и клавиатуру main
+# отправляем на команду старт фотографию с подписью и клавиатуру main
 #     await  state.clear()
+    await bot.send_chat_action(message.chat.id, ChatAction.TYPING)
+    await asyncio.sleep(1)
     await state.set_state(StartState.active)
     await message.answer_photo(photo='AgACAgIAAxkBAAPgZ361se9D_xn8AwRI7Y1gBmdmTiwAAgfrMRsQmvlLUMXQ9_Z9HXABAAMCAAN5AAM2BA',
-                               caption=Messages.START.format(name=message.from_user.full_name), reply_markup=kb.main)
-    await message.answer(
-        "Вы в режиме Start. Все сообщения кроме команд будут удаляться!\n"
-        "Доступные команды:\n"
-        "/help - справка\n"
-        "/register - регистрация"
+                               caption=Messages.START.format(name=message.from_user.full_name)
+                               # reply_markup=kb.main)
     )
+    await bot.send_chat_action(message.chat.id, ChatAction.TYPING)
+    await asyncio.sleep(3)
+    await message.answer(text=Messages.INTRO, parse_mode=ParseMode.HTML)
+
 # отправляем методом ответа на сообщение стикер по его ID
 #     await message.reply_sticker(sticker='CAACAgIAAxkBAAPYZ36b1AUNHQg55cEEfzilVTX1lCYAArkRAAJClVFLVmGP6JmH07A2BA', reply_markup=ReplyKeyboardRemove())
 # Получаем ID пользователя и Имя из самого первого сообщения
@@ -925,7 +928,6 @@ async def many_camer(message: types.Message, state: FSMContext, bot: Bot):
 @router.message(Register.photofile2, F.text == 'Завершить отправку')
 @router.message(Register.photofile3, F.text == 'Завершить отправку')
 async  def verefy(message: types.Message, state: FSMContext, bot: Bot):
-        # старый ответ до того как начал принимать фотографии
         await mes_user_history(message, state)
         await delete_all_previous_messages(message.chat.id, state, bot)
         await send_typing_and_message(
@@ -935,10 +937,6 @@ async  def verefy(message: types.Message, state: FSMContext, bot: Bot):
         )
 
         data = await state.get_data()
-        # await message.answer(f'Ваше имя RU: {data["nameRu"]}\nВаше имя EN: {data["nameEn"]}\nВаш ☎️ Телефон: {data["tel"]}\n'
-        #                      f'Ваши 🪪 Инициалы: {data["idn"]}\nВаши 📫 Контакты: {data["mailcontact"]}\nВаша 🪆 Роль: {data["role"]}\n'
-        #                      f'Первая фотография: {data["photofile1"]}\nВторая фотография: {data["photofile2"]}\n'
-        #                      f'Третья фотография: {data["photofile3"]}\nВсе верно?')
         if data["photofile3"]  == 'Не загружена' and data["photofile2"]  == 'Не загружена' and data["photofile1"]  == 'Не загружена':
             await message.answer(
                 f'🪪 Ваше имя RU: {data["nameRu"]}\n'
@@ -1000,9 +998,8 @@ async  def proverka_no(callback: CallbackQuery, state: FSMContext, bot: Bot):
     data = await state.get_data()
     await callback.message.edit_text(
                 f'🪪 Ваше имя RU: {data["nameRu"]}\n🪪 Ваше имя EN: {data["nameEn"]}\n☎️ Ваш Телефон: {data["tel"]}\n'
-                f'🪪 Ваши инициалы: {data["idn"]}\n📫 Ваши Контакты: {data["mailcontact"]}\n🪆 Вашу Роль: {data["role"]}\n'
-                f'Серийный номер первой камеры: {data["serial1"]}\nСерийный номер второй камеры: {data["serial2"]}\n'
-                f'Серийный номер третьей камеры: {data["serial3"]}\nВсе верно?', reply_markup=kb.edit)
+                f'🪪 Ваши инициалы: {data["idn"]}\n📫 Ваши Контакты: {data["mailcontact"]}\n🪆 Вашу Роль: {data["role"]}\n\n'
+                f'Все верно?', reply_markup=kb.edit)
 
 #-----------------------------------------------------------------------------------------------------------------------
 #   Меню редактирования своих данных
@@ -1069,16 +1066,17 @@ async  def register_mailcontact2(callback_query: types.CallbackQuery, state: FSM
     await bot.edit_message_reply_markup(chat_id=callback_query.from_user.id, message_id=callback_query.message.message_id, reply_markup=None)
     await state.set_state(Register.mailcontact2)
     data = await state.get_data()
-    await callback_query.message.answer(text=f'📫 Исправьте ваши Контакты  по которым с вами можно связаться, почта или социальные сети\n'
-                              f'сейчас ваши Контакты такие: 📫 Ваши Контакты: {data["mailcontact"]}')
+    await callback_query.message.answer(text=f'Исправьте ваши Контакты  по которым с вами можно связаться, почта или социальные сети\n'
+                              f'сейчас ваши Контакты такие:\n\n📫 {data["mailcontact"]}')
 
 @router.message(Register.mailcontact2)
 async  def register_mailcontact2(message: Message, state: FSMContext):
     await state.update_data(mailcontact=message.text)
     await state.set_state(Register.verefy)
     data = await state.get_data()
-    await message.answer(text=f'Подтвердите изменения.\n'
-                              f'Сейчас ваши Контакты такие: 📫  {data["mailcontact"]}', reply_markup=kb.getphoto)
+    text = (f"{Texts.Messages.DONE}\n" 
+            f'\nСейчас ваши Контакты такие:\n\n📫  {data["mailcontact"]}')
+    await message.answer(text, reply_markup=kb.getphoto)
 
 @router.callback_query(F.data =='phone')
 async  def edit_tel(callback_query: types.CallbackQuery, state: FSMContext, bot: Bot):
@@ -1092,13 +1090,11 @@ async  def edit_tel(callback_query: types.CallbackQuery, state: FSMContext, bot:
     await send_typing_and_message(
         message.chat.id, bot,
         f'📫 Исправьте ваш телефон\n'
-             f'сейчас ваш телефон такой: ☎️ Ваши телефон: {data["tel"]}',
+             f'сейчас ваш телефон такой:\n☎️ Ваш телефон: {data["tel"]}',
         state, reply_markup=kb.get_tel
     )
     await state.set_state(Register.tel)
     edit = 1
-
-# @router.message(Register.tel2)
 
 
 #Возникает ошибка, проверить изменение роли
@@ -1137,7 +1133,7 @@ async def proverka_yes(callback: CallbackQuery, state: FSMContext, bot: Bot):
     data = await state.get_data()
     try:
         await rq.set_item(data)
-        await callback.message.answer("Данные добавлены в базу данных, спасибо за регистрацию", reply_markup=ReplyKeyboardRemove())
+        await callback.message.answer(text=Texts.Messages.REG_SUCCESS, reply_markup=ReplyKeyboardRemove())
         await fu.number_row(data)
         await state.clear()
 
