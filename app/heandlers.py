@@ -197,7 +197,7 @@ async def delete_all_previous_messages(chat_id: int, state: FSMContext, bot: Bot
     """Удаление всех сообщений из истории и очистка хранилища"""
     data = await state.get_data()
     messages_to_delete = data.get("message_history", [])
-    print(messages_to_delete)
+    print(f'Бот: {messages_to_delete}')
     # Удаляем все сообщения из истории
     for msg_id in messages_to_delete:
         await delete_message_safe(chat_id, msg_id, bot)
@@ -625,7 +625,6 @@ async def register_tel(message: Message, state: FSMContext, bot: Bot):
     if phone and edit !=1:
         data = await state.get_data()
         await delete_all_previous_messages(message.chat.id, state, bot)
-        # await message.answer(f"Номер из контакта: {phone}", reply_markup=types.ReplyKeyboardRemove())
         await state.update_data(tel=phone)
         await send_typing_and_message(
             message.chat.id, bot,
@@ -665,7 +664,6 @@ async def validate_phone(message: Message, state: FSMContext, bot: Bot):
     if formatted and edit !=1:
         await delete_all_previous_messages(message.chat.id, state, bot)
         await state.update_data(tel=formatted)
-        # await message.answer(f"Валидный номер: {formatted}", reply_markup=ReplyKeyboardRemove())
         await send_typing_and_message(
             message.chat.id, bot,
             f"✅ Принято: {formatted}\n\n"
@@ -677,6 +675,16 @@ async def validate_phone(message: Message, state: FSMContext, bot: Bot):
             f'Выберите вашу роль, фотограф или редактор',
             state, reply_markup=await kb.roles()
         )
+        # await message.answer(
+        #     f"✅ Принято: {formatted}\n\n"
+        #     f'Ваше имя RU: {data["nameRu"]}\n'
+        #     f'Ваше имя EN: {data["nameEn"]}\n'
+        #     f'Ваши 🪪 Инициалы: {data["idn"]}\n'
+        #     f'Ваши 📫 Контакты: {data["mailcontact"]}\n'
+        #     f'Ваш номер ☎️ Телефона {formatted}\n\n'
+        #     f'Выберите вашу роль, фотограф или редактор',
+        #     reply_markup=await kb.roles()
+        # )
         await state.set_state(Register.role)
     elif formatted and edit == 1:
         await delete_all_previous_messages(message.chat.id, state, bot)
@@ -698,12 +706,29 @@ async def validate_phone(message: Message, state: FSMContext, bot: Bot):
     #     await message.answer(f'❌ Неверный формат номера.\n'
     #                          f'Пожалуйста, введите корректный номер ☎️ Телефона в формате +71234567890, или поделитесь контактом нажав на кнопку', reply_markup=kb.get_tel)
 
+#Удаление сообщений пока не нажмётся кнопка с ролью
+@router.message(Register.role, ~F.command, )
+async def handle_start_state(message: types.Message, bot: Bot):
+    if not message.text or not message.text.startswith('/') or not message.text.join('отмена'):
+    # """Удаляем все сообщения кроме команд"""
+        try:
+            # Удаляем сообщение пользователя
+            await message.delete()
+
+            # Отправляем уведомление и удаляем его через 3 секунды
+            notify = await message.answer("⚠️ Нужно выбрать из предложенных вариантов.")
+            await asyncio.sleep(4)
+            await notify.delete()
+
+        except Exception as e:
+            print(f"Ошибка при обработке сообщения: {e}")
+
 
 #Если выбрана роль не фотограф
 @router.callback_query(Register.role, F.data != 'Фотограф')
 async def select_rol(callback_query: types.CallbackQuery, state: FSMContext,  bot: Bot):
     message = callback_query.message
-    await mes_user_history(message, state)
+    # await mes_user_history(message, state)
     await delete_all_previous_messages(message.chat.id, state, bot)
     #удаляем инлайн клавиатуру по callback_query
     # await bot.edit_message_reply_markup(chat_id=callback_query.from_user.id, message_id=callback_query.message.message_id, reply_markup=None)
@@ -730,7 +755,7 @@ async def select_rol(callback_query: types.CallbackQuery, state: FSMContext,  bo
 @router.callback_query(Register.role, F.data == 'Фотограф')
 async def select_rol(callback_query: types.CallbackQuery, state: FSMContext, bot: Bot):
     message = callback_query.message
-    await mes_user_history(message, state)
+    # await mes_user_history(message, state)
     await bot.edit_message_reply_markup(chat_id=callback_query.from_user.id, message_id=callback_query.message.message_id, reply_markup=None)
     await state.update_data(role=callback_query.data,
                             photofile1='Не загружена', photofile2='Не загружена', photofile3='Не загружена',
@@ -892,6 +917,22 @@ async def many_camer(message: types.Message, state: FSMContext, bot: Bot):
         state, reply_markup=kb.getphoto
     )
 
+#Удаление сообщений пока не нажмётся кнопка
+@router.message(Register.verefy, ~F.command, ~F.text.in_({'Завершить отправку'}))
+async def handle_start_state(message: types.Message, bot: Bot):
+    if not message.text or not message.text.startswith('/') or not message.text.join('отмена'):
+    # """Удаляем все сообщения кроме команд"""
+        try:
+            # Удаляем сообщение пользователя
+            await message.delete()
+
+            # Отправляем уведомление и удаляем его через 3 секунды
+            notify = await message.answer("⚠️ Работают только кнопки под сообщением.")
+            await asyncio.sleep(3)
+            await notify.delete()
+
+        except Exception as e:
+            print(f"Ошибка при обработке сообщения: {e}")
 
 # Отвечаем на документ его ID
 # @router.message(F.document)

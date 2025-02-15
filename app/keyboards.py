@@ -57,7 +57,7 @@ edit = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text='Изменить ваши инициалы', callback_data='idn')],
     [InlineKeyboardButton(text='Изменить ваши контакты', callback_data='contact')],
     [InlineKeyboardButton(text='Изменить вашу роль', callback_data='role')],
-    [InlineKeyboardButton(text='Оставить так', callback_data='yes')]])
+    [InlineKeyboardButton(text='Оставить так и подтвердить', callback_data='yes')]])
 
 cancel = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text=Buttons.YES, callback_data='yes')],
