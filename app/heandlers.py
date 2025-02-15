@@ -678,7 +678,7 @@ async def validate_phone(message: Message, state: FSMContext, bot: Bot):
             state, reply_markup=await kb.roles()
         )
         await state.set_state(Register.role)
-    if formatted and edit == 1:
+    elif formatted and edit == 1:
         await delete_all_previous_messages(message.chat.id, state, bot)
         await state.update_data(tel=formatted)
         await state.set_state(Register.verefy)
@@ -690,30 +690,6 @@ async def validate_phone(message: Message, state: FSMContext, bot: Bot):
             state, reply_markup=kb.getphoto
         )
         edit = 0
-
-    # phone_text = message.text
-    # # Убедиться, что у объекта message.contact есть атрибут 'phone_number'
-    # if message.contact and hasattr(message.contact, 'phone_number'):
-    #     phone_key = message.contact.phone_number
-    # else:
-    #     phone_key = None
-    # # Проверка на корректный номер ☎️ Телефона с помощью регулярного выражения
-    # if re.match(r'^\+7\d{10}$', phone_text or phone_key):
-    #     if message.contact:  # Добавлено условие для проверки наличия объекта message.contact
-    #         await state.update_data(tel=message.contact.phone_number)
-    #     else:
-    #         await state.update_data(tel=message.text)
-    #     await state.set_state(Register.role)
-    #     await send_typing_and_message(
-    #         message.chat.id, bot,
-    #         'Спасибо',
-    #         state, reply_markup=ReplyKeyboardRemove()
-    #     )
-    #     await send_typing_and_message(
-    #         message.chat.id, bot,
-    #         'Выберите вашу роль, фотограф или редактор',
-    #         state, reply_markup=await kb.roles()
-    #     )
     else:
         await send_typing_and_message(
             message.chat.id, bot,
