@@ -1,3 +1,7 @@
+from idlelib.help import HelpText
+from symtable import Class
+
+
 class Messages:
     # Основные команды
     START = "🚀 Добро пожаловать, {name}!"
@@ -12,7 +16,6 @@ class Messages:
              "<code>Доступные команды:</code>\n\n"
              "🆘 /help - справка\n"
              "🗄 /register - регистрация")
-    HELP = "Вы попали в раздел помощи, он пока в разработке 😴😱😜😂😝"
     REGISTER = "Введите ваше ФИО на русском языке"
     CANCEL = "Отмена регистрации"
 
@@ -64,6 +67,13 @@ class Buttons:
     FIO = "ФИО"
     CONTACTS = "Контакты"
     PHOTO = "Фотографии"
+
+class Help:
+    MAIN = "Вы попали в раздел помощи, он пока в разработке 😴😱😜😂😝"
+    NAME ="помощь по ФИО"
+    IDN = "помощь по инициалам"
+    TEL = "помощь по телефону"
+    PHOTO = "помощь по фото"
 
 
 class StatesText:

@@ -22,7 +22,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.enums import ContentType, ChatAction
 from aiogram.enums import ParseMode
 #Импортировали тексты из отдельного файла
-from Texts import Messages, Buttons, StatesText
+from Texts import Messages, Buttons, StatesText, Help
 from app.generate import ai_generate
 
 
@@ -47,7 +47,7 @@ class StartState(StatesGroup):
 
 
 class Register(StatesGroup):
-    last_bot_message_id = State()
+    # last_bot_message_id = State()
     tg_id = State()
     nameRu = State()
     nameEn = State()
@@ -61,7 +61,7 @@ class Register(StatesGroup):
     serial1 = State()
     serial2 = State()
     serial3 = State()
-    verefy = State()
+    verify = State()
     nameRu2 = State()
     nameEn2 = State()
     idn2 = State()
@@ -96,9 +96,9 @@ async def cmd_start(message: Message, state: FSMContext, bot: Bot,):
                                # reply_markup=kb.main)
     )
     await bot.send_chat_action(message.chat.id, ChatAction.TYPING)
-    await asyncio.sleep(3)
+    await asyncio.sleep(1)
     await message.answer(text=Messages.INTRO, parse_mode=ParseMode.HTML)
-    # Записываем в БД пользоватлея с его id
+    # Записываем в БД пользователя с его id
     await rq.set_user(message.from_user.id)
 
 # отправляем методом ответа на сообщение стикер по его ID
@@ -113,7 +113,7 @@ async def  cmd_help(message: Message, state: FSMContext, bot: Bot):
     await mes_user_history(message, state)
     await send_typing_and_message(
         message.chat.id, bot, # Передаём chat.id и bot как позиционный аргумент
-        text=Messages.HELP, # Передаём text как именованный аргумент
+        text=Help.MAIN, # Передаём text как именованный аргумент
         state=state # Передаём state как именованный аргумент, указали state явно
     )
 
@@ -429,7 +429,7 @@ async def cancel_heandler(message: types.Message, state: FSMContext) -> None:
         await message.answer('Возвращаемся отправке второй фотографии.\nОтправьте файл со второй камеры или отмените полностью регистрацию и напишите "отмена"')
         await state.set_state(Register.photofile2)
         return
-    if current_state == Register.verefy:
+    if current_state == Register.verify:
         await message.answer('Возвращаемся отправке третьей фотографии.\nОтправьте файл с третьей камеры или отмените полностью регистрацию и напишите "отмена"')
         await state.set_state(Register.photofile3)
         return
@@ -663,7 +663,7 @@ async def register_tel(message: Message, state: FSMContext, bot: Bot):
             f'☎️ {data["tel"]}',
             state, reply_markup=kb.getphoto
         )
-        await state.set_state(Register.verefy)
+        await state.set_state(Register.verify)
         edit = 0
 
 
@@ -703,7 +703,7 @@ async def validate_phone(message: Message, state: FSMContext, bot: Bot):
     elif formatted and edit == 1:
         await delete_all_previous_messages(message.chat.id, state, bot)
         await state.update_data(tel=formatted)
-        await state.set_state(Register.verefy)
+        await state.set_state(Register.verify)
         await send_typing_and_message(
             message.chat.id, bot,
             f'Подтвердите изменения\n'
@@ -763,7 +763,7 @@ async def select_rol(callback_query: types.CallbackQuery, state: FSMContext,  bo
             f'Спасибо подтвердите отправку данных',
             state, reply_markup=kb.getphoto
         )
-    await state.set_state(Register.verefy)
+    await state.set_state(Register.verify)
 
 #Если выбрали роль Фотограф
 @router.callback_query(Register.role, F.data == 'Фотограф')
@@ -787,7 +787,11 @@ async def handle_media_group(message: Message, bot: Bot, state: FSMContext):
     media_group_id = message.media_group_id
     username = message.from_user.username
     data = await state.get_data()
-
+    await send_typing_and_message(
+        message.chat.id, bot,
+        f'Обрабатываю...',
+        state
+    )
     await mes_user_history(message, state)
     try:
         if media_group_id not in media_groups_cache:
@@ -822,7 +826,7 @@ async def handle_media_group(message: Message, bot: Bot, state: FSMContext):
             await message.answer("❌ Максимум 3 файла в группе!")
             return
 
-        await asyncio.sleep(3)
+        await asyncio.sleep(1)
 
         if not group_data["invalid"] and not group_data["processed"] and data["serial1"] == 'NoSerial':
             group_data["processed"] = True
@@ -860,12 +864,13 @@ async def handle_media_group(message: Message, bot: Bot, state: FSMContext):
             )
             await send_typing_and_message(
             message.chat.id, bot,
-                f'Спасибо, вы отправили {i + 1} фотографий, этого достаточно, завершите регистрацию нажав на кнопку внизу.',
+                f'Спасибо, вы отправили {i + 1} фотографий, этого достаточно для двух камер, завершите регистрацию нажав на кнопку внизу.\n\n'
+                f'Если у вас три камеры, пришлите еще один файл с третьего фотоаппарата.',
                 state, reply_markup=kb.getphoto)
             if i + 1  == 2:
                 await state.set_state(Register.photofile3)
             else:
-                await state.set_state(Register.verefy)
+                await state.set_state(Register.verify)
 
 
     except Exception as e:
@@ -915,12 +920,12 @@ async def register_photofile(message: types.Message, state: FSMContext, bot: Bot
         await save_document(message, bot)
         await message.answer('Спасибо вы отправили 3 фотографии, этого достаточно',
                              reply_markup=kb.getphoto)
-        await state.set_state(Register.verefy)
+        await state.set_state(Register.verify)
     else:
-        await state.set_state(Register.verefy)
+        await state.set_state(Register.verify)
 
 
-@router.message(Register.verefy, F.document)
+@router.message(Register.verify, F.document)
 async def many_camer(message: types.Message, state: FSMContext, bot: Bot):
     await mes_user_history(message, state)
     await delete_all_previous_messages(message.chat.id, state, bot)
@@ -932,7 +937,7 @@ async def many_camer(message: types.Message, state: FSMContext, bot: Bot):
     )
 
 #Удаление сообщений пока не нажмётся кнопка
-@router.message(Register.verefy, ~F.command, ~F.text.in_({'Завершить отправку'}))
+@router.message(Register.verify, ~F.command, ~F.text.in_({'Завершить отправку'}))
 async def handle_start_state(message: types.Message):
     if not message.text or not message.text.startswith('/') or not message.text.join('отмена'):
     # """Удаляем все сообщения кроме команд"""
@@ -953,11 +958,11 @@ async def handle_start_state(message: types.Message):
 # async def get_document(message: Message):
 #     await message.answer(f'ID документа: {message.document.file_id}')
 
-@router.message(Register.verefy, F.text == 'Завершить отправку')
+@router.message(Register.verify, F.text == 'Завершить отправку')
 @router.message(Register.photofile1, F.text == 'Завершить отправку')
 @router.message(Register.photofile2, F.text == 'Завершить отправку')
 @router.message(Register.photofile3, F.text == 'Завершить отправку')
-async  def verefy(message: types.Message, state: FSMContext, bot: Bot):
+async  def verify(message: types.Message, state: FSMContext, bot: Bot):
         await mes_user_history(message, state)
         await delete_all_previous_messages(message.chat.id, state, bot)
         await send_typing_and_message(
@@ -1044,7 +1049,7 @@ async def register_nameRu2(callback_query: types.CallbackQuery, state: FSMContex
 @router.message(Register.nameRu2)
 async def register_nameRu2(message: Message, state: FSMContext):
     await state.update_data(nameRu=message.text)
-    await state.set_state(Register.verefy)
+    await state.set_state(Register.verify)
     await message.answer('Подтвердите изменения',
                          reply_markup=kb.getphoto)
 
@@ -1060,7 +1065,7 @@ async def register_nameEn2(callback_query: types.CallbackQuery, state: FSMContex
 @router.message(Register.nameEn2)
 async def register_nameEn2(message: Message, state: FSMContext):
     await state.update_data(nameEn=message.text)
-    await state.set_state(Register.verefy)
+    await state.set_state(Register.verify)
     await message.answer('Подтвердите изменения',
                              reply_markup=kb.getphoto)
 
@@ -1086,7 +1091,7 @@ async  def register_idb2(message: Message, state: FSMContext):
 
         # Сохраняем очищенные данные
         await state.update_data(idn=clean_idn)
-        await state.set_state(Register.verefy)
+        await state.set_state(Register.verify)
         await message.answer('Подтвердите изменения', reply_markup=kb.getphoto)
 
 
@@ -1102,7 +1107,7 @@ async  def register_mailcontact2(callback_query: types.CallbackQuery, state: FSM
 @router.message(Register.mailcontact2)
 async  def register_mailcontact2(message: Message, state: FSMContext):
     await state.update_data(mailcontact=message.text)
-    await state.set_state(Register.verefy)
+    await state.set_state(Register.verify)
     data = await state.get_data()
     text = (f"{Texts.Messages.DONE}\n" 
             f'\nСейчас ваши Контакты такие:\n\n📫  {data["mailcontact"]}')
@@ -1138,7 +1143,7 @@ async def select_rol2(callback_query: types.CallbackQuery, state: FSMContext, bo
 @router.callback_query(Register.role2)
 async def select_rol2(callback_query: types.CallbackQuery, state: FSMContext):
     await state.update_data(role=callback_query.data)
-    await state.set_state(Register.verefy)
+    await state.set_state(Register.verify)
     await callback_query.message.answer('Подтвердите изменения', reply_markup=kb.getphoto)
     await state.clear()
 
