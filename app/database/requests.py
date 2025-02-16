@@ -54,14 +54,12 @@ async def set_item_sn(serial: str):
             await session.commit()
 
 # Пишем запрос на вывод данных
-
 async def get_item():
     async with async_session() as session:
         items = await session.scalars(select(Item))
         return items
 
 # Пишем удаление из базы данных
-
 async def del_item(id):
     async with async_session() as session:
         await session.execute(delete(Item).where(Item.id == id))

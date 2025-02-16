@@ -112,9 +112,9 @@ async def cmd_start(message: Message, state: FSMContext, bot: Bot,):
 async def  cmd_help(message: Message, state: FSMContext, bot: Bot):
     await mes_user_history(message, state)
     await send_typing_and_message(
-        message.chat.id, bot,
-        'Вы попали в раздел помощи, он пока в разработке 😴😱😜😂😝',
-    state
+        message.chat.id, bot, # Передаём chat.id и bot как позиционный аргумент
+        text=Messages.HELP, # Передаём text как именованный аргумент
+        state=state # Передаём state как именованный аргумент, указали state явно
     )
 
 
