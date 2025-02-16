@@ -1025,7 +1025,7 @@ async  def verify(message: types.Message, state: FSMContext, bot: Bot):
                 f'Все верно?', reply_markup=kb.proverka)
 
 
-@router.callback_query(F.data == 'no')
+@router.callback_query(Register.verify, F.data == 'no')
 async  def proverka_no(callback: CallbackQuery, state: FSMContext, bot: Bot):
     # удаляем инлайн клавиатуру по callback
     await bot.edit_message_reply_markup(chat_id=callback.from_user.id, message_id=callback.message.message_id, reply_markup=None)
@@ -1157,7 +1157,7 @@ async def select_rol2(callback_query: types.CallbackQuery, state: FSMContext):
 #   Конец меню редактирования своих данных
 #-----------------------------------------------------------------------------------------------------------------------
 
-@router.callback_query(F.data == 'yes')
+@router.callback_query(Register.verify, F.data == 'yes')
 async def proverka_yes(callback: CallbackQuery, state: FSMContext, bot: Bot):
     message = callback.message
     await delete_all_previous_messages(message.chat.id, state, bot)
