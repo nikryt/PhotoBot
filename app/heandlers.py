@@ -74,6 +74,10 @@ class Gen(StatesGroup):
     wait = State()
     result = State()
 
+class Find(StatesGroup):
+    wait = State()
+    send = State()
+
 # Переменная для хранения message_id последнего сообщения бота
 # last_bot_message_id = None
 
@@ -1249,6 +1253,18 @@ async def generating(message: Message, state: FSMContext):
 @router.message(Gen.wait)
 async def stop_flood(message: Message):
     await message.answer('Подожди ты, не так быстро, эй!')
+
+#Поиск по таблице
+@router.message(F.text == "найди")
+async def deepseek(message: Message, state: FSMContext):
+    await message.answer('Напиши что ты хочешь найти?')
+    await state.set_state(Find.send)
+
+@router.message(Find.send)
+async def find_text(message: Message, state: FSMContext):
+    result = await fu.find_text_in_sheet(text=message.text)
+    await message.answer(f'Вот что я нашел: {result}')
+    await state.clear()
 
 
 

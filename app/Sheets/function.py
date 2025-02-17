@@ -4,6 +4,8 @@ from gspread_asyncio import AsyncioGspreadClient, AsyncioGspreadSpreadsheet, Asy
 
 from google.oauth2.service_account import Credentials
 from sqlalchemy.orm import defer
+from typing import Optional, Tuple, List
+from gspread_asyncio import AsyncioGspreadClient, AsyncioGspreadWorksheet
 
 def get_creds():
     # To obtain a service account JSON file, follow these steps:
@@ -51,6 +53,77 @@ async def number_row(data: dict):
         values = [[f'sn{data["serial3"]}', f'{data["nameRu"]}', f'{data["nameEn"]}', f'{data["idn"]}', f'{data["mailcontact"]}', f'{data["tel"]}', f'{data["role"]}']]
         await sh.update(values, "A{}".format(next_row))
 
+
+async def find_text_in_sheet(
+        text: str,
+        spreadsheet_name: str = "Архипелаг 2024",
+        sheet_name: str = "Расписание фото"
+) -> List[Tuple[int, int]]:
+    """
+    Ищет все вхождения текста в указанной таблице и листе.
+    Возвращает список координат (строка, колонка) в 1-индексации.
+    """
+    agc: AsyncioGspreadClient = await agcm.authorize()
+    spreadsheet = await agc.open(spreadsheet_name)
+    worksheet: AsyncioGspreadWorksheet = await spreadsheet.worksheet(sheet_name)
+
+    # Получаем все данные листа
+    all_values = await worksheet.get_all_values()
+
+    # Подготавливаем текст для поиска
+    search_text = text.strip().lower()
+    matches = []
+
+    # Ищем все совпадения
+    for row_num, row in enumerate(all_values, start=1):
+        for col_num, value in enumerate(row, start=1):
+            if value.strip().lower() == search_text:
+                matches.append((row_num, col_num))
+
+    return matches
+
+# async def find_text_in_sheet(
+#         text: str,
+#         spreadsheet_name: str = "Архипелаг 2024",
+#         sheet_name: str = "Расписание фото"
+# ) -> Optional[Tuple[int, int]]:
+#     """
+#     Ищет текст в указанной таблице и листе.
+#     Возвращает координаты (строка, колонка) в 1-индексации или None.
+#     """
+#     agc: AsyncioGspreadClient = await agcm.authorize()
+#     spreadsheet = await agc.open(spreadsheet_name)
+#     worksheet: AsyncioGspreadWorksheet = await spreadsheet.worksheet(sheet_name)
+#
+#     # Получаем все данные листа
+#     all_values = await worksheet.get_all_values()
+#
+#     # Ищем точное совпадение с учетом пробелов
+#     search_text = text.strip().lower()
+#
+#     for row_num, row in enumerate(all_values, start=1):
+#         for col_num, value in enumerate(row, start=1):
+#             if value.strip().lower() == search_text:
+#                 return (row_num, col_num)
+#
+#     return None
+
+# async def example_usage():
+#     # Поиск в таблице по умолчанию
+#     result = await find_text_in_sheet("Персональный код AIV")
+#     print(f"Результат поиска: {result}")
+
+    # # Поиск в другой таблице и листе
+    # result_custom = await find_text_in_sheet(
+    #     text="Другой текст",
+    #     spreadsheet_name="ДругаяТаблица",
+    #     sheet_name="ДругойЛист"
+    # )
+    # print(f"Кастомный поиск: {result_custom}")
+
+# Запуск асинхронного кода
+# import asyncio
+# asyncio.run(example_usage())
 
 # async def number_row(item: dict):
 #     agc = await agcm.authorize()
