@@ -58,7 +58,7 @@ async def find_text_in_sheet(
         text: str,
         spreadsheet_name: str = "Архипелаг 2024",
         sheet_name: str = "Расписание фото"
-) -> List[Tuple[int, int]]:
+) -> List[Tuple[int, int, str]]:
     """
     Ищет все вхождения текста в указанной таблице и листе.
     Возвращает список координат (строка, колонка) в 1-индексации.
@@ -77,8 +77,49 @@ async def find_text_in_sheet(
     # Ищем все совпадения
     for row_num, row in enumerate(all_values, start=1):
         for col_num, value in enumerate(row, start=1):
-            if value.strip().lower() == search_text:
-                matches.append((row_num, col_num))
+            if value.strip().lower().startswith(search_text.lower()) == search_text:
+                # Добавляем оригинальное значение ячейки
+                matches.append((row_num, col_num, value.strip()))
+
+
+    return matches
+
+
+async def find_cod(
+        prefix: str,
+        spreadsheet_name: str = "Архипелаг 2024",
+        sheet_name: str = "Расписание фото",
+        case_sensitive: bool = False
+) -> List[Tuple[int, int, str]]:
+    """
+    Ищет ячейки, начинающиеся с указанного префикса.
+    Возвращает список кортежей: (строка, колонка, полное значение).
+    """
+    agc: AsyncioGspreadClient = await agcm.authorize()
+    spreadsheet = await agc.open(spreadsheet_name)
+    worksheet: AsyncioGspreadWorksheet = await spreadsheet.worksheet(sheet_name)
+
+    all_values = await worksheet.get_all_values()
+    matches = []
+
+    # Подготовка префикса для сравнения
+    search_prefix = prefix.strip()
+    if not case_sensitive:
+        search_prefix = search_prefix.lower()
+
+    for row_num, row in enumerate(all_values, start=1):
+        for col_num, value in enumerate(row, start=1):
+            # Очистка значения и проверка
+            cleaned_value = value.strip()
+            if not cleaned_value:
+                continue
+
+            # Приведение к нижнему регистру если нужно
+            compare_value = cleaned_value if case_sensitive else cleaned_value.lower()
+            target_prefix = search_prefix if case_sensitive else search_prefix.lower()
+
+            if compare_value.startswith(target_prefix):
+                matches.append((row_num, col_num, cleaned_value))
 
     return matches
 

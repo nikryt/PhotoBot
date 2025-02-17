@@ -1261,10 +1261,16 @@ async def deepseek(message: Message, state: FSMContext):
     await state.set_state(Find.send)
 
 @router.message(Find.send)
-async def find_text(message: Message, state: FSMContext):
-    result = await fu.find_text_in_sheet(text=message.text)
+async def find_cod(message: Message, state: FSMContext):
+    result = await fu.find_cod(prefix=message.text)
     await message.answer(f'Вот что я нашел: {result}')
     await state.clear()
+
+# @router.message(Find.send)
+# async def find_text(message: Message, state: FSMContext):
+#     result = await fu.find_text_in_sheet(text=message.text)
+#     await message.answer(f'Вот что я нашел: {result}')
+#     await state.clear()
 
 
 
