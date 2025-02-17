@@ -54,6 +54,36 @@ async def number_row(data: dict):
         await sh.update(values, "A{}".format(next_row))
 
 
+async def write_done(row: int, col: int) -> Optional[str]:
+    """Записывает 'СНЯТО' в ячейку под указанной"""
+    try:
+        agc = await agcm.authorize()
+        wks = await agc.open("Архипелаг 2024")
+        sh = await wks.worksheet("Расписание фото")
+        await sh.update_cell(row + 1, col, "СНЯТО")
+        return "✅ СНЯТО успешно записано!"
+    except Exception as e:
+        print(f"Google Sheets error: {e}")
+        return None
+
+async def write_cancel(row: int, col: int) -> Optional[str]:
+    """Записывает 'СНЯТО' в ячейку под указанной"""
+    try:
+        agc = await agcm.authorize()
+        wks = await agc.open("Архипелаг 2024")
+        sh = await wks.worksheet("Расписание фото")
+        await sh.update_cell(row + 1, col, "ОТМЕНА")
+        return "✅ ОТМЕНА успешно записано!"
+    except Exception as e:
+        print(f"Google Sheets error: {e}")
+        return None
+
+
+
+
+    #-------------------------------------------------------------------------------------------------------------------
+    # Функции поиска ячеек
+    #-------------------------------------------------------------------------------------------------------------------
 async def find_text_in_sheet(
         text: str,
         spreadsheet_name: str = "Архипелаг 2024",

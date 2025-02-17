@@ -24,18 +24,6 @@ back_cancel = InlineKeyboardMarkup(inline_keyboard=[
     InlineKeyboardButton(text=Buttons.CANCEL, callback_data='cancel')]
 ])
 
-# Создаем клавиатуру с роями из базы данных
-async def roles():
-    all_roles = await get_roles()
-    keyboard = InlineKeyboardBuilder()
-# Достали все роли и итерируем их
-    for role in all_roles:
-#       Передача в callback_data roles_1-2-3-4...
-#       keyboard.add(InlineKeyboardButton(text=role.name, callback_data=f"roles_{role.id}"))
-        keyboard.add(InlineKeyboardButton(text=role.name, callback_data=role.name))
-        # print(InlineKeyboardButton(text=role.name, callback_data=role.name))
-    return keyboard.adjust(2).as_markup()
-
 fio = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text='На русском', callback_data='ru')],
     [InlineKeyboardButton(text='На  английском', callback_data='en')],
@@ -63,7 +51,26 @@ cancel = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text=Buttons.YES, callback_data='yes')],
     [InlineKeyboardButton(text=Buttons.NO, callback_data='no')]])
 
-# Кнопка как функуия в которую передаётся словарь и возвращаемые значения из места где её вызывают
+
+    # ------------------------------------------------------------------------------------------------------------------
+    # Клавиатуры, которые генерируются функциями
+    # ------------------------------------------------------------------------------------------------------------------
+
+
+# Создаем клавиатуру с роями из базы данных
+async def roles():
+    all_roles = await get_roles()
+    keyboard = InlineKeyboardBuilder()
+# Достали все роли и итерируем их
+    for role in all_roles:
+#       Передача в callback_data roles_1-2-3-4...
+#       keyboard.add(InlineKeyboardButton(text=role.name, callback_data=f"roles_{role.id}"))
+        keyboard.add(InlineKeyboardButton(text=role.name, callback_data=role.name))
+        # print(InlineKeyboardButton(text=role.name, callback_data=role.name))
+    return keyboard.adjust(2).as_markup()
+
+
+# Кнопка как функции, в которую передаётся словарь и возвращаемые значения из места где её вызывают
 async def edit_item(
         *,
         btns: dict[str, str],
@@ -83,6 +90,25 @@ task = InlineKeyboardMarkup(inline_keyboard=[
     ]
 ])
 
+
+def create_task_keyboard(row: int, col: int) -> InlineKeyboardMarkup:
+    """
+    Создаёт клавиатуру для задачи с динамическими параметрами
+    :param row: Номер строки в таблице
+    :param col: Номер колонки в таблице
+    """
+    builder = InlineKeyboardBuilder()
+
+    builder.button(
+        text=Buttons.DONE,
+        callback_data=f"done:{row}:{col}"
+    )
+    builder.button(
+        text=Buttons.CANCEL,
+        callback_data=f"cancel:{row}:{col}"
+    )
+
+    return builder.as_markup()
 
 # edit_item = InlineKeyboardMarkup(inline_keyboard=[
 #     [InlineKeyboardButton(text='Удалить', callback_data='del')],

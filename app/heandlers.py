@@ -1280,7 +1280,6 @@ async def find_all_text_code(message: Message, state: FSMContext):
         await state.clear()
         return
 
-
     labels = ["Время", "Место", "Название"]  # Кастомные названия для строк
     # Отправляем общее количество результатов
     await message.answer(f"🔍 Найдено результатов: {len(filtered_results)}")
@@ -1304,12 +1303,63 @@ async def find_all_text_code(message: Message, state: FSMContext):
         #         if val:
         #             response += f"   ▪️ {label}: {val}\n"
             response += f"✅ Персональный код: {value}\n\n"
-
-            await message.answer(response, reply_markup=kb.task)
+            # Создаем клавиатуру с динамическими параметрами
+            keyboard = kb.create_task_keyboard(row=row, col=col)
+            await message.answer(response, reply_markup=keyboard)
             await asyncio.sleep(0.3)  # Задержка между сообщениями
 
     await state.clear()
 
+
+@router.callback_query(F.data.startswith('done'))
+async def handle_done_callback(callback: CallbackQuery):
+
+    try:
+        _, row_str, col_str = callback.data.split(':')
+        row = int(row_str)
+        col = int(col_str)
+
+        # Добавим логирование для отладки
+        print(f"DEBUG: Writing to row={row}, col={col}")
+
+        # Вызов метода из менеджера
+        result = await fu.write_done(row, col)
+
+        if result:
+            await callback.answer(result)
+        else:
+            await callback.answer("⚠️ Ошибка записи в таблицу")
+
+    except ValueError:
+        await callback.answer("⚠️ Некорректные данные")
+    except Exception as e:
+        await callback.answer(f"⚠️ Системная ошибка: {str(e)}")
+        print(f"Callback error: {e}")
+
+@router.callback_query(F.data.startswith('cancel'))
+async def handle_done_callback(callback: CallbackQuery):
+
+    try:
+        _, row_str, col_str = callback.data.split(':')
+        row = int(row_str)
+        col = int(col_str)
+
+        # Добавим логирование для отладки
+        print(f"DEBUG: Writing to row={row}, col={col}")
+
+        # Вызов метода из менеджера
+        result = await fu.write_cancel(row, col)
+
+        if result:
+            await callback.answer(result)
+        else:
+            await callback.answer("⚠️ Ошибка записи в таблицу")
+
+    except ValueError:
+        await callback.answer("⚠️ Некорректные данные")
+    except Exception as e:
+        await callback.answer(f"⚠️ Системная ошибка: {str(e)}")
+        print(f"Callback error: {e}")
 
 
 
