@@ -781,6 +781,7 @@ async def select_rol(callback_query: types.CallbackQuery, state: FSMContext, bot
         state, reply_markup=kb.getphoto
     )
     await state.set_state(Register.photofile1)
+
 # Если отправленны фотогарафии группой, то выполняется этот
 @router.message(Register.photofile1, F.content_type.in_({ContentType.DOCUMENT, ContentType.PHOTO}), F.media_group_id)
 async def handle_media_group(message: Message, bot: Bot, state: FSMContext):
@@ -970,7 +971,7 @@ async  def verify(message: types.Message, state: FSMContext, bot: Bot):
             'Спасибо, проверьте ваши данные:',
             state, reply_markup=ReplyKeyboardRemove()
         )
-
+        print(F.data)
         data = await state.get_data()
         if data["photofile3"]  == 'Не загружена' and data["photofile2"]  == 'Не загружена' and data["photofile1"]  == 'Не загружена':
             await message.answer(
@@ -1023,6 +1024,7 @@ async  def verify(message: types.Message, state: FSMContext, bot: Bot):
                 f'2️⃣ Серийный номер второй камеры: {data["serial2"]}\n'
                 f'3️⃣ Серийный номер третьей камеры: {data["serial3"]}\n\n'
                 f'Все верно?', reply_markup=kb.proverka)
+        await state.set_state(Register.verify)
 
 
 @router.callback_query(Register.verify, F.data == 'no')
