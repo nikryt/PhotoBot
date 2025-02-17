@@ -75,6 +75,15 @@ async def edit_item(
             keydoard.add(InlineKeyboardButton(text=text, callback_data=data))
         return keydoard.adjust(*sizes).as_markup()
 
+task = InlineKeyboardMarkup(inline_keyboard=[
+    # Один ряд с двумя кнопками
+    [
+        InlineKeyboardButton(text=Buttons.DONE, callback_data='done'),
+        InlineKeyboardButton(text=Buttons.CANCEL, callback_data='cancel')
+    ]
+])
+
+
 # edit_item = InlineKeyboardMarkup(inline_keyboard=[
 #     [InlineKeyboardButton(text='Удалить', callback_data='del')],
 #     [InlineKeyboardButton(text='Изменить', callback_data='edit')]])

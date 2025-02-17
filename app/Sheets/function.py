@@ -123,7 +123,211 @@ async def find_cod(
 
     return matches
 
+# функция ищет все совпадения по началу слова и исключает точное совпадение без продолжения.
 
+async def find_all_text_code(
+        prefix: str,
+        spreadsheet_name: str = "Архипелаг 2024",
+        sheet_name: str = "Расписание фото",
+        case_sensitive: bool = False
+) -> List[Tuple[int, int, str, List[str]]]:
+    """
+    Ищет все ячейки с указанным префиксом и возвращает:
+    - Координаты (строка, колонка)
+    - Значение ячейки
+    - 3 значения выше (только непустые)
+    """
+    agc: AsyncioGspreadClient = await agcm.authorize()
+    spreadsheet = await agc.open(spreadsheet_name)
+    worksheet: AsyncioGspreadWorksheet = await spreadsheet.worksheet(sheet_name)
+
+    all_values = await worksheet.get_all_values()
+    search_prefix = prefix.strip()
+    matches = []
+
+    if not case_sensitive:
+        search_prefix_lower = search_prefix.lower()
+
+    for row_idx, row in enumerate(all_values):
+        for col_idx, value in enumerate(row):
+            current_value = value.strip()
+            if not current_value:
+                continue
+
+            if case_sensitive:
+                compare_value = current_value
+                target_prefix = search_prefix
+            else:
+                compare_value = current_value.lower()
+                target_prefix = search_prefix_lower
+
+            # Проверяем, что значение начинается с префикса и не равно ему
+            if compare_value.startswith(target_prefix) and compare_value != target_prefix:
+                # Сбор данных выше
+                above_values = []
+                for offset in range(1, 4):
+                    above_row_idx = row_idx - offset
+                    cell_value = ""
+
+                    if above_row_idx >= 0 and col_idx < len(all_values[above_row_idx]):
+                        cell_value = all_values[above_row_idx][col_idx].strip()
+
+                    above_values.append(cell_value)
+
+                # Фильтрация пустых значений
+                filtered_above = [v for v in above_values if v]
+
+                if filtered_above:
+                    matches.append((
+                        row_idx + 1,
+                        col_idx + 1,
+                        current_value,
+                        filtered_above
+                    ))
+
+    return matches
+
+
+#   Функция ищет все совпадения с началом слова
+
+# async def find_all_text_code(
+#         prefix: str,
+#         spreadsheet_name: str = "Архипелаг 2024",
+#         sheet_name: str = "Расписание фото",
+#         case_sensitive: bool = False
+# ) -> List[Tuple[int, int, str, List[str]]]:
+#     """
+#     Ищет все ячейки с указанным префиксом и возвращает:
+#     - Координаты (строка, колонка)
+#     - Значение ячейки
+#     - 3 значения выше (только непустые)
+#     """
+#     agc: AsyncioGspreadClient = await agcm.authorize()
+#     spreadsheet = await agc.open(spreadsheet_name)
+#     worksheet: AsyncioGspreadWorksheet = await spreadsheet.worksheet(sheet_name)
+#
+#     all_values = await worksheet.get_all_values()
+#     search_prefix = prefix.strip()
+#     matches = []
+#
+#     if not case_sensitive:
+#         search_prefix_lower = search_prefix.lower()
+#
+#     for row_idx, row in enumerate(all_values):
+#         for col_idx, value in enumerate(row):
+#             current_value = value.strip()
+#             if not current_value:
+#                 continue
+#
+#             if case_sensitive:
+#                 compare_value = current_value
+#                 target_prefix = search_prefix
+#             else:
+#                 compare_value = current_value.lower()
+#                 target_prefix = search_prefix_lower
+#
+#             # Проверяем, что значение начинается с префикса и не равно ему
+#             if compare_value.startswith(target_prefix) and compare_value != target_prefix:
+#                 # Сбор данных выше
+#                 above_values = []
+#                 for offset in range(1, 4):
+#                     above_row_idx = row_idx - offset
+#                     cell_value = ""
+#
+#                     if above_row_idx >= 0 and col_idx < len(all_values[above_row_idx]):
+#                         cell_value = all_values[above_row_idx][col_idx].strip()
+#
+#                     above_values.append(cell_value)
+#
+#                 # Фильтрация пустых значений
+#                 filtered_above = [v for v in above_values if v]
+#
+#                 if filtered_above:
+#                     matches.append((
+#                         row_idx + 1,
+#                         col_idx + 1,
+#                         current_value,
+#                         filtered_above
+#                     ))
+#
+#     return matches
+
+# async def find_all_text_code(
+#         prefix: str,
+#         spreadsheet_name: str = "Архипелаг 2024",
+#         sheet_name: str = "Расписание фото",
+#         case_sensitive: bool = False
+# ) -> List[Tuple[int, int, str, List[str]]]:
+#     """
+#     Ищет все ячейки, начинающиеся с указанного префикса, и возвращает:
+#     - Координаты (строка, колонка) в 1-индексации
+#     - Значение ячейки
+#     - 3 значения выше в том же столбце
+#     """
+#     agc: AsyncioGspreadClient = await agcm.authorize()
+#     spreadsheet = await agc.open(spreadsheet_name)
+#     worksheet: AsyncioGspreadWorksheet = await spreadsheet.worksheet(sheet_name)
+#
+#     all_values = await worksheet.get_all_values()
+#     search_prefix = prefix.strip()
+#     matches = []
+#
+#     # Приводим к нижнему регистру если нужно
+#     if not case_sensitive:
+#         search_prefix = search_prefix.lower()
+#
+#     for row_idx, row in enumerate(all_values):
+#         for col_idx, value in enumerate(row):
+#             current_value = value.strip()
+#             if not current_value:
+#                 continue
+#
+#             # Проверяем начало строки
+#             compare_value = current_value if case_sensitive else current_value.lower()
+#             target_prefix = search_prefix if case_sensitive else search_prefix.lower()
+#
+#             if compare_value.startswith(target_prefix):
+#                 gspread_row = row_idx + 1
+#                 gspread_col = col_idx + 1
+#
+#                 # Собираем 3 ячейки выше
+#                 above_values = []
+#                 for offset in range(1, 4):
+#                     above_row_idx = row_idx - offset
+#
+#                     if above_row_idx < 0:
+#                         break
+#
+#                     cell_value = ""
+#                     if col_idx < len(all_values[above_row_idx]):
+#                         cell_value = all_values[above_row_idx][col_idx].strip()
+#
+#                     above_values.append(cell_value)
+#
+#                     above_values = []
+#                     for offset in range(1, 4):
+#                         above_row_idx = row_idx - offset
+#
+#                         if above_row_idx < 0:
+#                             break
+#
+#                         cell_value = ""
+#                         if col_idx < len(all_values[above_row_idx]):
+#                             cell_value = all_values[above_row_idx][col_idx].strip()
+#
+#                         above_values.append(cell_value)
+#
+#                     # Фильтр: пропускаем если все 3 значения выше пустые
+#                     if not all(val == "" for val in above_values):
+#                         matches.append((
+#                             gspread_row,
+#                             gspread_col,
+#                             current_value,
+#                             above_values
+#                         ))
+#     return matches
+
+#Ищем точное одно совпадение и выводим три строки выше
 async def find_text_code(
         text: str,
         spreadsheet_name: str = "Архипелаг 2024",

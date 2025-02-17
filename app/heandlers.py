@@ -1,5 +1,6 @@
 # from email.policy import default
 # from sys import exception
+import logging
 from http.client import responses
 
 import phonenumbers
@@ -1254,21 +1255,108 @@ async def generating(message: Message, state: FSMContext):
 async def stop_flood(message: Message):
     await message.answer('Подожди ты, не так быстро, эй!')
 
+
+
 #Поиск по таблице
 @router.message(F.text == "найди")
 async def deepseek(message: Message, state: FSMContext):
     await message.answer('Напиши что ты хочешь найти?')
     await state.set_state(Find.send)
 
+
+# Вывод каждого кода отдельным сообщением
 @router.message(Find.send)
-async def find_cod(message: Message, state: FSMContext):
-    result = await fu.find_text_code(text=message.text)
-    for row, col, value, above in result:
-        await message.answer(f'Вот что я нашел: {value}')
-        await message.answer(f'Значения выше:')
-        for i, val in enumerate(above, start=1):
-            await message.answer(f' {i} строкой выше: {val}')
+async def find_all_text_code(message: Message, state: FSMContext):
+    results = await fu.find_all_text_code(prefix=message.text)
+    # Дополнительная фильтрация на случай если все above_values стали пустыми
+    filtered_results = [
+        (row, col, val, above)
+        for row, col, val, above in results
+        if any(above)  # Оставляем только записи где есть хотя бы одно значение выше
+    ]
+
+    if not filtered_results:
+        await message.answer("🔎 Ничего не найдено или все результаты не имеют данных выше 😔")
+        await state.clear()
+        return
+
+
+    labels = ["Время", "Место", "Название"]  # Кастомные названия для строк
+    # Отправляем общее количество результатов
+    await message.answer(f"🔍 Найдено результатов: {len(filtered_results)}")
+
+    # Отправляем каждый результат отдельным сообщением
+    for i, (row, col, value, above) in enumerate(filtered_results, 1):
+        response = (
+            f"📌 Результат {i} из {len(filtered_results)}:\n"
+            f"📍 Строка: {row} | Колонка: {col}\n"
+            f"💡 Значение: {value}\n"
+        )
+
+        # Добавляем информацию о ячейках выше
+        if above:
+            response += "📚 Съемка:\n"
+            for label, val in zip(labels[-len(above):], reversed(above)):
+                response += f"   ▫️ {label}: {val}\n"
+        # if any(above):
+        #     response += "⬆️ Выше:\n"
+        #     for label, val in zip(labels, reversed(above)):
+        #         if val:
+        #             response += f"   ▪️ {label}: {val}\n"
+            response += f"✅ Персональный код: {value}\n\n"
+
+            await message.answer(response, reply_markup=kb.task)
+            await asyncio.sleep(0.3)  # Задержка между сообщениями
+
     await state.clear()
+
+
+
+
+
+# # Вывод одним сообщением точного совпадения из поиска по таблице
+# @router.message(Find.send)
+# async def find_cod(message: Message, state: FSMContext):
+#     result = await fu.find_text_code(text=message.text)
+#
+#     if not result:
+#         await message.answer("Ничего не найдено 😔")
+#         await state.clear()
+#         return
+#
+#     response = "🔍 Вот что я нашел:\n\n"
+#     labels = ["Время", "Место", "Название"]  # Кастомные названия для строк
+#
+#     for row, col, value, above in result:
+#         response += f"📍 Координаты: строка {row}, колонка {col}\n\n"
+#
+#         # Фильтруем пустые значения и добавляем кастомные названия
+#         filtered_above = [
+#             (label, val)
+#             for label, val in zip(labels, reversed(above))
+#             if val.strip()
+#         ]
+#
+#         if filtered_above:
+#             response += "📌 Связанные данные:\n"
+#             for label, val in filtered_above:
+#                 response += f"   ▫️ {label}: {val}\n"
+#
+#         response += f"✅ Персональный код: {value}\n\n"
+#
+#     await message.answer(response.strip())
+#     await state.clear()
+
+
+# @router.message(Find.send)
+# async def find_cod(message: Message, state: FSMContext):
+#     result = await fu.find_text_code(text=message.text)
+#     for row, col, value, above in result:
+#         await message.answer(f'Вот что я нашел:')
+#         for i, val in enumerate(reversed(above), start=1):
+#             await message.answer(f'{val}')
+#         await message.answer(f'{value}')
+#     await state.clear()
 
 # @router.message(Find.send)
 # async def find_text(message: Message, state: FSMContext):
