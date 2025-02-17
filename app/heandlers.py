@@ -1262,8 +1262,12 @@ async def deepseek(message: Message, state: FSMContext):
 
 @router.message(Find.send)
 async def find_cod(message: Message, state: FSMContext):
-    result = await fu.find_cod(prefix=message.text)
-    await message.answer(f'Вот что я нашел: {result}')
+    result = await fu.find_text_code(text=message.text)
+    for row, col, value, above in result:
+        await message.answer(f'Вот что я нашел: {value}')
+        await message.answer(f'Значения выше:')
+        for i, val in enumerate(above, start=1):
+            await message.answer(f' {i} строкой выше: {val}')
     await state.clear()
 
 # @router.message(Find.send)

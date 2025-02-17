@@ -123,6 +123,70 @@ async def find_cod(
 
     return matches
 
+
+async def find_text_code(
+        text: str,
+        spreadsheet_name: str = "Архипелаг 2024",
+        sheet_name: str = "Расписание фото"
+) -> List[Tuple[int, int, str, List[str]]]:
+    """
+    Ищет текст в таблице и возвращает:
+    - Координаты ячейки (строка, колонка)
+    - Значение найденной ячейки
+    - Список из трёх значений выше (от ближайшей к дальней)
+    """
+    agc: AsyncioGspreadClient = await agcm.authorize()
+    spreadsheet = await agc.open(spreadsheet_name)
+    worksheet: AsyncioGspreadWorksheet = await spreadsheet.worksheet(sheet_name)
+
+    all_values = await worksheet.get_all_values()
+    search_text = text.strip().lower()
+    matches = []
+
+    for row_idx, row in enumerate(all_values):
+        for col_idx, value in enumerate(row):
+            if value.strip().lower() == search_text:
+                gspread_row = row_idx + 1  # Конвертация в 1-индексацию
+                gspread_col = col_idx + 1
+                current_value = value.strip()
+
+                # Собираем 3 ячейки выше
+                above_values = []
+                for offset in range(1, 4):
+                    above_row_idx = row_idx - offset
+
+                    # Проверяем выход за границы таблицы
+                    if above_row_idx < 0:
+                        break
+
+                    # Проверяем наличие столбца в строке
+                    if col_idx >= len(all_values[above_row_idx]):
+                        cell_value = ""
+                    else:
+                        cell_value = all_values[above_row_idx][col_idx].strip()
+
+                    above_values.append(cell_value)
+
+                matches.append((
+                    gspread_row,
+                    gspread_col,
+                    current_value,
+                    above_values
+                ))
+
+    return matches
+
+# вызов функции
+# async def main():
+#     results = await find_text_code("KNA")
+#
+#     for row, col, value, above in results:
+#         print(f"Найдено в [{row}, {col}]: {value}")
+#         print("Значения выше:")
+#         for i, val in enumerate(above, start=1):
+#             print(f"  {i} строкой выше: {val}")
+
+
 # async def find_text_in_sheet(
 #         text: str,
 #         spreadsheet_name: str = "Архипелаг 2024",
