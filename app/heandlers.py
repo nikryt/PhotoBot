@@ -78,6 +78,7 @@ class Gen(StatesGroup):
 class Find(StatesGroup):
     wait = State()
     send = State()
+    exclude = State()
 
 # Переменная для хранения message_id последнего сообщения бота
 # last_bot_message_id = None
@@ -1263,6 +1264,11 @@ async def deepseek(message: Message, state: FSMContext):
     await message.answer('Напиши что ты хочешь найти?')
     await state.set_state(Find.send)
 
+#Поиск по таблице
+@router.message(F.text == "найди всё")
+async def deepseek(message: Message, state: FSMContext):
+    await message.answer('Напиши что ты хочешь найти?')
+    await state.set_state(Find.send)
 
 # Вывод каждого кода отдельным сообщением
 @router.message(Find.send)
@@ -1304,7 +1310,7 @@ async def find_all_text_code(message: Message, state: FSMContext):
         #             response += f"   ▪️ {label}: {val}\n"
             response += f"✅ Персональный код: {value}\n\n"
             # Создаем клавиатуру с динамическими параметрами
-            keyboard = kb.create_task_keyboard(row=row, col=col)
+            keyboard = kb.create_task_keyboard(row=row, col=col, code=value)
             await message.answer(response, reply_markup=keyboard)
             await asyncio.sleep(0.3)  # Задержка между сообщениями
 
@@ -1313,23 +1319,18 @@ async def find_all_text_code(message: Message, state: FSMContext):
 
 @router.callback_query(F.data.startswith('done'))
 async def handle_done_callback(callback: CallbackQuery):
-
     try:
         _, row_str, col_str = callback.data.split(':')
         row = int(row_str)
         col = int(col_str)
-
         # Добавим логирование для отладки
         print(f"DEBUG: Writing to row={row}, col={col}")
-
         # Вызов метода из менеджера
         result = await fu.write_done(row, col)
-
         if result:
             await callback.answer(result)
         else:
             await callback.answer("⚠️ Ошибка записи в таблицу")
-
     except ValueError:
         await callback.answer("⚠️ Некорректные данные")
     except Exception as e:
@@ -1346,6 +1347,46 @@ async def handle_done_callback(callback: CallbackQuery):
         # print(f"DEBUG: Writing to row={row}, col={col}")
         # Вызов метода из менеджера
         result = await fu.write_cancel(row, col)
+        if result:
+            await callback.answer(result)
+        else:
+            await callback.answer("⚠️ Ошибка записи в таблицу")
+    except ValueError:
+        await callback.answer("⚠️ Некорректные данные")
+    except Exception as e:
+        await callback.answer(f"⚠️ Системная ошибка: {str(e)}")
+        print(f"Callback error: {e}")
+
+@router.callback_query(F.data.startswith('code'))
+async def handle_done_callback(callback: CallbackQuery):
+    try:
+        _, row_str, col_str = callback.data.split(':')
+        row = int(row_str)
+        col = int(col_str)
+        # # Добавим логирование для отладки
+        # print(f"DEBUG: Writing to row={row}, col={col}")
+        # Вызов метода из менеджера
+        result = await fu.write_state(row, col)
+        if result:
+            await callback.answer(result)
+        else:
+            await callback.answer("⚠️ Ошибка записи в таблицу")
+    except ValueError:
+        await callback.answer("⚠️ Некорректные данные")
+    except Exception as e:
+        await callback.answer(f"⚠️ Системная ошибка: {str(e)}")
+        print(f"Callback error: {e}")
+
+@router.callback_query(F.data.startswith('error'))
+async def handle_done_callback(callback: CallbackQuery):
+    try:
+        _, row_str, col_str = callback.data.split(':')
+        row = int(row_str)
+        col = int(col_str)
+        # # Добавим логирование для отладки
+        # print(f"DEBUG: Writing to row={row}, col={col}")
+        # Вызов метода из менеджера
+        result = await fu.write_error(row, col)
         if result:
             await callback.answer(result)
         else:

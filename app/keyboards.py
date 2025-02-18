@@ -83,7 +83,7 @@ async def edit_item(
         return keydoard.adjust(*sizes).as_markup()
 
 
-def create_task_keyboard(row: int, col: int) -> InlineKeyboardMarkup:
+def create_task_keyboard(row: int, col: int, code: str) -> InlineKeyboardMarkup:
     """
     Создаёт клавиатуру для задачи с динамическими параметрами
     :param row: Номер строки в таблице
@@ -92,6 +92,11 @@ def create_task_keyboard(row: int, col: int) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.button(text=Buttons.DONE, callback_data=f"done:{row}:{col}")
     builder.button(text=Buttons.CANCEL, callback_data=f"cancel:{row}:{col}")
+    builder.button(text=Buttons.CODE.format(code), callback_data=f"code:{row}:{col}")
+    builder.button(text=Buttons.ERROR, callback_data=f"error:{row}:{col}")
+
+    # Настройка расположения кнопок: первые две кнопки в одной строке, третья — в другой
+    builder.adjust(2, 1, 1)
     return builder.as_markup()
 
 # edit_item = InlineKeyboardMarkup(inline_keyboard=[

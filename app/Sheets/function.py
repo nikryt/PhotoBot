@@ -78,8 +78,29 @@ async def write_cancel(row: int, col: int) -> Optional[str]:
         print(f"Google Sheets error: {e}")
         return None
 
+async def write_state(row: int, col: int) -> Optional[str]:
+    """Записывает 'СНИМАЮТ' в ячейку под указанной"""
+    try:
+        agc = await agcm.authorize()
+        wks = await agc.open("Архипелаг 2024")
+        sh = await wks.worksheet("Расписание фото")
+        await sh.update_cell(row + 1, col, "СНИМАЮТ")
+        return "✅ СНИМАЮТ успешно записано!"
+    except Exception as e:
+        print(f"Google Sheets error: {e}")
+        return None
 
-
+async def write_error(row: int, col: int) -> Optional[str]:
+    """Записывает 'СНИМАЮТ' в ячейку под указанной"""
+    try:
+        agc = await agcm.authorize()
+        wks = await agc.open("Архипелаг 2024")
+        sh = await wks.worksheet("Расписание фото")
+        await sh.update_cell(row + 1, col, "")
+        return "✅ Отменил пометку успешно!"
+    except Exception as e:
+        print(f"Google Sheets error: {e}")
+        return None
 
     #-------------------------------------------------------------------------------------------------------------------
     # Функции поиска ячеек
@@ -159,13 +180,21 @@ async def find_all_text_code(
         prefix: str,
         spreadsheet_name: str = "Архипелаг 2024",
         sheet_name: str = "Расписание фото",
-        case_sensitive: bool = False
+        case_sensitive: bool = False,
+        exclude_words: Optional[List[str]] = []  # Новый параметр для исключения # Устанавливаем пустой список по умолчанию
 ) -> List[Tuple[int, int, str, List[str]]]:
     """
     Ищет все ячейки с указанным префиксом и возвращает:
     - Координаты (строка, колонка)
     - Значение ячейки
     - 3 значения выше (только непустые)
+
+    :param prefix: Префикс для поиска.
+    :param spreadsheet_name: Название таблицы.
+    :param sheet_name: Название листа.
+    :param case_sensitive: Учитывать регистр при поиске.
+    :param exclude_words: Список слов для исключения (проверка под найденным текстом).
+    :return: Список кортежей с результатами.
     """
     agc: AsyncioGspreadClient = await agcm.authorize()
     spreadsheet = await agc.open(spreadsheet_name)
@@ -193,6 +222,13 @@ async def find_all_text_code(
 
             # Проверяем, что значение начинается с префикса и не равно ему
             if compare_value.startswith(target_prefix) and compare_value != target_prefix:
+                # Проверяем ячейку под найденным текстом
+                below_row_idx = row_idx + 1
+                if below_row_idx < len(all_values) and col_idx < len(all_values[below_row_idx]):
+                    below_value = all_values[below_row_idx][col_idx].strip()
+                    if below_value in exclude_words:  # Проверяем на исключения
+                        continue  # Пропускаем этот результат
+
                 # Сбор данных выше
                 above_values = []
                 for offset in range(1, 4):
@@ -216,6 +252,7 @@ async def find_all_text_code(
                     ))
 
     return matches
+
 
 
 #   Функция ищет все совпадения с началом слова
