@@ -1261,19 +1261,40 @@ async def stop_flood(message: Message):
 #Поиск по таблице
 @router.message(F.text == "найди")
 async def deepseek(message: Message, state: FSMContext):
-    await message.answer('Напиши что ты хочешь найти?')
+    await message.answer('Напиши что ты хочешь найти?', reply_markup=kb.find)
+    # Устанавливаем состояние ожидания выбора слов исключений
+    await state.set_state(Find.exclude)
+
+# Обработчик нажатий на кнопки инлайн-клавиатуры
+@router.callback_query(Find.exclude)
+async def process_exclude_words(callback: CallbackQuery, state: FSMContext):
+    # Определяем список исключений на основе callback_data
+    exclude_words = []
+    if callback.data == "ready":
+        exclude_words = ["", "ОТМЕНА", "СНИМАЮТ"]
+    elif callback.data == "clear":
+        exclude_words = [""]
+    elif callback.data == "new":
+        exclude_words = ["СНЯТО", "ОТМЕНА", "СНИМАЮТ"]
+    # Если callback_data == "exclude_none", список исключений останется пустым
+
+    # Сохраняем список исключений в state
+    await state.update_data(exclude_words=exclude_words)
+
+    # Запрашиваем текст для поиска
+    await callback.message.answer("Напиши свои инициалы")
     await state.set_state(Find.send)
 
-#Поиск по таблице
-@router.message(F.text == "найди всё")
-async def deepseek(message: Message, state: FSMContext):
-    await message.answer('Напиши что ты хочешь найти?')
-    await state.set_state(Find.send)
+
 
 # Вывод каждого кода отдельным сообщением
 @router.message(Find.send)
 async def find_all_text_code(message: Message, state: FSMContext):
-    results = await fu.find_all_text_code(prefix=message.text)
+    # Получаем список исключений из state
+    data = await state.get_data()
+    exclude_words: List[str] = data.get("exclude_words", [])
+
+    results = await fu.find_all_text_code(prefix=message.text, exclude_words=exclude_words)
     # Дополнительная фильтрация на случай если все above_values стали пустыми
     filtered_results = [
         (row, col, val, above)
