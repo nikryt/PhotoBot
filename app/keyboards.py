@@ -82,14 +82,6 @@ async def edit_item(
             keydoard.add(InlineKeyboardButton(text=text, callback_data=data))
         return keydoard.adjust(*sizes).as_markup()
 
-task = InlineKeyboardMarkup(inline_keyboard=[
-    # Один ряд с двумя кнопками
-    [
-        InlineKeyboardButton(text=Buttons.DONE, callback_data='done'),
-        InlineKeyboardButton(text=Buttons.CANCEL, callback_data='cancel')
-    ]
-])
-
 
 def create_task_keyboard(row: int, col: int) -> InlineKeyboardMarkup:
     """
@@ -98,16 +90,8 @@ def create_task_keyboard(row: int, col: int) -> InlineKeyboardMarkup:
     :param col: Номер колонки в таблице
     """
     builder = InlineKeyboardBuilder()
-
-    builder.button(
-        text=Buttons.DONE,
-        callback_data=f"done:{row}:{col}"
-    )
-    builder.button(
-        text=Buttons.CANCEL,
-        callback_data=f"cancel:{row}:{col}"
-    )
-
+    builder.button(text=Buttons.DONE, callback_data=f"done:{row}:{col}")
+    builder.button(text=Buttons.CANCEL, callback_data=f"cancel:{row}:{col}")
     return builder.as_markup()
 
 # edit_item = InlineKeyboardMarkup(inline_keyboard=[

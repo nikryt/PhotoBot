@@ -2,7 +2,8 @@ import os
 import asyncio
 import logging
 
-from aiogram import Bot, Dispatcher
+
+from aiogram import Bot, Dispatcher, types
 # Для базы данных импортируем
 from app.database.models import async_main
 
@@ -15,6 +16,8 @@ from app.heandlers import router
 #Импорт из env
 from dotenv import load_dotenv
 
+from bot_cmd_list import private
+
 async def main():
 # Запуск функции базы данных в самом начале, для того что-бы при запуске бота создавались все таблицы
     await  async_main()
@@ -24,6 +27,11 @@ async def main():
     dp = Dispatcher() #Основной роутер обрабатывает входящие обновления, сообщения, calback
     #Вызываем метод include_router
     dp.include_router(router)
+    # Создаём кнопку меню с командами
+    await  bot.set_my_commands(commands=private, scope=types.BotCommandScopeAllPrivateChats())
+    # # Удаление кнопок
+    # await bot.delete_my_commands(scope=types.BotCommandScopeAllPrivateChats())
+
     await dp.start_polling(bot) #start_polling хэндлеры
 
 # конструкция, которая запускает функцию Main

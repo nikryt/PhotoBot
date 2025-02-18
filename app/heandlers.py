@@ -248,7 +248,7 @@ async def transliterate_russian_to_eng(name_ru: str) -> str:
     Транслитерирует русские ФИО в английские согласно правилам загранпаспортов РФ.
     Пример: 'Иванов Иван Иванович' → 'Ivanov Ivan Ivanovich'
     """
-    translit_dict = Texts.Translit_EN.EN
+    translit_dict = Texts.Translit_en.EN
     translated = []
     for part in name_ru.split():
         translit_part = []
@@ -1338,23 +1338,18 @@ async def handle_done_callback(callback: CallbackQuery):
 
 @router.callback_query(F.data.startswith('cancel'))
 async def handle_done_callback(callback: CallbackQuery):
-
     try:
         _, row_str, col_str = callback.data.split(':')
         row = int(row_str)
         col = int(col_str)
-
-        # Добавим логирование для отладки
-        print(f"DEBUG: Writing to row={row}, col={col}")
-
+        # # Добавим логирование для отладки
+        # print(f"DEBUG: Writing to row={row}, col={col}")
         # Вызов метода из менеджера
         result = await fu.write_cancel(row, col)
-
         if result:
             await callback.answer(result)
         else:
             await callback.answer("⚠️ Ошибка записи в таблицу")
-
     except ValueError:
         await callback.answer("⚠️ Некорректные данные")
     except Exception as e:

@@ -1,7 +1,3 @@
-from idlelib.help import HelpText
-from symtable import Class
-
-
 class Messages:
     # Основные команды
     START = "🚀 Добро пожаловать, {name}!"
@@ -89,7 +85,7 @@ class StatesText:
         'photofile1': "Отправьте файлы заново:"
     }
 
-class Translit_EN:
+class Translit_en:
     EN = {
         'А': 'A', 'а': 'a',
         'Б': 'B', 'б': 'b',
