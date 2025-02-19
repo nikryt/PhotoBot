@@ -64,3 +64,19 @@ async def del_item(id):
     async with async_session() as session:
         await session.execute(delete(Item).where(Item.id == id))
         await session.commit()
+
+
+#-------------------------------------------------------------------------------------------------------------------
+# Функции получения данных
+#-------------------------------------------------------------------------------------------------------------------
+
+# Функция для получения инициалов из базы данных
+async def get_initials(tg_id: int):
+    async with async_session() as session:
+        try:
+            initials = await session.scalar(select(Item.idn).where(Item.name == tg_id))
+            print(initials)
+            return initials
+        except Exception as e:
+            print(f"Ошибка при получении инициалов: {e}")
+            return None

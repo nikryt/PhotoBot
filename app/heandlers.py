@@ -1268,6 +1268,9 @@ async def deepseek(message: Message, state: FSMContext):
 # Обработчик нажатий на кнопки инлайн-клавиатуры
 @router.callback_query(Find.exclude)
 async def process_exclude_words(callback: CallbackQuery, state: FSMContext):
+    # Подтверждаем обработку callback-запроса
+    await callback.answer('Пойду поищу')
+
     # Определяем список исключений на основе callback_data
     exclude_words = []
     if callback.data == "ready":
@@ -1281,20 +1284,48 @@ async def process_exclude_words(callback: CallbackQuery, state: FSMContext):
     # Сохраняем список исключений в state
     await state.update_data(exclude_words=exclude_words)
 
-    # Запрашиваем текст для поиска
-    await callback.message.answer("Напиши свои инициалы")
+    # Получаем инициалы из базы данных
+    tg_id = callback.from_user.id
+    try:
+        initials = await rq.get_initials(tg_id)
+    except Exception as e:
+        await callback.message.answer("🔎 Произошла ошибка при получении инициалов.")
+        await state.clear()
+        return
+
+    if not initials:
+        await callback.message.answer("🔎 Инициалы не найдены в базе данных.")
+        await state.clear()
+        return
+
+    # Сохраняем инициалы в state
+    await state.update_data(initials=initials)
+
+    # # Запрашиваем текст для поиска
+    # await callback.message.answer("Напиши свои инициалы")
     await state.set_state(Find.send)
+    await find_all_text_code(callback.message, state)  # Вызываем функцию поиска
 
 
 
 # Вывод каждого кода отдельным сообщением
 @router.message(Find.send)
 async def find_all_text_code(message: Message, state: FSMContext):
-    # Получаем список исключений из state
+    # Получаем список исключений и инициалы из state
     data = await state.get_data()
     exclude_words: List[str] = data.get("exclude_words", [])
+    initials: str = data.get("initials", "")
 
-    results = await fu.find_all_text_code(prefix=message.text, exclude_words=exclude_words)
+    if not initials:
+        await message.answer("🔎 Инициалы не найдены.")
+        await state.clear()
+        return
+
+        # Выполняем поиск
+    results = await fu.find_all_text_code(prefix=initials, exclude_words=exclude_words)
+
+    # results = await fu.find_all_text_code(prefix=message.text, exclude_words=exclude_words)
+
     # Дополнительная фильтрация на случай если все above_values стали пустыми
     filtered_results = [
         (row, col, val, above)
