@@ -25,7 +25,7 @@ from aiogram.enums import ParseMode
 #Импортировали тексты из отдельного файла
 from Texts import Messages, Buttons, StatesText, Help
 from app.generate import ai_generate
-
+from app.Filters.chat_types import ChatTypeFilter # импортировали наши личные фильтры
 
 
 import app.keyboards as kb
@@ -42,6 +42,8 @@ from requests import session
 
 #Объект класса router Router
 router = Router()
+# включаем фильтр на работу только в приватных чатах из созданного нами фильтра
+router.message.filter(ChatTypeFilter(['private']))
 
 class StartState(StatesGroup):
     active = State()  # Состояние, в котором будем удалять сообщения

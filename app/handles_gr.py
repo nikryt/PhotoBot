@@ -2,17 +2,18 @@ from string import punctuation
 
 from aiogram import F, Router, types, Bot
 
-gr_router = Router()
+from app.Filters.chat_types import ChatTypeFilter # импортировали наши личные фильтры
 
+gr_router = Router()
+gr_router.message.filter(ChatTypeFilter(['group', 'supergroup']))
 
 restricted_worlds = {'сука', 'canon', 'sony'}
-
-
 
 def clean_text(text: str):
     """функция удаляет все знаки препинания из текста"""
     return text.translate(str.maketrans('', '', punctuation))
 
+@gr_router.edited_message()
 @gr_router.message()
 async def cleaner(message: types.Message):
     """функция удаляет сообщения из списка и предупреждает пользователя"""

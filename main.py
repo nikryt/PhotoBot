@@ -28,8 +28,8 @@ async def main():
     bot = Bot(token=os.getenv("TOKEN"))
     dp = Dispatcher() #Основной роутер обрабатывает входящие обновления, сообщения, calback
     #Вызываем метод include_router
-    dp.include_router(router)
-    dp.include_router(gr_router)
+    dp.include_router(router) # этот роутер сработает первым
+    dp.include_router(gr_router) # этот роутер сработает если первый не сработал
     # Создаём кнопку меню с командами
     await  bot.set_my_commands(commands=private, scope=types.BotCommandScopeAllPrivateChats())
     # # Удаление кнопок
