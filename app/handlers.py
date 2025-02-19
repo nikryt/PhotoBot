@@ -1259,7 +1259,7 @@ async def stop_flood(message: Message):
 
 
 #Поиск по таблице
-@router.message(F.text == "найди")
+@router.message(F.text.lower() == "найди")
 async def deepseek(message: Message, state: FSMContext):
     await message.answer('Напиши что ты хочешь найти?', reply_markup=kb.find)
     # Устанавливаем состояние ожидания выбора слов исключений
