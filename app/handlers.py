@@ -2,6 +2,7 @@
 # from sys import exception
 import logging
 from http.client import responses
+from pathlib import Path
 
 import phonenumbers
 from sqlalchemy.orm import defer
@@ -1505,4 +1506,34 @@ async def handle_done_callback(callback: CallbackQuery):
 #     await state.clear()
 
 
+@router.message(F.text.lower() == "файл")
+async def handle_report_request(message: types.Message, bot: Bot):
+    user_id = message.from_user.id
+    filename = f"TSV/report_{user_id}.tsv"
+
+    try:
+        # Создаем директорию для отчетов если ее нет
+        Path("TSV").mkdir(exist_ok=True)
+
+        # Сохраняем отчет
+        await message.answer("🔄 Начинаю сохранение файла...")
+        await fu.save_sheet_as_tsv(filename=filename)
+
+        # Отправляем файл
+        with open(filename, "rb") as file:
+            await bot.send_document(
+                chat_id=user_id,
+                document=types.BufferedInputFile(
+                    file=file.read(),
+                    filename=f"daily_report.tsv"
+                ),
+                caption="✅ Ваш файл готов!"
+            )
+
+        # Удаляем временный файл
+        Path(filename).unlink(missing_ok=True)
+
+    except Exception as e:
+        await message.answer(f"❌ Ошибка при сохранении файла: {str(e)}")
+        print(f"Error: {str(e)}")
 

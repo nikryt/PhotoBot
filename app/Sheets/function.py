@@ -1,6 +1,7 @@
 import asyncio
 import gspread_asyncio
 from gspread_asyncio import AsyncioGspreadClient, AsyncioGspreadSpreadsheet, AsyncioGspreadWorksheet
+from gspread.exceptions import WorksheetNotFound
 
 from google.oauth2.service_account import Credentials
 from sqlalchemy.orm import defer
@@ -267,35 +268,47 @@ async def find_all_text_code(
 #-------------------------------------------------------------------------------------------------------------------
 
 async def save_sheet_as_tsv(
-        sheet_name: str,
         filename: str,
-        spreadsheet_name: str = "MainTable"
+        spreadsheet_name: str = "MainTable",
+        sheet_name: str | None = None
 ):
     """
     Сохраняет указанный лист Google Sheets в файл TSV
 
-    :param sheet_name: Название листа для сохранения
     :param filename: Имя выходного файла
-    :param spreadsheet_name: Название таблицы в Google Sheets (по умолчанию "PhotoBot")
+    :param spreadsheet_name: Название таблицы в Google Sheets
+    :param sheet_name: Опциональное имя листа (если не указано - первый лист)
     """
     try:
         agc = await agcm.authorize()
         wks = await agc.open(spreadsheet_name)
-        sh = await wks.worksheet(sheet_name)
 
+        # Выбор листа
+        if sheet_name:
+            sh = await wks.worksheet(sheet_name)
+        else:
+            worksheets = await wks.worksheets()
+            if not worksheets:
+                raise ValueError("Таблица не содержит листов")
+            sh = worksheets[0]
+
+        # Получение данных
         data = await sh.get_all_values()
 
+        # Сохранение в файл
         with open(filename, 'w', encoding='utf-8') as f:
             for row in data:
                 f.write('\t'.join(row) + '\n')
 
-        print(f"Успешно сохранено {len(data)} строк в {filename}")
+        print(f"Успешно сохранено {len(data)} строк из листа '{sh.title}' в {filename}")
         return True
 
+    except WorksheetNotFound:
+        print(f"Ошибка: лист с именем '{sheet_name}' не найден")
+        raise
     except Exception as e:
         print(f"Ошибка при сохранении TSV: {str(e)}")
         raise
-
 
 
 #   Функция ищет все совпадения с началом слова
