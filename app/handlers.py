@@ -1,6 +1,7 @@
 # from email.policy import default
 # from sys import exception
 import logging
+from datetime import datetime
 from http.client import responses
 from pathlib import Path
 
@@ -1505,11 +1506,16 @@ async def handle_done_callback(callback: CallbackQuery):
 #     await message.answer(f'Вот что я нашел: {result}')
 #     await state.clear()
 
+#-------------------------------------------------------------------------------------------------------------------
+# Функция сохранения данных в TSV по сообщению Файл. Дописать на нажатие кнопки и выбор, что сохранить первую страницу
+# или лист ПУТЬ.
+#-------------------------------------------------------------------------------------------------------------------
 
 @router.message(F.text.lower() == "файл")
 async def handle_report_request(message: types.Message, bot: Bot):
     user_id = message.from_user.id
-    filename = f"TSV/report_{user_id}.tsv"
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    temp_filename = f"TSV/report_{user_id}_{timestamp}.tsv"
 
     try:
         # Создаем директорию для отчетов если ее нет
@@ -1517,21 +1523,26 @@ async def handle_report_request(message: types.Message, bot: Bot):
 
         # Сохраняем отчет
         await message.answer("🔄 Начинаю сохранение файла...")
-        await fu.save_sheet_as_tsv(filename=filename)
+        success, sheet_title = await fu.save_sheet_as_tsv(filename=temp_filename)
+
+        # Генерируем безопасное имя файла
+        safe_title = re.sub(r'[\\/*?:"<>|]', '', sheet_title).replace(' ', '_')
+        # output_filename = f"{safe_title}_{timestamp}.tsv" # файл с именем лист_время
+        output_filename = f"{safe_title}_{timestamp}.tsv" # файл с именем Лист
 
         # Отправляем файл
-        with open(filename, "rb") as file:
+        with open(temp_filename, "rb") as file:
             await bot.send_document(
                 chat_id=user_id,
                 document=types.BufferedInputFile(
                     file=file.read(),
-                    filename=f"daily_report.tsv"
+                    filename=output_filename
                 ),
-                caption="✅ Ваш файл готов!"
+                caption=f"✅ Файл '{sheet_title}' готов!"
             )
 
         # Удаляем временный файл
-        Path(filename).unlink(missing_ok=True)
+        Path(temp_filename).unlink(missing_ok=True)
 
     except Exception as e:
         await message.answer(f"❌ Ошибка при сохранении файла: {str(e)}")

@@ -271,13 +271,10 @@ async def save_sheet_as_tsv(
         filename: str,
         spreadsheet_name: str = "MainTable",
         sheet_name: str | None = None
-):
+) -> tuple[bool, str]:
     """
     Сохраняет указанный лист Google Sheets в файл TSV
-
-    :param filename: Имя выходного файла
-    :param spreadsheet_name: Название таблицы в Google Sheets
-    :param sheet_name: Опциональное имя листа (если не указано - первый лист)
+    Возвращает кортеж (статус_сохранения, название_листа)
     """
     try:
         agc = await agcm.authorize()
@@ -301,7 +298,7 @@ async def save_sheet_as_tsv(
                 f.write('\t'.join(row) + '\n')
 
         print(f"Успешно сохранено {len(data)} строк из листа '{sh.title}' в {filename}")
-        return True
+        return True, sh.title
 
     except WorksheetNotFound:
         print(f"Ошибка: лист с именем '{sheet_name}' не найден")
