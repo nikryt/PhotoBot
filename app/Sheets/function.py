@@ -21,10 +21,10 @@ def get_creds():
 
 agcm = gspread_asyncio.AsyncioGspreadClientManager(get_creds)
 
+
 #-------------------------------------------------------------------------------------------------------------------
 # Функции записи данных
 #-------------------------------------------------------------------------------------------------------------------
-
 
 async def next_available_row(sh, cols_to_sample=8):
     # Always authorize first.
@@ -260,6 +260,41 @@ async def find_all_text_code(
                     ))
 
     return matches
+
+
+#-------------------------------------------------------------------------------------------------------------------
+# Функция сохранения данных в TSV
+#-------------------------------------------------------------------------------------------------------------------
+
+async def save_sheet_as_tsv(
+        sheet_name: str,
+        filename: str,
+        spreadsheet_name: str = "MainTable"
+):
+    """
+    Сохраняет указанный лист Google Sheets в файл TSV
+
+    :param sheet_name: Название листа для сохранения
+    :param filename: Имя выходного файла
+    :param spreadsheet_name: Название таблицы в Google Sheets (по умолчанию "PhotoBot")
+    """
+    try:
+        agc = await agcm.authorize()
+        wks = await agc.open(spreadsheet_name)
+        sh = await wks.worksheet(sheet_name)
+
+        data = await sh.get_all_values()
+
+        with open(filename, 'w', encoding='utf-8') as f:
+            for row in data:
+                f.write('\t'.join(row) + '\n')
+
+        print(f"Успешно сохранено {len(data)} строк в {filename}")
+        return True
+
+    except Exception as e:
+        print(f"Ошибка при сохранении TSV: {str(e)}")
+        raise
 
 
 
