@@ -80,3 +80,14 @@ async def get_initials(tg_id: int):
         except Exception as e:
             print(f"Ошибка при получении инициалов: {e}")
             return None
+
+# Функция для получения роли из базы данных
+async def get_role(tg_id: int):
+    async with async_session() as session:
+        try:
+            role = await session.scalar(select(Item.role).where(Item.name == tg_id))
+            print(role)
+            return role
+        except Exception as e:
+            print(f"Ошибка при получении роли: {e}")
+            return None

@@ -1513,36 +1513,41 @@ async def handle_done_callback(callback: CallbackQuery):
 
 @router.message(F.text.lower() == "файл")
 async def handle_report_request(message: types.Message, bot: Bot):
-    user_id = message.from_user.id
+    tg_id = message.from_user.id
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-    temp_filename = f"TSV/report_{user_id}_{timestamp}.tsv"
+    temp_filename = f"TSV/report_{tg_id}_{timestamp}.tsv"
 
     try:
-        # Создаем директорию для отчетов если ее нет
-        Path("TSV").mkdir(exist_ok=True)
+        role = await rq.get_role(tg_id)
+        if role == "Билд-редактор":
+            # Создаем директорию для отчетов если ее нет
+            Path("TSV").mkdir(exist_ok=True)
 
-        # Сохраняем отчет
-        await message.answer("🔄 Начинаю сохранение файла...")
-        success, sheet_title = await fu.save_sheet_as_tsv(filename=temp_filename)
+            # Сохраняем отчет
+            await message.answer("🔄 Начинаю сохранение файла...")
+            success, sheet_title = await fu.save_sheet_as_tsv(filename=temp_filename)
 
-        # Генерируем безопасное имя файла
-        safe_title = re.sub(r'[\\/*?:"<>|]', '', sheet_title).replace(' ', '_')
-        # output_filename = f"{safe_title}_{timestamp}.tsv" # файл с именем лист_время
-        output_filename = f"{safe_title}_{timestamp}.tsv" # файл с именем Лист
+            # Генерируем безопасное имя файла
+            safe_title = re.sub(r'[\\/*?:"<>|]', '', sheet_title).replace(' ', '_')
+            # output_filename = f"{safe_title}_{timestamp}.tsv" # файл с именем лист_время
+            output_filename = f"{safe_title}_{timestamp}.tsv" # файл с именем Лист
 
-        # Отправляем файл
-        with open(temp_filename, "rb") as file:
-            await bot.send_document(
-                chat_id=user_id,
-                document=types.BufferedInputFile(
-                    file=file.read(),
-                    filename=output_filename
-                ),
-                caption=f"✅ Файл '{sheet_title}' готов!"
-            )
+            # Отправляем файл
+            # Чтение файла в "rb" бинарном режиме необходимо для корректной работы.
+            with open(temp_filename, "rb") as file:
+                await bot.send_document(
+                    chat_id=tg_id,
+                    document=types.BufferedInputFile(
+                        file=file.read(),
+                        filename=output_filename
+                    ),
+                    caption=f"✅ Файл '{sheet_title}' готов!"
+                )
 
-        # Удаляем временный файл
-        Path(temp_filename).unlink(missing_ok=True)
+            # Удаляем временный файл
+            Path(temp_filename).unlink(missing_ok=True)
+        else:
+            await message.answer("🔄 Вам не нужен этот файл")
 
     except Exception as e:
         await message.answer(f"❌ Ошибка при сохранении файла: {str(e)}")
