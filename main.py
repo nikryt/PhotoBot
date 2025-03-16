@@ -11,6 +11,7 @@ from app.database.models import async_main
 from app.handlers import router
 # Импортируем объект router из другого файла app/handlers_gr.py
 from app.handles_gr import gr_router
+from  app.admin_private import admin_router
 # заменил на env
 #from config import TOKEN
 #from config import ID_GS
@@ -30,6 +31,7 @@ async def main():
     #Вызываем метод include_router
     dp.include_router(router) # этот роутер сработает первым
     dp.include_router(gr_router) # этот роутер сработает если первый не сработал
+    dp.include_router(admin_router)
     # Создаём кнопку меню с командами
     await  bot.set_my_commands(commands=private, scope=types.BotCommandScopeAllPrivateChats())
     # # Удаление кнопок

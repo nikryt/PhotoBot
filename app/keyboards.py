@@ -25,12 +25,12 @@ back_cancel = InlineKeyboardMarkup(inline_keyboard=[
 ])
 
 fio = InlineKeyboardMarkup(inline_keyboard=[
-    [InlineKeyboardButton(text='На русском', callback_data='ru')],
-    [InlineKeyboardButton(text='На  английском', callback_data='en')],
+    [InlineKeyboardButton(text=Buttons.RU, callback_data='ru')],
+    [InlineKeyboardButton(text=Buttons.EN, callback_data='en')],
     [InlineKeyboardButton(text=Buttons.CHECK, callback_data='check')]])
 
 get_tel = ReplyKeyboardMarkup(keyboard=[
-    [KeyboardButton(text='📱 Отправить номер',
+    [KeyboardButton(text=Buttons.PHONE,
                     request_contact=True)]],
                     resize_keyboard=True, one_time_keyboard=True)
 
@@ -55,6 +55,31 @@ find = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text=Buttons.ALL, callback_data='all'), InlineKeyboardButton(text=Buttons.DONE, callback_data='ready')],
     [InlineKeyboardButton(text=Buttons.ERROR, callback_data='clear'), InlineKeyboardButton(text=Buttons.NEW, callback_data='new')]
 ])
+
+
+table = InlineKeyboardMarkup(inline_keyboard=[
+    [InlineKeyboardButton(text=Buttons.MAIN, callback_data='main'), InlineKeyboardButton(text=Buttons.DIST, callback_data='путь')]
+])
+
+
+    # ------------------------------------------------------------------------------------------------------------------
+    # Клавиатуры админа
+    # ------------------------------------------------------------------------------------------------------------------
+
+admin = InlineKeyboardMarkup(inline_keyboard=[
+    [InlineKeyboardButton(text=Buttons.ALL, callback_data='all'), InlineKeyboardButton(text=Buttons.DONE, callback_data='ready')],
+    [InlineKeyboardButton(text=Buttons.ERROR, callback_data='clear'), InlineKeyboardButton(text=Buttons.NEW, callback_data='new')]
+])
+
+
+
+
+
+
+    # ------------------------------------------------------------------------------------------------------------------
+    # Клавиатуры админа
+    # ------------------------------------------------------------------------------------------------------------------
+
 
 
     # ------------------------------------------------------------------------------------------------------------------
@@ -88,7 +113,7 @@ async def edit_item(
         return keydoard.adjust(*sizes).as_markup()
 
 
-def create_task_keyboard(row: int, col: int, code: str) -> InlineKeyboardMarkup:
+async def create_task_keyboard(row: int, col: int, code: str) -> InlineKeyboardMarkup:
     """
     Создаёт клавиатуру для задачи с динамическими параметрами
     :param row: Номер строки в таблице

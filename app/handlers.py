@@ -4,6 +4,7 @@ import logging
 from datetime import datetime
 from http.client import responses
 from pathlib import Path
+from typing import List
 
 import phonenumbers
 from sqlalchemy.orm import defer
@@ -1366,7 +1367,7 @@ async def find_all_text_code(message: Message, state: FSMContext):
         #             response += f"   ▪️ {label}: {val}\n"
             response += f"✅ Персональный код: {value}\n\n"
             # Создаем клавиатуру с динамическими параметрами
-            keyboard = kb.create_task_keyboard(row=row, col=col, code=value)
+            keyboard = await kb.create_task_keyboard(row=row, col=col, code=value)
             await message.answer(response, reply_markup=keyboard)
             await asyncio.sleep(0.3)  # Задержка между сообщениями
 
