@@ -99,3 +99,9 @@ async def get_role(tg_id: int):
 async def get_item_by_tg_id(tg_id: int) -> Item | None:
     async with async_session() as session:
         return await session.scalar(select(Item).where(Item.name == str(tg_id)))
+
+# Функция получения данных о роли по id в таблице
+async def get_role_name(role_id: int) -> str | None:
+    async with async_session() as session:
+        role = await session.scalar(select(Role.name).where(Role.id == role_id))
+        return role if role else "Не указана"

@@ -172,12 +172,14 @@ async def create_keyboard(
     return keyboard.adjust(*sizes).as_markup(
             resize_keyboard=True, input_field_placeholder=placeholder)
 
+
+
 # функция для клавиатур в зависимости от роли
 async def get_role_keyboard(role: str) -> ReplyKeyboardMarkup:
     if role == "Фотограф":
         return ReplyKeyboardMarkup(
             keyboard=[
-                [KeyboardButton(text="📸 Отправить фото")],
+                [KeyboardButton(text="📸 Моё расписание")],
                 [KeyboardButton(text="🔄 Редактировать данные")],
                 [KeyboardButton(text="📋 Мои серийники")]
             ],
@@ -186,9 +188,9 @@ async def get_role_keyboard(role: str) -> ReplyKeyboardMarkup:
     elif role == "Билд-редактор":
         return ReplyKeyboardMarkup(
             keyboard=[
-                [KeyboardButton(text="📊 Отчет")],
+                [KeyboardButton(text="📊 Таблицы")],
                 [KeyboardButton(text="🔍 Поиск кода")],
-                [KeyboardButton(text="📂 Архив")]
+                [KeyboardButton(text="📂 Все фотографы")]
             ],
             resize_keyboard=True
         )

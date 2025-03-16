@@ -104,8 +104,8 @@ async def cmd_start(message: Message, state: FSMContext, bot: Bot):
 
     if user_item:
         # Получаем данные пользователя
-        role_name = {user_item.role}
-        logging.info(f'роль у пользователя: {user_item.role}')
+        role_name = await rq.get_role_name(user_item.role)
+        logging.info(f'роль у пользователя: {role_name}')
         keyboard = await kb.get_role_keyboard(role_name)
 
         await message.answer_photo(
@@ -807,6 +807,7 @@ async def select_rol(callback_query: types.CallbackQuery, state: FSMContext,  bo
                             serial1='NoSerial', serial2='NoSerial', serial3='NoSerial'
                             )
     data = await state.get_data()
+    role = await rq.get_role_name(data["role"])
     await send_typing_and_message(
             message.chat.id, bot,
             f"✅ Принято: {callback_query.data}\n\n"
@@ -815,7 +816,7 @@ async def select_rol(callback_query: types.CallbackQuery, state: FSMContext,  bo
             f'🪪 Ваши Инициалы: {data["idn"]}\n'
             f'📫 Ваши Контакты: {data["mailcontact"]}\n'
             f'☎️ Ваш номер Телефона {data["tel"]}\n'
-            f'🪆 Ваша Роль: {data["role"]}\n\n'
+            f'🪆 Ваша Роль: {role}\n\n'
             f'Спасибо подтвердите отправку данных',
             state, reply_markup=kb.getphoto
         )
@@ -1028,8 +1029,10 @@ async  def verify(message: types.Message, state: FSMContext, bot: Bot):
             'Спасибо, проверьте ваши данные:',
             state, reply_markup=ReplyKeyboardRemove()
         )
-        print(F.data)
+
+        logging.info(F.data)
         data = await state.get_data()
+        role = await rq.get_role_name(data["role"])
         if data["photofile3"]  == 'Не загружена' and data["photofile2"]  == 'Не загружена' and data["photofile1"]  == 'Не загружена':
             await message.answer(
                 f'🪪 Ваше имя RU: {data["nameRu"]}\n'
@@ -1037,7 +1040,7 @@ async  def verify(message: types.Message, state: FSMContext, bot: Bot):
                 f'🪪 Ваши Инициалы: {data["idn"]}\n'
                 f'📫 Ваши Контакты: {data["mailcontact"]}\n'
                 f'☎️ Ваш Телефон: {data["tel"]}\n'
-                f'🪆 Ваша Роль: {data["role"]}\n\n'
+                f'🪆 Ваша Роль: {role}\n\n'
                 f'Все верно?', reply_markup=kb.proverka)
 
         elif data["photofile3"]  == 'Не загружена' and data["photofile2"]  == 'Не загружена':
@@ -1048,7 +1051,7 @@ async  def verify(message: types.Message, state: FSMContext, bot: Bot):
                 f'🪪 Ваши Инициалы: {data["idn"]}\n'
                 f'📫 Ваши Контакты: {data["mailcontact"]}\n'
                 f'☎️ Ваш Телефон: {data["tel"]}\n'
-                f'🪆 Ваша Роль: {data["role"]}\n'
+                f'🪆 Ваша Роль: {role}\n'
                 f'1️⃣ Серийный номер первой камеры: {data["serial1"]}\n\n'
                 f'Все верно?', reply_markup=kb.proverka)
 
@@ -1061,7 +1064,7 @@ async  def verify(message: types.Message, state: FSMContext, bot: Bot):
                 f'🪪 Ваши Инициалы: {data["idn"]}\n'
                 f'📫 Ваши Контакты: {data["mailcontact"]}\n'
                 f'☎️ Ваш Телефон: {data["tel"]}\n'
-                f'🪆 Ваша Роль: {data["role"]}\n'
+                f'🪆 Ваша Роль: {role}\n'
                 f'1️⃣ Серийный номер первой камеры: {data["serial1"]}\n'
                 f'2️⃣ Серийный номер второй камеры: {data["serial2"]}\n\n'
                 f'Все верно?', reply_markup=kb.proverka)
@@ -1076,7 +1079,7 @@ async  def verify(message: types.Message, state: FSMContext, bot: Bot):
                 f'🪪 Ваши Инициалы: {data["idn"]}\n'
                 f'📫 Ваши Контакты: {data["mailcontact"]}\n'
                 f'☎️ Ваш Телефон: {data["tel"]}\n'
-                f'🪆 Ваша Роль: {data["role"]}\n'
+                f'🪆 Ваша Роль: {role}\n'
                 f'1️⃣ Серийный номер первой камеры: {data["serial1"]}\n'
                 f'2️⃣ Серийный номер второй камеры: {data["serial2"]}\n'
                 f'3️⃣ Серийный номер третьей камеры: {data["serial3"]}\n\n'
@@ -1090,9 +1093,10 @@ async  def proverka_no(callback: CallbackQuery, state: FSMContext, bot: Bot):
     await bot.edit_message_reply_markup(chat_id=callback.from_user.id, message_id=callback.message.message_id, reply_markup=None)
     await callback.answer('Что Вы хотите изменить?.', show_alert=True)
     data = await state.get_data()
+    role = await rq.get_role_name(data["role"])
     await callback.message.edit_text(
                 f'🪪 Ваше имя RU: {data["nameRu"]}\n🪪 Ваше имя EN: {data["nameEn"]}\n☎️ Ваш Телефон: {data["tel"]}\n'
-                f'🪪 Ваши инициалы: {data["idn"]}\n📫 Ваши Контакты: {data["mailcontact"]}\n🪆 Вашу Роль: {data["role"]}\n\n'
+                f'🪪 Ваши инициалы: {data["idn"]}\n📫 Ваши Контакты: {data["mailcontact"]}\n🪆 Вашу Роль: {role}\n\n'
                 f'Все верно?', reply_markup=kb.edit)
 
 #-----------------------------------------------------------------------------------------------------------------------
@@ -1524,7 +1528,7 @@ async def handle_report_request(message: types.Message, bot: Bot):
 
     try:
         role = await rq.get_role(tg_id)
-        if role == "Билд-редактор":
+        if role == "2":
             # Создаем директорию для отчетов если ее нет
             Path("TSV").mkdir(exist_ok=True)
 
