@@ -788,7 +788,7 @@ async def select_rol(callback_query: types.CallbackQuery, state: FSMContext, bot
                             )
     await send_typing_and_message(
         message.chat.id, bot,
-        'Отправьте по одной фотографии с каждой вашей камеры, обязательно файлом.',
+        Texts.Messages.PHOTO_FILE,
         state, reply_markup=kb.getphoto
     )
     await state.set_state(Register.photofile1)
@@ -949,7 +949,7 @@ async def many_camer(message: types.Message, state: FSMContext, bot: Bot):
     )
 
 #Удаление сообщений пока не нажмётся кнопка
-@router.message(Register.verify, ~F.command, ~F.text.in_({'Завершить отправку'}))
+@router.message(Register.verify, ~F.command, ~F.text.in_({'🏁 Завершить отправку'}))
 async def handle_start_state(message: types.Message):
     if not message.text or not message.text.startswith('/') or not message.text.join('отмена'):
     # """Удаляем все сообщения кроме команд"""
@@ -970,10 +970,10 @@ async def handle_start_state(message: types.Message):
 # async def get_document(message: Message):
 #     await message.answer(f'ID документа: {message.document.file_id}')
 
-@router.message(Register.verify, F.text == 'Завершить отправку')
-@router.message(Register.photofile1, F.text == 'Завершить отправку')
-@router.message(Register.photofile2, F.text == 'Завершить отправку')
-@router.message(Register.photofile3, F.text == 'Завершить отправку')
+@router.message(Register.verify, F.text == '🏁 Завершить отправку')
+@router.message(Register.photofile1, F.text == '🏁 Завершить отправку')
+@router.message(Register.photofile2, F.text == '🏁 Завершить отправку')
+@router.message(Register.photofile3, F.text == '🏁 Завершить отправку')
 async  def verify(message: types.Message, state: FSMContext, bot: Bot):
         await mes_user_history(message, state)
         await delete_all_previous_messages(message.chat.id, state, bot)
@@ -1181,8 +1181,8 @@ async def proverka_yes(callback: CallbackQuery, state: FSMContext, bot: Bot):
     data = await state.get_data()
     try:
         await rq.set_item(data)
-        await callback.message.answer(text=Texts.Messages.REG_SUCCESS, reply_markup=ReplyKeyboardRemove())
         await fu.number_row(data)
+        await callback.message.answer(text=Texts.Messages.REG_SUCCESS, reply_markup=ReplyKeyboardRemove())
         await state.clear()
 
     except Exception as e:
@@ -1190,61 +1190,17 @@ async def proverka_yes(callback: CallbackQuery, state: FSMContext, bot: Bot):
                 f"Ошибка: \n {str(e)}\nОбратитесь к программисту, он денег хочет снова",reply_markup=ReplyKeyboardRemove())
             await state.clear()
 
-# Записываем в БД пользователя с его id
+# #Записываем в БД пользователя с его id
 #     await rq.set_item(data)
 #     await state.clear()
     await state.set_state(StartState.active)
 
 
-#Выводим данные из базы по запросу
-@router.message(F.text == "Можно всех посмотреть")
-async def view_all_items(message: types.Message):
-    for item in await rq.get_item():
-        try:
-            await message.answer_document(document=item.serial1,
-                                          caption=f'🪪 ФИО ru: {item.nameRU}\n'
-                                                  f'🪪 ФИО en: {item.nameEN}\n'
-                                                  f'🪪 Инициалы: {item.idn}\n'
-                                                  f'📫 Контакты: {item.mailcontact}\n'
-                                                  f'☎️ Телефон: {item.tel}\n'
-                                                  f'🪆 Роль: {item.role}',
-                                          protect_content=True,
-                                          reply_markup=await kb.edit_item(btns={
-                                              'Удалить': f'delete_{item.id}',
-                                              'Изменить': f'change_{item.id}'})
-                                          )
-            # запись просто в ячейку
-            # sh.wks.update([[f'{item.nameRU}',f'{item.nameEN}',f'{item.idn}',f'{item.mailcontact}',f'{item.tel}',f'{item.role}']], 'A2')
-            # запись просто в последнюю свободную ячейку,но ячейка находится только при старте боета, нужно похоже ассинхронную функцию делать
-            # await sh.update([[f'{item.nameRU}',f'{item.nameEN}',f'{item.idn}',f'{item.mailcontact}',f'{item.tel}',f'{item.role}']], "A{}".format(sh.next_row))
-        except TelegramBadRequest:
-            await message.answer(text=f'🪪 ФИО ru: {item.nameRU}\n'
-                                      f'🪪 ФИО en: {item.nameEN}\n'
-                                      f'🪪 Инициалы: {item.idn}\n'
-                                      f'📫 Контакты: {item.mailcontact}\n'
-                                      f'☎️ Телефон: {item.tel}\n'
-                                      f'🪆 Роль: {item.role}',
-                                 protect_content=True,
-                                 message_effect_id="5046589136895476101",
-                                 reply_markup=await kb.edit_item(btns={
-                                     '🗑️ Удалить': f'delete_{item.id}',
-                                     '✏️ Изменить': f'change_{item.id}'}))
-            # запись просто в ячейку
-            # sh.wks.update([[f'{item.nameRU}',f'{item.nameEN}',f'{item.idn}',f'{item.mailcontact}',f'{item.tel}',f'{item.role}']], 'A2')
-            # запись просто в последнюю свободную ячейку,но ячейка находится только при старте боета, нужно похоже ассинхронную функцию делать
-            # await fu.number_row(item)
-            # await fu.sh.update([[f'{item.nameRU}',f'{item.nameEN}',f'{item.idn}',f'{item.mailcontact}',f'{item.tel}',f'{item.role}']], "A{}".format(sh.next_row))
-    await message.answer("Вот все, любуйся")
 
-#Ловим нажатие на инлайн кнопки по редактированию или удалению
-@router.callback_query(F.data.startswith('delete_'))
-async def delete_item(callback: CallbackQuery):
-    item_id = callback.data.split("_")[-1]
-    await  rq.del_item(int(item_id))
-    await callback.answer(text=f'Запись удалена')
-    await callback.message.answer(text=f'Запись удалена')
 
-#DeepSeek
+#=======================================================================================================================
+# DeepSeek
+#=======================================================================================================================
 @router.message(F.text == "поговори", )
 async def deepseek(message: Message, state: FSMContext):
     await message.answer('Напиши что ты хочешь?')
@@ -1260,7 +1216,9 @@ async def generating(message: Message, state: FSMContext):
 @router.message(Gen.wait)
 async def stop_flood(message: Message):
     await message.answer('Подожди ты, не так быстро, эй!')
-
+#=======================================================================================================================
+# DeepSeek
+#=======================================================================================================================
 
 
 #Поиск по таблице
