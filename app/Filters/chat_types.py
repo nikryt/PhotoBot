@@ -20,5 +20,5 @@ class IsAdmin(Filter):
     async def   __call__(self, message: types.Message, bot: Bot) -> bool:
         load_dotenv()
         admin = int(os.getenv('ADMIN')) # Преобразуем строку в число
-        logging.info(str(admin))
+        # logging.info(str(admin))
         return message.from_user.id == admin

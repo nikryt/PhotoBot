@@ -95,7 +95,7 @@ async def roles():
     for role in all_roles:
 #       Передача в callback_data roles_1-2-3-4...
 #       keyboard.add(InlineKeyboardButton(text=role.name, callback_data=f"roles_{role.id}"))
-        keyboard.add(InlineKeyboardButton(text=role.name, callback_data=role.name))
+        keyboard.add(InlineKeyboardButton(text=role.name, callback_data=f"role_{role.id}"))
         # print(InlineKeyboardButton(text=role.name, callback_data=role.name))
     return keyboard.adjust(2).as_markup()
 
@@ -171,3 +171,25 @@ async def create_keyboard(
 
     return keyboard.adjust(*sizes).as_markup(
             resize_keyboard=True, input_field_placeholder=placeholder)
+
+# функция для клавиатур в зависимости от роли
+async def get_role_keyboard(role: str) -> ReplyKeyboardMarkup:
+    if role == "Фотограф":
+        return ReplyKeyboardMarkup(
+            keyboard=[
+                [KeyboardButton(text="📸 Отправить фото")],
+                [KeyboardButton(text="🔄 Редактировать данные")],
+                [KeyboardButton(text="📋 Мои серийники")]
+            ],
+            resize_keyboard=True
+        )
+    elif role == "Билд-редактор":
+        return ReplyKeyboardMarkup(
+            keyboard=[
+                [KeyboardButton(text="📊 Отчет")],
+                [KeyboardButton(text="🔍 Поиск кода")],
+                [KeyboardButton(text="📂 Архив")]
+            ],
+            resize_keyboard=True
+        )
+    return main  # Стандартная клавиатура

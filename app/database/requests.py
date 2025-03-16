@@ -1,3 +1,5 @@
+import logging
+
 from app.database.models import async_session
 from app.database.models import User, Role, Item
 from sqlalchemy import select, update, delete
@@ -41,10 +43,11 @@ async def set_item(data: dict):
             )
             await session.commit()
 
+
 async def set_item_sn(serial: str):
     async with async_session() as session:
 #         # проверяем есть ли уже запись от этого аккаунта в БД
-#         name = await  session.scalar(select(Item).where(Item.name == data["tg_id"]))
+#         name = await session.scalar(select(Item).where(Item.name == data["tg_id"]))
 #
 # # Если нет еще записи от этого аккаунта то записываем в новую строчку
 #         if not name:
@@ -86,8 +89,13 @@ async def get_role(tg_id: int):
     async with async_session() as session:
         try:
             role = await session.scalar(select(Item.role).where(Item.name == tg_id))
-            print(role)
+            logging.info(f'Получена роль {role}')
             return role
         except Exception as e:
-            print(f"Ошибка при получении роли: {e}")
+            logging.error(f"Ошибка при получении роли: {e}")
             return None
+
+# Функция получения данных о регистрации по tg_id пользователя
+async def get_item_by_tg_id(tg_id: int) -> Item | None:
+    async with async_session() as session:
+        return await session.scalar(select(Item).where(Item.name == str(tg_id)))

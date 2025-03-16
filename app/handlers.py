@@ -92,25 +92,69 @@ class Find(StatesGroup):
 edit = None
 
 @router.message(CommandStart())
-# асинхронная функция cmd_start которая принимает в себя объект Massage
-async def cmd_start(message: Message, state: FSMContext, bot: Bot,):
-# внутри функции cmd_start обращаемся к методу answer, он позволяет отвечать этому же пользователю
-#     await message.answer('Привет!', reply_markup=kb.main)
-# отправляем на команду старт фотографию с подписью и клавиатуру main
-    await  state.clear()
-    # await mes_user_history(message, state)
+async def cmd_start(message: Message, state: FSMContext, bot: Bot):
+    await state.clear()
     await bot.send_chat_action(message.chat.id, ChatAction.TYPING)
     await asyncio.sleep(1)
     await state.set_state(StartState.active)
-    await message.answer_photo(photo='AgACAgIAAxkBAAPgZ361se9D_xn8AwRI7Y1gBmdmTiwAAgfrMRsQmvlLUMXQ9_Z9HXABAAMCAAN5AAM2BA',
-                               caption=Messages.START.format(name=message.from_user.full_name)
-                               # reply_markup=kb.main)
-    )
-    await bot.send_chat_action(message.chat.id, ChatAction.TYPING)
-    await asyncio.sleep(1)
-    await message.answer(text=Messages.INTRO, parse_mode=ParseMode.HTML)
-    # Записываем в БД пользователя с его id
-    await rq.set_user(message.from_user.id)
+
+    # Проверка наличия пользователя в таблице items
+    user_item = await rq.get_item_by_tg_id(message.from_user.id)
+    await rq.set_user(message.from_user.id)  # Всегда обновляем users
+
+    if user_item:
+        # Получаем данные пользователя
+        role_name = {user_item.role}
+        logging.info(f'роль у пользователя: {user_item.role}')
+        keyboard = await kb.get_role_keyboard(role_name)
+
+        await message.answer_photo(
+            photo='AgACAgIAAxkBAAPgZ361se9D_xn8AwRI7Y1gBmdmTiwAAgfrMRsQmvlLUMXQ9_Z9HXABAAMCAAN5AAM2BA',
+            caption=f"👋 Добро пожаловать, {user_item.nameRU}!"
+        )
+        await bot.send_chat_action(message.chat.id, ChatAction.TYPING)
+        await asyncio.sleep(1)
+        await message.answer(text=Messages.INTRO, parse_mode=ParseMode.HTML,
+            reply_markup=keyboard)
+        await state.clear()
+    else:
+        await message.answer_photo(
+            photo='AgACAgIAAxkBAAPgZ361se9D_xn8AwRI7Y1gBmdmTiwAAgfrMRsQmvlLUMXQ9_Z9HXABAAMCAAN5AAM2BA',
+            caption=Messages.START.format(name=message.from_user.full_name),
+        )
+        await bot.send_chat_action(message.chat.id, ChatAction.TYPING)
+        await asyncio.sleep(1)
+        await message.answer(text=Messages.INTRO, parse_mode=ParseMode.HTML
+        )
+
+
+
+
+
+
+# # Старое приветсвие без проверки на регистрацию
+# @router.message(CommandStart())
+# # асинхронная функция cmd_start которая принимает в себя объект Massage
+# async def cmd_start(message: Message, state: FSMContext, bot: Bot,):
+# # внутри функции cmd_start обращаемся к методу answer, он позволяет отвечать этому же пользователю
+# #     await message.answer('Привет!', reply_markup=kb.main)
+# # отправляем на команду старт фотографию с подписью и клавиатуру main
+#     await  state.clear()
+#     # await mes_user_history(message, state)
+#     await bot.send_chat_action(message.chat.id, ChatAction.TYPING)
+#     await asyncio.sleep(1)
+#     await state.set_state(StartState.active)
+#     await message.answer_photo(photo='AgACAgIAAxkBAAPgZ361se9D_xn8AwRI7Y1gBmdmTiwAAgfrMRsQmvlLUMXQ9_Z9HXABAAMCAAN5AAM2BA',
+#                                caption=Messages.START.format(name=message.from_user.full_name)
+#                                # reply_markup=kb.main)
+#     )
+#     await bot.send_chat_action(message.chat.id, ChatAction.TYPING)
+#     await asyncio.sleep(1)
+#     await message.answer(text=Messages.INTRO, parse_mode=ParseMode.HTML)
+#     # Записываем в БД пользователя с его id
+#     await rq.set_user(message.from_user.id)
+# # Конец старого приветсвия без проверки на регистрацию
+
 
 # отправляем методом ответа на сообщение стикер по его ID
 #     await message.reply_sticker(sticker='CAACAgIAAxkBAAPYZ36b1AUNHQg55cEEfzilVTX1lCYAArkRAAJClVFLVmGP6JmH07A2BA', reply_markup=ReplyKeyboardRemove())
@@ -750,14 +794,15 @@ async def handle_start_state(message: types.Message, bot: Bot):
 
 
 #Если выбрана роль не фотограф
-@router.callback_query(Register.role, F.data != 'Фотограф')
+@router.callback_query(Register.role, F.data != 'role_1')
 async def select_rol(callback_query: types.CallbackQuery, state: FSMContext,  bot: Bot):
     message = callback_query.message
+    role_id = int(callback_query.data.split('_')[1])  # Извлекаем ID роли
     # await mes_user_history(message, state)
     await delete_all_previous_messages(message.chat.id, state, bot)
     #удаляем инлайн клавиатуру по callback_query
     # await bot.edit_message_reply_markup(chat_id=callback_query.from_user.id, message_id=callback_query.message.message_id, reply_markup=None)
-    await state.update_data(role=callback_query.data,
+    await state.update_data(role=role_id,
                             photofile1='Не загружена', photofile2='Не загружена', photofile3='Не загружена',
                             serial1='NoSerial', serial2='NoSerial', serial3='NoSerial'
                             )
@@ -777,12 +822,13 @@ async def select_rol(callback_query: types.CallbackQuery, state: FSMContext,  bo
     await state.set_state(Register.verify)
 
 #Если выбрали роль Фотограф
-@router.callback_query(Register.role, F.data == 'Фотограф')
+@router.callback_query(Register.role, F.data == 'role_1')
 async def select_rol(callback_query: types.CallbackQuery, state: FSMContext, bot: Bot):
     message = callback_query.message
     # await mes_user_history(message, state)
+    role_id = int(callback_query.data.split('_')[1])  # Извлекаем ID роли
     await bot.edit_message_reply_markup(chat_id=callback_query.from_user.id, message_id=callback_query.message.message_id, reply_markup=None)
-    await state.update_data(role=callback_query.data,
+    await state.update_data(role=role_id,
                             photofile1='Не загружена', photofile2='Не загружена', photofile3='Не загружена',
                             serial1='NoSerial', serial2='NoSerial', serial3='NoSerial'
                             )
