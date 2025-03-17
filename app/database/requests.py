@@ -138,7 +138,7 @@ async def apply_temp_changes(tg_id: int):
         data = json.loads(temp.data)
         item = await session.scalar(select(Item).where(Item.name == str(tg_id)))
 
-        for field in ['nameRu', 'nameEn', 'idn', 'mailcontact', 'tel',
+        for field in ['nameRU', 'nameEN', 'idn', 'mailcontact', 'tel',
                       'role', 'serial1', 'serial2', 'serial3']:
             if field in data:
                 setattr(item, field, data[field])

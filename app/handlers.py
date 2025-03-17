@@ -48,8 +48,8 @@ class StartState(StatesGroup):
 class Register(StatesGroup):
     # last_bot_message_id = State()
     tg_id = State()
-    nameRu = State()
-    nameEn = State()
+    nameRU = State()
+    nameEN = State()
     idn = State()
     mailcontact = State()
     tel = State()
@@ -61,8 +61,8 @@ class Register(StatesGroup):
     serial2 = State()
     serial3 = State()
     verify = State()
-    nameRu2 = State()
-    nameEn2 = State()
+    nameRU2 = State()
+    nameEN2 = State()
     idn2 = State()
     mailcontact2 = State()
     tel2 = State()
@@ -223,7 +223,7 @@ async def register(message: Message, state: FSMContext, bot: Bot):
             state
         )
     # Активируем состояние диалога
-    await state.set_state(Register.nameRu)
+    await state.set_state(Register.nameRU)
 
 
 #-----------------------------------------------------------------------------------------------------------------------
@@ -322,8 +322,8 @@ async def format_phone(phone: str) -> str:
         return None
 
 #Функция получения инициалов
-async def get_initials(nameEn: str) -> str:
-    return ''.join([part[0].upper() for part in nameEn.split() if part])
+async def get_initials(nameEN: str) -> str:
+    return ''.join([part[0].upper() for part in nameEN.split() if part])
 
 #Функция перевода в латиницу
 async def transliterate_russian_to_eng(name_ru: str) -> str:
@@ -382,8 +382,8 @@ async def process_documents(documents: list, username: int, bot: Bot) -> list:
 async def generate_diff_message(old_item: Item, new_data: dict) -> str:
     diff = []
     fields = {
-        'nameRu': 'Имя (RU)',
-        'nameEn': 'Имя (EN)',
+        'nameRU': 'Имя (RU)',
+        'nameEU': 'Имя (EN)',
         'idn': 'Инициалы',
         'tel': 'Телефон',
         'mailcontact': 'Контакты',
@@ -517,12 +517,12 @@ async def cancel_heandler(message: types.Message, state: FSMContext) -> None:
 
     current_state = await  state.get_state()
     # print(current_state)
-    if current_state == Register.nameRu:
+    if current_state == Register.nameRU:
         await message.answer('Предыдущего шага нет.\nВведите  ФИО на русском или отмените полностью регистрацию и напишите "отмена"')
         return
     if current_state == Register.mailcontact:
         await message.answer('Возвращаемся к вводу ФИО.\nВведите  ФИО на русском или отмените полностью регистрацию и напишите "отмена"')
-        await state.set_state(Register.nameRu)
+        await state.set_state(Register.nameRU)
         return
     if current_state == Register.tel:
         await message.answer('Возвращаемся к вводу контактной информации.\nВведите  ваши контакты или отмените полностью регистрацию и напишите "отмена"')
@@ -566,7 +566,7 @@ async def cancel_heandler(message: types.Message, state: FSMContext) -> None:
 #     await state.clear()
 #     await message.answer('Начнём регистрацию.')
 #     await asyncio.sleep(1)
-#     await state.set_state(Register.nameRu)
+#     await state.set_state(Register.nameRU)
 #     new_message = await message.answer('Введите ваше ФИО на русском языке', reply_markup=ReplyKeyboardRemove())
 #     await state.update_data(last_bot_message_id=new_message.message_id)
 
@@ -587,8 +587,8 @@ async def cancel_heandler(message: types.Message, state: FSMContext) -> None:
 #     await state.update_data(message_history=[new_msg.message_id])
 
 
-@router.message(Register.nameRu)
-async def register_nameRu(message: Message, state: FSMContext, bot: Bot):
+@router.message(Register.nameRU)
+async def register_nameRU(message: Message, state: FSMContext, bot: Bot):
     await mes_user_history(message, state)
     if not re.match(r"^[А-Яа-яЁё\-\' ]+$", message.text):
         return await send_typing_and_message(
@@ -596,13 +596,13 @@ async def register_nameRu(message: Message, state: FSMContext, bot: Bot):
             "Недопустимые символы в имени, исправьте и введите корректно имя",
             state)
     else:
-        nameRu = await registr_fio(message.text)
-        nameEn = await transliterate_russian_to_eng(message.text)
-        initials = await get_initials(nameEn)
+        nameRU = await registr_fio(message.text)
+        nameEN = await transliterate_russian_to_eng(message.text)
+        initials = await get_initials(nameEN)
         await state.update_data(
-            nameRu=nameRu,
+            nameRU=nameRU,
             tg_id=message.from_user.id,
-            nameEn=nameEn,
+            nameEN=nameEN,
             idn=initials,
         )
         # # Добавляем сообщение пользователя в историю
@@ -627,9 +627,9 @@ async def register_nameRu(message: Message, state: FSMContext, bot: Bot):
         # Отправляем новое сообщение
         await send_typing_and_message(
             message.chat.id, bot,
-            f"✅ Принято: {nameRu}\n\n"
-            f"🪪 Ваше имя RU: {nameRu}\n"
-            f"🪪 Ваше имя EN: {nameEn}\n"
+            f"✅ Принято: {nameRU}\n\n"
+            f"🪪 Ваше имя RU: {nameRU}\n"
+            f"🪪 Ваше имя EN: {nameEN}\n"
             f"🪪 Ваши Инициалы: {initials}\n\n"
             f"📫 Введите Контакты для связи (почта или соцсети):",
             state, reply_markup=kb.back_cancel
@@ -637,15 +637,15 @@ async def register_nameRu(message: Message, state: FSMContext, bot: Bot):
         await state.set_state(Register.mailcontact)
 
 #Тестирую удаление всех сообщений, оставил прошлую версию
-# @router.message(Register.nameRu)
-# async def register_nameRu(message: Message, state: FSMContext, bot: Bot):
+# @router.message(Register.nameRU)
+# async def register_nameRU(message: Message, state: FSMContext, bot: Bot):
 #     if not re.match(r"^[А-Яа-яЁё\-\' ]+$", message.text):
 #         return await message.answer("Недопустимые символы в имени, исправьте и введтие корректно имя")
 #     else:
-#         nameRu = await registr_fio(message.text)
-#         nameEn = await transliterate_russian_to_eng(message.text)
-#         initials = await get_initials(nameEn)
-#         await state.update_data(nameRu=nameRu, tg_id=message.from_user.id, nameEn=nameEn, idn=initials)
+#         nameRU = await registr_fio(message.text)
+#         nameEN = await transliterate_russian_to_eng(message.text)
+#         initials = await get_initials(nameEN)
+#         await state.update_data(nameRU=nameRU, tg_id=message.from_user.id, nameEN=nameEN, idn=initials)
 #         data = await state.get_data()
 #         last_bot_message_id = data.get("last_bot_message_id")
 #         if last_bot_message_id:
@@ -657,8 +657,8 @@ async def register_nameRu(message: Message, state: FSMContext, bot: Bot):
 #         await asyncio.sleep(1)  # Имитация задержки печати
 #         # Отправляем новое сообщение
 #         new_message = await message.answer(
-#             f'Ваше имя RU: {nameRu}\n'
-#             f'Ваше имя EN: {nameEn}\n'
+#             f'Ваше имя RU: {nameRU}\n'
+#             f'Ваше имя EN: {nameEN}\n'
 #             f'Ваши 🪪 Инициалы: {initials}\n\n'
 #             f'Введите 📫 Контакты  по которым с вами можно связаться, почта или социальные сети'
 #         )
@@ -668,9 +668,9 @@ async def register_nameRu(message: Message, state: FSMContext, bot: Bot):
 #
 
 #-----------------------------------------------------------------------------------------------------------------------
-# @router.message(Register.nameEn)
+# @router.message(Register.nameEN)
 # async def register_nameEN(message: Message, state: FSMContext):
-#     await state.update_data(nameEn=message.text)
+#     await state.update_data(nameEN=message.text)
 #     await state.set_state(Register.idn)
 #     await message.answer('Введите ваши 🪪 Инициалы на латинице, они будут подставленны в имя файла ваших фотографий, как пример вот так KNA')
 #
@@ -709,8 +709,8 @@ async def register_mailcontact(message: Message, state: FSMContext, bot: Bot):
     await send_typing_and_message(
         message.chat.id, bot,
         f"✅ Принято: {message.text}\n\n"
-        f'🪪 Ваше имя RU: {data["nameRu"]}\n'
-        f'🪪 Ваше имя EN: {data["nameEn"]}\n'
+        f'🪪 Ваше имя RU: {data["nameRU"]}\n'
+        f'🪪 Ваше имя EN: {data["nameEN"]}\n'
         f'🪪 Ваши Инициалы: {data["idn"]}\n'
         f'📫 Ваши Контакты: {data["mailcontact"]}\n\n'
         f'☎️ Поделитесь своим Телефоном нажав на кнопку ниже.',
@@ -758,8 +758,8 @@ async def register_tel(message: Message, state: FSMContext, bot: Bot):
         await send_typing_and_message(
             message.chat.id, bot,
             f"✅ Принято: {phone}\n\n"
-            f'Ваше имя RU: {data["nameRu"]}\n'
-            f'Ваше имя EN: {data["nameEn"]}\n'
+            f'Ваше имя RU: {data["nameRU"]}\n'
+            f'Ваше имя EN: {data["nameEN"]}\n'
             f'Ваши 🪪 Инициалы: {data["idn"]}\n'
             f'Ваши 📫 Контакты: {data["mailcontact"]}\n'
             f'Ваш номер ☎️ Телефона {phone}\n\n'
@@ -796,8 +796,8 @@ async def validate_phone(message: Message, state: FSMContext, bot: Bot):
         await send_typing_and_message(
             message.chat.id, bot,
             f"✅ Принято: {formatted}\n\n"
-            f'Ваше имя RU: {data["nameRu"]}\n'
-            f'Ваше имя EN: {data["nameEn"]}\n'
+            f'Ваше имя RU: {data["nameRU"]}\n'
+            f'Ваше имя EN: {data["nameEN"]}\n'
             f'Ваши 🪪 Инициалы: {data["idn"]}\n'
             f'Ваши 📫 Контакты: {data["mailcontact"]}\n'
             f'Ваш номер ☎️ Телефона {formatted}\n\n'
@@ -806,8 +806,8 @@ async def validate_phone(message: Message, state: FSMContext, bot: Bot):
         )
         # await message.answer(
         #     f"✅ Принято: {formatted}\n\n"
-        #     f'Ваше имя RU: {data["nameRu"]}\n'
-        #     f'Ваше имя EN: {data["nameEn"]}\n'
+        #     f'Ваше имя RU: {data["nameRU"]}\n'
+        #     f'Ваше имя EN: {data["nameEN"]}\n'
         #     f'Ваши 🪪 Инициалы: {data["idn"]}\n'
         #     f'Ваши 📫 Контакты: {data["mailcontact"]}\n'
         #     f'Ваш номер ☎️ Телефона {formatted}\n\n'
@@ -871,8 +871,8 @@ async def select_rol(callback_query: types.CallbackQuery, state: FSMContext,  bo
     await send_typing_and_message(
             message.chat.id, bot,
             f"✅ Принято:  {role}\n\n"
-            f'🪪 Ваше имя RU: {data["nameRu"]}\n'
-            f'🪪 Ваше имя EN: {data["nameEn"]}\n'
+            f'🪪 Ваше имя RU: {data["nameRU"]}\n'
+            f'🪪 Ваше имя EN: {data["nameEN"]}\n'
             f'🪪 Ваши Инициалы: {data["idn"]}\n'
             f'📫 Ваши Контакты: {data["mailcontact"]}\n'
             f'☎️ Ваш номер Телефона {data["tel"]}\n'
@@ -1095,8 +1095,8 @@ async  def verify(message: types.Message, state: FSMContext, bot: Bot):
         role = await rq.get_role_name(data["role"])
         if data["photofile3"]  == 'Не загружена' and data["photofile2"]  == 'Не загружена' and data["photofile1"]  == 'Не загружена':
             await message.answer(
-                f'🪪 Ваше имя RU: {data["nameRu"]}\n'
-                f'🪪 Ваше имя EN: {data["nameEn"]}\n'
+                f'🪪 Ваше имя RU: {data["nameRU"]}\n'
+                f'🪪 Ваше имя EN: {data["nameEN"]}\n'
                 f'🪪 Ваши Инициалы: {data["idn"]}\n'
                 f'📫 Ваши Контакты: {data["mailcontact"]}\n'
                 f'☎️ Ваш Телефон: {data["tel"]}\n'
@@ -1106,8 +1106,8 @@ async  def verify(message: types.Message, state: FSMContext, bot: Bot):
         elif data["photofile3"]  == 'Не загружена' and data["photofile2"]  == 'Не загружена':
             await message.answer_document(data["photofile1"])
             await message.answer(
-                f'🪪 Ваше имя RU: {data["nameRu"]}\n'
-                f'🪪 Ваше имя EN: {data["nameEn"]}\n'
+                f'🪪 Ваше имя RU: {data["nameRU"]}\n'
+                f'🪪 Ваше имя EN: {data["nameEN"]}\n'
                 f'🪪 Ваши Инициалы: {data["idn"]}\n'
                 f'📫 Ваши Контакты: {data["mailcontact"]}\n'
                 f'☎️ Ваш Телефон: {data["tel"]}\n'
@@ -1119,8 +1119,8 @@ async  def verify(message: types.Message, state: FSMContext, bot: Bot):
             await message.answer_document(data["photofile1"])
             await message.answer_document(data["photofile2"])
             await message.answer(
-                f'🪪 Ваше имя RU: {data["nameRu"]}\n'
-                f'🪪 Ваше имя EN: {data["nameEn"]}\n'
+                f'🪪 Ваше имя RU: {data["nameRU"]}\n'
+                f'🪪 Ваше имя EN: {data["nameEN"]}\n'
                 f'🪪 Ваши Инициалы: {data["idn"]}\n'
                 f'📫 Ваши Контакты: {data["mailcontact"]}\n'
                 f'☎️ Ваш Телефон: {data["tel"]}\n'
@@ -1134,8 +1134,8 @@ async  def verify(message: types.Message, state: FSMContext, bot: Bot):
             await message.answer_document(data["photofile2"])
             await message.answer_document(data["photofile3"])
             await message.answer(
-                f'🪪 Ваше имя RU: {data["nameRu"]}\n'
-                f'🪪 Ваше имя EN: {data["nameEn"]}\n'
+                f'🪪 Ваше имя RU: {data["nameRU"]}\n'
+                f'🪪 Ваше имя EN: {data["nameEN"]}\n'
                 f'🪪 Ваши Инициалы: {data["idn"]}\n'
                 f'📫 Ваши Контакты: {data["mailcontact"]}\n'
                 f'☎️ Ваш Телефон: {data["tel"]}\n'
@@ -1155,7 +1155,7 @@ async  def proverka_no(callback: CallbackQuery, state: FSMContext, bot: Bot):
     data = await state.get_data()
     role = await rq.get_role_name(data["role"])
     await callback.message.edit_text(
-                f'🪪 Ваше имя RU: {data["nameRu"]}\n🪪 Ваше имя EN: {data["nameEn"]}\n☎️ Ваш Телефон: {data["tel"]}\n'
+                f'🪪 Ваше имя RU: {data["nameRU"]}\n🪪 Ваше имя EN: {data["nameEN"]}\n☎️ Ваш Телефон: {data["tel"]}\n'
                 f'🪪 Ваши инициалы: {data["idn"]}\n📫 Ваши Контакты: {data["mailcontact"]}\n🪆 Вашу Роль: {role}\n\n'
                 f'Все верно?', reply_markup=kb.edit)
 
@@ -1163,31 +1163,31 @@ async  def proverka_no(callback: CallbackQuery, state: FSMContext, bot: Bot):
 #   Меню редактирования своих данных
 #-----------------------------------------------------------------------------------------------------------------------
 @router.callback_query(F.data == 'RU')
-async def register_nameRu2(callback_query: types.CallbackQuery, state: FSMContext, bot: Bot):
+async def register_nameRU2(callback_query: types.CallbackQuery, state: FSMContext, bot: Bot):
     # удаляем инлайн клавиатуру по callback_query
     await bot.edit_message_reply_markup(chat_id=callback_query.from_user.id, message_id=callback_query.message.message_id, reply_markup=None)
-    await state.set_state(Register.nameRu2)
+    await state.set_state(Register.nameRU2)
     await callback_query.message.answer(text='Введите исправления в ваше ФИО на русском языке')
 
-@router.message(Register.nameRu2)
-async def register_nameRu2(message: Message, state: FSMContext):
-    await state.update_data(nameRu=message.text)
+@router.message(Register.nameRU2)
+async def register_nameRU2(message: Message, state: FSMContext):
+    await state.update_data(nameRU=message.text)
     await state.set_state(Register.verify)
     await message.answer('Подтвердите изменения',
                          reply_markup=kb.getphoto)
 
 @router.callback_query(F.data == 'EN')
-async def register_nameEn2(callback_query: types.CallbackQuery, state: FSMContext, bot: Bot):
+async def register_nameEN2(callback_query: types.CallbackQuery, state: FSMContext, bot: Bot):
     # удаляем инлайн клавиатуру по callback_query
     await bot.edit_message_reply_markup(chat_id=callback_query.from_user.id, message_id=callback_query.message.message_id, reply_markup=None)
-    await state.set_state(Register.nameEn2)
+    await state.set_state(Register.nameEN2)
     data = await state.get_data()
     await  callback_query.message.answer(text=f'Вы можете внести исправления в ваше имя на английском языке.\n'
-                                              f'Сейчас оно такое: {data["nameEn"]}')
+                                              f'Сейчас оно такое: {data["nameEN"]}')
 
-@router.message(Register.nameEn2)
-async def register_nameEn2(message: Message, state: FSMContext):
-    await state.update_data(nameEn=message.text)
+@router.message(Register.nameEN2)
+async def register_nameEN2(message: Message, state: FSMContext):
+    await state.update_data(nameEN=message.text)
     await state.set_state(Register.verify)
     await message.answer('Подтвердите изменения',
                              reply_markup=kb.getphoto)
