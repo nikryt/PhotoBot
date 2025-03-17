@@ -71,10 +71,20 @@ admin = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text=Buttons.ERROR, callback_data='clear'), InlineKeyboardButton(text=Buttons.NEW, callback_data='new')]
 ])
 
-
-
-
-
+# Клавиатура для админ-подтверждения
+def admin_approval_kb(user_id: int) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(
+                text="✅ Подтвердить",
+                callback_data=f"approve_{user_id}"
+            ),
+            InlineKeyboardButton(
+                text="❌ Отклонить",
+                callback_data=f"reject_{user_id}"
+            )
+        ]
+    ])
 
     # ------------------------------------------------------------------------------------------------------------------
     # Клавиатуры админа

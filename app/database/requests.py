@@ -1,6 +1,7 @@
+import json
 import logging
 
-from app.database.models import async_session
+from app.database.models import async_session, TempChanges
 from app.database.models import User, Role, Item
 from sqlalchemy import select, update, delete
 from sqlalchemy.orm import defer
@@ -68,7 +69,6 @@ async def del_item(id):
         await session.execute(delete(Item).where(Item.id == id))
         await session.commit()
 
-
 #-------------------------------------------------------------------------------------------------------------------
 # Функции получения данных
 #-------------------------------------------------------------------------------------------------------------------
@@ -105,3 +105,50 @@ async def get_role_name(role_id: int) -> str | None:
     async with async_session() as session:
         role = await session.scalar(select(Role.name).where(Role.id == role_id))
         return role if role else "Не указана"
+
+#-------------------------------------------------------------------------------------------------------------------
+# Конец Функции получения данных
+#-------------------------------------------------------------------------------------------------------------------
+
+
+
+#-------------------------------------------------------------------------------------------------------------------
+# Функции для обработки временных сохранений и подтверждения сохранения данных
+#-------------------------------------------------------------------------------------------------------------------
+
+async def save_temp_changes(tg_id: int, data: dict):
+    async with async_session() as session:
+        await session.execute(delete(TempChanges).where(TempChanges.tg_id == tg_id))
+        session.add(TempChanges(tg_id=tg_id, data=json.dumps(data)))
+        await session.commit()
+
+
+async def get_temp_changes(tg_id: int) -> dict | None:
+    async with async_session() as session:
+        temp = await session.scalar(select(TempChanges).where(TempChanges.tg_id == tg_id))
+        return json.loads(temp.data) if temp else None
+
+
+async def apply_temp_changes(tg_id: int):
+    async with async_session() as session:
+        temp = await session.scalar(select(TempChanges).where(TempChanges.tg_id == tg_id))
+        if not temp:
+            return False
+
+        data = json.loads(temp.data)
+        item = await session.scalar(select(Item).where(Item.name == str(tg_id)))
+
+        for field in ['nameRu', 'nameEn', 'idn', 'mailcontact', 'tel',
+                      'role', 'serial1', 'serial2', 'serial3']:
+            if field in data:
+                setattr(item, field, data[field])
+
+        await session.delete(temp)
+        await session.commit()
+        return True
+
+async def del_temp_changes(user_id: int):
+    async with async_session() as session:
+        await session.execute(delete(TempChanges).where(TempChanges.tg_id == user_id))
+        await session.commit()
+        return True

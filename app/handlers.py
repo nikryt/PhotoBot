@@ -1,35 +1,28 @@
-# from email.policy import default
-# from sys import exception
 import logging
-from datetime import datetime
-from http.client import responses
-from pathlib import Path
-from typing import List
-
 import phonenumbers
-from sqlalchemy.orm import defer
+from dotenv import load_dotenv
 
 import Texts
 import os
 import re
 import asyncio
 
+from datetime import datetime
+from pathlib import Path
+from typing import List
 from phonenumbers import NumberParseException, PhoneNumberFormat
 from aiogram import F, Router, types, Bot
-# from aiogram.client.default import Default
-from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, ReplyKeyboardRemove, Update
 from aiogram.filters import CommandStart, Command, StateFilter
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
-# from aiogram.methods import SendMessage, ForwardMessage
 from aiogram.enums import ContentType, ChatAction
 from aiogram.enums import ParseMode
 #Импортировали тексты из отдельного файла
 from Texts import Messages, Buttons, StatesText, Help
+from app.database.models import Item
 from app.generate import ai_generate
 from app.Filters.chat_types import ChatTypeFilter # импортировали наши личные фильтры
-
 
 import app.keyboards as kb
 import app.database.requests as rq
@@ -85,6 +78,9 @@ class Find(StatesGroup):
     send = State()
     exclude = State()
 
+class AdminApproval(StatesGroup):
+    waiting = State()
+
 # Переменная для хранения message_id последнего сообщения бота
 # last_bot_message_id = None
 
@@ -107,16 +103,44 @@ async def cmd_start(message: Message, state: FSMContext, bot: Bot):
         role_name = await rq.get_role_name(user_item.role)
         logging.info(f'роль у пользователя: {role_name}')
         keyboard = await kb.get_role_keyboard(role_name)
-
-        await message.answer_photo(
-            photo='AgACAgIAAxkBAAPgZ361se9D_xn8AwRI7Y1gBmdmTiwAAgfrMRsQmvlLUMXQ9_Z9HXABAAMCAAN5AAM2BA',
-            caption=f"👋 Добро пожаловать, {user_item.nameRU}!"
-        )
-        await bot.send_chat_action(message.chat.id, ChatAction.TYPING)
-        await asyncio.sleep(1)
-        await message.answer(text=Messages.INTRO, parse_mode=ParseMode.HTML,
-            reply_markup=keyboard)
+        if role_name == "Фотограф":
+            await message.answer_photo(
+                photo='AgACAgIAAxkBAAPgZ361se9D_xn8AwRI7Y1gBmdmTiwAAgfrMRsQmvlLUMXQ9_Z9HXABAAMCAAN5AAM2BA',
+                caption=f"👋 Фотограф: {user_item.nameRU}!"
+            )
+            await bot.send_chat_action(message.chat.id, ChatAction.TYPING)
+            await asyncio.sleep(1)
+            await message.answer(text=Messages.INTRO_PHOTO, parse_mode=ParseMode.HTML,
+                reply_markup=keyboard)
+        elif role_name == "Билд-редактор":
+            await message.answer_photo(
+                photo='AgACAgIAAxkBAAPgZ361se9D_xn8AwRI7Y1gBmdmTiwAAgfrMRsQmvlLUMXQ9_Z9HXABAAMCAAN5AAM2BA',
+                caption=f"👋 Билд-Редкатор: {user_item.nameRU}!"
+            )
+            await bot.send_chat_action(message.chat.id, ChatAction.TYPING)
+            await asyncio.sleep(1)
+            await message.answer(text=Messages.INTRO_BILD, parse_mode=ParseMode.HTML,
+                reply_markup=keyboard)
+        elif role_name == "Менеджер":
+            await message.answer_photo(
+                photo='AgACAgIAAxkBAAPgZ361se9D_xn8AwRI7Y1gBmdmTiwAAgfrMRsQmvlLUMXQ9_Z9HXABAAMCAAN5AAM2BA',
+                caption=f"👋 Манеджер: {user_item.nameRU}!"
+            )
+            await bot.send_chat_action(message.chat.id, ChatAction.TYPING)
+            await asyncio.sleep(1)
+            await message.answer(text=Messages.INTRO_MANAGER, parse_mode=ParseMode.HTML,
+                reply_markup=keyboard)
+        else:
+            await message.answer_photo(
+                photo='AgACAgIAAxkBAAPgZ361se9D_xn8AwRI7Y1gBmdmTiwAAgfrMRsQmvlLUMXQ9_Z9HXABAAMCAAN5AAM2BA',
+                caption=f"👋 Кто ты? {user_item.nameRU}!"
+            )
+            await bot.send_chat_action(message.chat.id, ChatAction.TYPING)
+            await asyncio.sleep(1)
+            await message.answer(text=Messages.INTRO_MANAGER, parse_mode=ParseMode.HTML,
+                reply_markup=keyboard)
         await state.clear()
+
     else:
         await message.answer_photo(
             photo='AgACAgIAAxkBAAPgZ361se9D_xn8AwRI7Y1gBmdmTiwAAgfrMRsQmvlLUMXQ9_Z9HXABAAMCAAN5AAM2BA',
@@ -176,19 +200,28 @@ async def  cmd_help(message: Message, state: FSMContext, bot: Bot):
 @router.message(StateFilter('*'), Command('register'))
 async def register(message: Message, state: FSMContext, bot: Bot):
     await state.clear()
+    current_user = await rq.get_item_by_tg_id(message.from_user.id)
     # запишем команды для ее удаления
     await mes_user_history(message, state)
-    await send_typing_and_message(
-        message.chat.id, bot,
-        f'✅ Начнём регистрацию.\n\n',
-        state, reply_markup=ReplyKeyboardRemove()
-    )
-    await send_typing_and_message(
-        message.chat.id, bot,
-        f'Введите ваше ФИО на русском языке',
-        state
-    )
-
+    if current_user:  # Если пользователь уже зарегистрирован
+        await state.update_data(is_edit=True)
+        await send_typing_and_message(
+            message.chat.id, bot,
+            "✏️ Режим редактирования. Введите новые данные.\n"
+            "Сперва ФИО на русском языке:",
+            state, reply_markup=ReplyKeyboardRemove()
+        )
+    else:
+        await send_typing_and_message(
+            message.chat.id, bot,
+            "✅ Начнём регистрацию.",
+            state, reply_markup=ReplyKeyboardRemove()
+        )
+        await send_typing_and_message(
+            message.chat.id, bot,
+            f'Введите ваше ФИО на русском языке',
+            state
+        )
     # Активируем состояние диалога
     await state.set_state(Register.nameRu)
 
@@ -345,6 +378,33 @@ async def process_documents(documents: list, username: int, bot: Bot) -> list:
 
     return saved_files
 
+# функция сравнения данных при запросе к админу о изменениях.
+async def generate_diff_message(old_item: Item, new_data: dict) -> str:
+    diff = []
+    fields = {
+        'nameRu': 'Имя (RU)',
+        'nameEn': 'Имя (EN)',
+        'idn': 'Инициалы',
+        'tel': 'Телефон',
+        'mailcontact': 'Контакты',
+        'serial1': 'Серийник 1',
+        'serial2': 'Серийник 2',
+        'serial3': 'Серийник 3',
+        'role': 'Роль'
+    }
+
+    for field, name in fields.items():
+        old_val = getattr(old_item, field, 'не указано')
+        new_val = new_data.get(field, 'не указано')
+
+        if str(old_val) != str(new_val):
+            diff.append(
+                f"▫️ {name}:\n"
+                f"Было: {old_val}\n"
+                f"Стало: {new_val}\n"
+            )
+
+    return "\n".join(diff) if diff else "Нет изменений в основных полях"
 
 #-----------------------------------------------------------------------------------------------------------------------
 #Проверяем новые функции
@@ -810,7 +870,7 @@ async def select_rol(callback_query: types.CallbackQuery, state: FSMContext,  bo
     role = await rq.get_role_name(data["role"])
     await send_typing_and_message(
             message.chat.id, bot,
-            f"✅ Принято: {callback_query.data}\n\n"
+            f"✅ Принято:  {role}\n\n"
             f'🪪 Ваше имя RU: {data["nameRu"]}\n'
             f'🪪 Ваше имя EN: {data["nameEn"]}\n'
             f'🪪 Ваши Инициалы: {data["idn"]}\n'
@@ -1229,16 +1289,33 @@ async def proverka_yes(callback: CallbackQuery, state: FSMContext, bot: Bot):
     await callback.answer('Вы подтвердили верность данных.', show_alert=True)
     await callback.message.answer('Вы подтвердили верность данных.')
     data = await state.get_data()
-    try:
-        await rq.set_item(data)
-        await fu.number_row(data)
-        await callback.message.answer(text=Texts.Messages.REG_SUCCESS, reply_markup=ReplyKeyboardRemove())
-        await state.clear()
+    load_dotenv()
+    admin = int(os.getenv('ADMIN'))
 
-    except Exception as e:
-            await callback.message.answer(
-                f"Ошибка: \n {str(e)}\nОбратитесь к программисту, он денег хочет снова",reply_markup=ReplyKeyboardRemove())
+    if data.get('is_edit'):
+        await rq.save_temp_changes(callback.from_user.id, data)
+        admin_text = await generate_diff_message(
+            await rq.get_item_by_tg_id(callback.from_user.id),
+            data
+        )
+
+        await bot.send_message(
+            chat_id=admin,
+            text=f"🛠 Запрос на изменения от @{callback.from_user.username}:\n{admin_text}",
+            reply_markup=kb.admin_approval_kb(callback.from_user.id)
+        )
+        await callback.message.answer("✅ Запрос отправлен администратору")
+    else:
+        try:
+            await rq.set_item(data)
+            await fu.number_row(data)
+            await callback.message.answer(text=Texts.Messages.REG_SUCCESS, reply_markup=ReplyKeyboardRemove())
             await state.clear()
+
+        except Exception as e:
+                await callback.message.answer(
+                    f"Ошибка: \n {str(e)}\nОбратитесь к программисту, он денег хочет снова",reply_markup=ReplyKeyboardRemove())
+                await state.clear()
 
 # #Записываем в БД пользователя с его id
 #     await rq.set_item(data)
@@ -1246,6 +1323,30 @@ async def proverka_yes(callback: CallbackQuery, state: FSMContext, bot: Bot):
     await state.set_state(StartState.active)
 
 
+# Добавим обработчики для админ-подтверждения:
+@router.callback_query(F.data.startswith("approve_"))
+async def approve_changes(callback: CallbackQuery):
+    user_id = int(callback.data.split("_")[1])
+
+    if await rq.apply_temp_changes(user_id):
+        await callback.message.edit_text(f"✅ Изменения для {user_id} применены")
+        await callback.bot.send_message(user_id, "✅ Ваши изменения утверждены!")
+    else:
+        await callback.answer("❌ Нет ожидающих изменений")
+
+
+@router.callback_query(F.data.startswith("reject_"))
+async def reject_changes(callback: CallbackQuery):
+    user_id = int(callback.data.split("_")[1])
+
+    await rq.del_temp_changes(user_id)
+
+    # async with async_session() as session:
+    #     await session.execute(delete(TempChanges).where(TempChanges.tg_id == user_id))
+    #     await session.commit()
+
+    await callback.message.edit_text(f"❌ Изменения для {user_id} отклонены")
+    await callback.bot.send_message(user_id, "❌ Ваши изменения были отклонены")
 
 
 #=======================================================================================================================

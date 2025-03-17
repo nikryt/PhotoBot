@@ -45,6 +45,14 @@ class Item(Base):
     photo3: Mapped[str] = mapped_column(String(30), nullable=True)
     role: Mapped[int] = mapped_column(ForeignKey('roles.id'), nullable=True)
 
+
+class TempChanges(Base):
+    __tablename__ = 'temp_changes'
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    tg_id = mapped_column(BigInteger)
+    data: Mapped[str] = mapped_column(String(2000))
+
 async  def async_main():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
