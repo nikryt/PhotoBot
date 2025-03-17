@@ -1372,8 +1372,10 @@ async def stop_flood(message: Message):
 #=======================================================================================================================
 
 
+
+
 #Поиск по таблице
-@router.message(F.text.lower() == "найди")
+@router.message(F.text.lower() == "расписание")
 async def deepseek(message: Message, state: FSMContext):
     await message.answer('Напиши что ты хочешь найти?', reply_markup=kb.find)
     # Устанавливаем состояние ожидания выбора слов исключений
@@ -1385,18 +1387,22 @@ async def process_exclude_words(callback: CallbackQuery, state: FSMContext):
     # Подтверждаем обработку callback-запроса
     await callback.answer('Пойду поищу')
 
+    # Инициализируем обе переменные
+    exclude_words = []
+    include_values = []
+
     # Определяем список исключений на основе callback_data
     exclude_words = []
     if callback.data == "ready":
         exclude_words = ["", "ОТМЕНА", "СНИМАЮТ"]
     elif callback.data == "clear":
-        exclude_words = [""]
+        include_values = [""]
     elif callback.data == "new":
         exclude_words = ["СНЯТО", "ОТМЕНА", "СНИМАЮТ"]
     # Если callback_data == "exclude_none", список исключений останется пустым
 
     # Сохраняем список исключений в state
-    await state.update_data(exclude_words=exclude_words)
+    await state.update_data(exclude_words=exclude_words, include_values=include_values)
 
     # Получаем инициалы из базы данных
     tg_id = callback.from_user.id
@@ -1422,148 +1428,414 @@ async def process_exclude_words(callback: CallbackQuery, state: FSMContext):
 
 
 
-# Вывод каждого кода отдельным сообщением
+# # Вывод каждого кода отдельным сообщением
+# @router.message(Find.send)
+# async def find_all_text_code(message: Message, state: FSMContext):
+#     # Получаем список исключений и инициалы из state
+#     data = await state.get_data()
+#     exclude_words: List[str] = data.get("exclude_words", [])
+#     initials: str = data.get("initials", "")
+#
+#     if not initials:
+#         await message.answer("🔎 Инициалы не найдены.")
+#         await state.clear()
+#         return
+#
+#         # Выполняем поиск
+#     results = await fu.find_all_text_code(prefix=initials, exclude_words=exclude_words)
+#
+#     # results = await fu.find_all_text_code(prefix=message.text, exclude_words=exclude_words)
+#
+#     # Дополнительная фильтрация на случай если все above_values стали пустыми
+#     filtered_results = [
+#         (row, col, val, above)
+#         for row, col, val, above in results
+#         if any(above)  # Оставляем только записи где есть хотя бы одно значение выше
+#     ]
+#
+#     if not filtered_results:
+#         await message.answer("🔎 Ничего не найдено или все результаты не имеют данных выше 😔")
+#         await state.clear()
+#         return
+#
+#     labels = ["Время", "Место", "Название"]  # Кастомные названия для строк
+#     # Отправляем общее количество результатов
+#     await message.answer(f"🔍 Найдено результатов: {len(filtered_results)}")
+#
+#     # Отправляем каждый результат отдельным сообщением
+#     for i, (row, col, value, above) in enumerate(filtered_results, 1):
+#         response = (
+#             f"📌 Результат {i} из {len(filtered_results)}:\n"
+#             # f"📍 Строка: {row} | Колонка: {col}\n" # номер строки из таблицы
+#             f"💡 Код съемки: {value}\n"
+#         )
+#
+#         # Добавляем информацию о ячейках выше
+#         if above:
+#             response += "📚 Съемка:\n"
+#             for label, val in zip(labels[-len(above):], reversed(above)):
+#                 response += f"   ▫️ {label}: {val}\n"
+#         # if any(above):
+#         #     response += "⬆️ Выше:\n"
+#         #     for label, val in zip(labels, reversed(above)):
+#         #         if val:
+#         #             response += f"   ▪️ {label}: {val}\n"
+#             response += f"✅ Персональный код: {value}\n\n"
+#             # Создаем клавиатуру с динамическими параметрами
+#             keyboard = await kb.create_task_keyboard(row=row, col=col, code=value)
+#             await message.answer(response, reply_markup=keyboard)
+#             await asyncio.sleep(0.3)  # Задержка между сообщениями
+#
+#     await state.clear()
+
+
+# Новая функция с учётом редактирования Вывод каждого кода отдельным сообщением
 @router.message(Find.send)
 async def find_all_text_code(message: Message, state: FSMContext):
-    # Получаем список исключений и инициалы из state
     data = await state.get_data()
-    exclude_words: List[str] = data.get("exclude_words", [])
-    initials: str = data.get("initials", "")
+    exclude_words = data.get("exclude_words", [])
+    include_values = data.get("include_values", [])
+    initials = data.get("initials", "")
 
     if not initials:
         await message.answer("🔎 Инициалы не найдены.")
         await state.clear()
         return
 
-        # Выполняем поиск
-    results = await fu.find_all_text_code(prefix=initials, exclude_words=exclude_words)
-
-    # results = await fu.find_all_text_code(prefix=message.text, exclude_words=exclude_words)
-
-    # Дополнительная фильтрация на случай если все above_values стали пустыми
-    filtered_results = [
-        (row, col, val, above)
-        for row, col, val, above in results
-        if any(above)  # Оставляем только записи где есть хотя бы одно значение выше
-    ]
-
-    if not filtered_results:
-        await message.answer("🔎 Ничего не найдено или все результаты не имеют данных выше 😔")
-        await state.clear()
-        return
-
-    labels = ["Время", "Место", "Название"]  # Кастомные названия для строк
-    # Отправляем общее количество результатов
-    await message.answer(f"🔍 Найдено результатов: {len(filtered_results)}")
-
-    # Отправляем каждый результат отдельным сообщением
-    for i, (row, col, value, above) in enumerate(filtered_results, 1):
-        response = (
-            f"📌 Результат {i} из {len(filtered_results)}:\n"
-            f"📍 Строка: {row} | Колонка: {col}\n"
-            f"💡 Значение: {value}\n"
+    try:
+        results = await fu.find_all_text_code(
+            prefix=initials,
+            exclude_words=exclude_words,
+            include_values=include_values
         )
 
-        # Добавляем информацию о ячейках выше
-        if above:
-            response += "📚 Съемка:\n"
-            for label, val in zip(labels[-len(above):], reversed(above)):
+        filtered_results = [
+            (row, col, val, above)
+            for row, col, val, above in results
+            if any(above)
+        ]
+
+        if not filtered_results:
+            await message.answer("🔎 Ничего не найдено")
+            await state.clear()
+            return
+
+        status_msg = await message.answer(f"🔍 Найдено результатов: {len(filtered_results)}")
+
+        # Создаем список для хранения ID сообщений
+        message_ids = []
+
+        for i, (row, col, value, above) in enumerate(filtered_results, 1):
+            below_value = await fu.get_cell_value(row + 1, col)
+
+            response = (
+                f"📌 Результат {i}:\n"
+                f"💡 Код: {value}\n"
+                f"✅ Статус: {below_value}\n"
+                "📚 Детали:\n"
+            )
+
+            for label, val in zip(["Время", "Место", "Событие"], reversed(above)):
                 response += f"   ▫️ {label}: {val}\n"
-        # if any(above):
-        #     response += "⬆️ Выше:\n"
-        #     for label, val in zip(labels, reversed(above)):
-        #         if val:
-        #             response += f"   ▪️ {label}: {val}\n"
-            response += f"✅ Персональный код: {value}\n\n"
-            # Создаем клавиатуру с динамическими параметрами
-            keyboard = await kb.create_task_keyboard(row=row, col=col, code=value)
-            await message.answer(response, reply_markup=keyboard)
-            await asyncio.sleep(0.3)  # Задержка между сообщениями
+
+            # Сначала отправляем сообщение
+            sent_message = await message.answer(response)
+
+            # Создаем клавиатуру с REAL message_id
+            keyboard = await kb.create_task_keyboard(
+                row=row,
+                col=col,
+                code=value,
+                message_id=sent_message.message_id  # Используем реальный ID
+            )
+
+            # Обновляем сообщение с клавиатурой
+            await sent_message.edit_reply_markup(reply_markup=keyboard)
+            await asyncio.sleep(0.3)
+
+        # Сохраняем ID всех сообщений в state
+        await state.update_data(message_ids=message_ids)
+
+    except Exception as e:
+        await message.answer(f"⚠️ Ошибка поиска: {str(e)}")
 
     await state.clear()
 
 
+# Новая функция для редактирования сообщения после нажатия на кнопку со сменой статуса съемки.
+async def update_message_after_change(
+        callback: CallbackQuery,
+        row: int,
+        col: int,
+        message_id: int,
+        new_value: str
+):
+    """Обновляет текст сообщения и клавиатуру"""
+    try:
+        # Получаем обновленные данные
+        value = await fu.get_cell_value(row, col)
+        below_value = await fu.get_cell_value(row + 1, col)
+
+        # Формируем новый текст
+        new_text = (
+            f"📌 Результат:\n"
+            f"💡 Код съемки: {value}\n"
+            f"✅ Статус: {below_value}\n"
+        )
+
+        # Обновляем сообщение
+        await callback.bot.edit_message_text(
+            chat_id=callback.from_user.id,
+            message_id=message_id,
+            text=new_text,
+            reply_markup=await kb.create_task_keyboard(row, col, value, message_id)
+        )
+    except Exception as e:
+        print(f"Error updating message: {e}")
+
+# @router.callback_query(F.data.startswith('done'))
+# async def handle_done_callback(callback: CallbackQuery):
+#     try:
+#         _, row_str, col_str = callback.data.split(':')
+#         row = int(row_str)
+#         col = int(col_str)
+#         # Добавим логирование для отладки
+#         print(f"DEBUG: Writing to row={row}, col={col}")
+#         # Вызов метода из менеджера
+#         result = await fu.write_done(row, col)
+#         if result:
+#             await callback.answer(result)
+#         else:
+#             await callback.answer("⚠️ Ошибка записи в таблицу")
+#     except ValueError:
+#         await callback.answer("⚠️ Некорректные данные")
+#     except Exception as e:
+#         await callback.answer(f"⚠️ Системная ошибка: {str(e)}")
+#         print(f"Callback error: {e}")
+#
+# @router.callback_query(F.data.startswith('cancel'))
+# async def handle_done_callback(callback: CallbackQuery):
+#     try:
+#         _, row_str, col_str = callback.data.split(':')
+#         row = int(row_str)
+#         col = int(col_str)
+#         # # Добавим логирование для отладки
+#         # print(f"DEBUG: Writing to row={row}, col={col}")
+#         # Вызов метода из менеджера
+#         result = await fu.write_cancel(row, col)
+#         if result:
+#             await callback.answer(result)
+#         else:
+#             await callback.answer("⚠️ Ошибка записи в таблицу")
+#     except ValueError:
+#         await callback.answer("⚠️ Некорректные данные")
+#     except Exception as e:
+#         await callback.answer(f"⚠️ Системная ошибка: {str(e)}")
+#         print(f"Callback error: {e}")
+#
+# @router.callback_query(F.data.startswith('code'))
+# async def handle_done_callback(callback: CallbackQuery):
+#     try:
+#         _, row_str, col_str = callback.data.split(':')
+#         row = int(row_str)
+#         col = int(col_str)
+#         # # Добавим логирование для отладки
+#         # print(f"DEBUG: Writing to row={row}, col={col}")
+#         # Вызов метода из менеджера
+#         result = await fu.write_state(row, col)
+#         if result:
+#             await callback.answer(result)
+#         else:
+#             await callback.answer("⚠️ Ошибка записи в таблицу")
+#     except ValueError:
+#         await callback.answer("⚠️ Некорректные данные")
+#     except Exception as e:
+#         await callback.answer(f"⚠️ Системная ошибка: {str(e)}")
+#         print(f"Callback error: {e}")
+#
+# @router.callback_query(F.data.startswith('error'))
+# async def handle_done_callback(callback: CallbackQuery):
+#     try:
+#         _, row_str, col_str = callback.data.split(':')
+#         row = int(row_str)
+#         col = int(col_str)
+#         # # Добавим логирование для отладки
+#         # print(f"DEBUG: Writing to row={row}, col={col}")
+#         # Вызов метода из менеджера
+#         result = await fu.write_error(row, col)
+#         if result:
+#             await callback.answer(result)
+#         else:
+#             await callback.answer("⚠️ Ошибка записи в таблицу")
+#     except ValueError:
+#         await callback.answer("⚠️ Некорректные данные")
+#     except Exception as e:
+#         await callback.answer(f"⚠️ Системная ошибка: {str(e)}")
+#         print(f"Callback error: {e}")
+
+# Обновлённые 4 функции для редактирования статуса съемки после нажатия на кнопу
+# @router.callback_query(F.data.startswith('done'))
+# async def handle_done_callback(callback: CallbackQuery):
+#     try:
+#         _, row_str, col_str, message_id_str  = callback.data.split(':')
+#         row = int(row_str)
+#         col = int(col_str)
+#         message_id = int(message_id_str)
+#
+#         # Добавим логирование для отладки
+#         print(f"DEBUG: Writing to row={row}, col={col}")
+#         # Выполняем запись
+#         result_msg, new_value = await fu.write_done(row, col)
+#
+#         if result_msg and new_value:
+#             await update_message_after_change(callback, row, col, message_id, new_value)
+#             await callback.answer(result_msg)
+#         else:
+#             await callback.answer("⚠️ Ошибка записи в таблицу")
+#
+#     except Exception as e:
+#         await callback.answer(f"⚠️ Ошибка: {str(e)}")
+#         print(f"Callback error: {e}")
+#
+#
+#
+# @router.callback_query(F.data.startswith('cancel'))
+# async def handle_done_callback(callback: CallbackQuery):
+#     try:
+#         _, row_str, col_str, message_id_str = callback.data.split(':')
+#         row = int(row_str)
+#         col = int(col_str)
+#         message_id = int(message_id_str)
+#
+#         # Добавим логирование для отладки
+#         print(f"DEBUG: Writing to row={row}, col={col}")
+#         # Выполняем запись
+#         result_msg, new_value = await fu.write_cancel(row, col)
+#
+#         if result_msg and new_value:
+#             await update_message_after_change(callback, row, col, message_id, new_value)
+#             await callback.answer(result_msg)
+#         else:
+#             await callback.answer("⚠️ Ошибка записи в таблицу")
+#
+#     except Exception as e:
+#         await callback.answer(f"⚠️ Ошибка: {str(e)}")
+#         print(f"Callback error: {e}")
+#
+# @router.callback_query(F.data.startswith('code'))
+# async def handle_done_callback(callback: CallbackQuery):
+#     try:
+#         _, row_str, col_str, message_id_str = callback.data.split(':')
+#         row = int(row_str)
+#         col = int(col_str)
+#         message_id = int(message_id_str)
+#
+#         # Добавим логирование для отладки
+#         print(f"DEBUG: Writing to row={row}, col={col}")
+#         # Выполняем запись
+#         result_msg, new_value = await fu.write_state(row, col)
+#
+#         if result_msg and new_value:
+#             await update_message_after_change(callback, row, col, message_id, new_value)
+#             await callback.answer(result_msg)
+#         else:
+#             await callback.answer("⚠️ Ошибка записи в таблицу")
+#
+#     except Exception as e:
+#         await callback.answer(f"⚠️ Ошибка: {str(e)}")
+#         print(f"Callback error: {e}")
+#
+# @router.callback_query(F.data.startswith('error'))
+# async def handle_done_callback(callback: CallbackQuery):
+#     try:
+#         _, row_str, col_str, message_id_str = callback.data.split(':')
+#         row = int(row_str)
+#         col = int(col_str)
+#         message_id = int(message_id_str)
+#
+#         # Добавим логирование для отладки
+#         print(f"DEBUG: Writing to row={row}, col={col}")
+#         # Выполняем запись
+#         result_msg, new_value = await fu.write_error(row, col)
+#
+#         if result_msg and new_value:
+#             await update_message_after_change(callback, row, col, message_id, new_value)
+#             await callback.answer(result_msg)
+#         else:
+#             await callback.answer("⚠️ Ошибка записи в таблицу")
+#
+#     except Exception as e:
+#         await callback.answer(f"⚠️ Ошибка: {str(e)}")
+#         print(f"Callback error: {e}")
+
+
 @router.callback_query(F.data.startswith('done'))
 async def handle_done_callback(callback: CallbackQuery):
-    try:
-        _, row_str, col_str = callback.data.split(':')
-        row = int(row_str)
-        col = int(col_str)
-        # Добавим логирование для отладки
-        print(f"DEBUG: Writing to row={row}, col={col}")
-        # Вызов метода из менеджера
-        result = await fu.write_done(row, col)
-        if result:
-            await callback.answer(result)
-        else:
-            await callback.answer("⚠️ Ошибка записи в таблицу")
-    except ValueError:
-        await callback.answer("⚠️ Некорректные данные")
-    except Exception as e:
-        await callback.answer(f"⚠️ Системная ошибка: {str(e)}")
-        print(f"Callback error: {e}")
+    await handle_status_update(callback, "СНЯТО")
 
 @router.callback_query(F.data.startswith('cancel'))
-async def handle_done_callback(callback: CallbackQuery):
-    try:
-        _, row_str, col_str = callback.data.split(':')
-        row = int(row_str)
-        col = int(col_str)
-        # # Добавим логирование для отладки
-        # print(f"DEBUG: Writing to row={row}, col={col}")
-        # Вызов метода из менеджера
-        result = await fu.write_cancel(row, col)
-        if result:
-            await callback.answer(result)
-        else:
-            await callback.answer("⚠️ Ошибка записи в таблицу")
-    except ValueError:
-        await callback.answer("⚠️ Некорректные данные")
-    except Exception as e:
-        await callback.answer(f"⚠️ Системная ошибка: {str(e)}")
-        print(f"Callback error: {e}")
+async def handle_cancel_callback(callback: CallbackQuery):
+    await handle_status_update(callback, "ОТМЕНА")
 
 @router.callback_query(F.data.startswith('code'))
-async def handle_done_callback(callback: CallbackQuery):
-    try:
-        _, row_str, col_str = callback.data.split(':')
-        row = int(row_str)
-        col = int(col_str)
-        # # Добавим логирование для отладки
-        # print(f"DEBUG: Writing to row={row}, col={col}")
-        # Вызов метода из менеджера
-        result = await fu.write_state(row, col)
-        if result:
-            await callback.answer(result)
-        else:
-            await callback.answer("⚠️ Ошибка записи в таблицу")
-    except ValueError:
-        await callback.answer("⚠️ Некорректные данные")
-    except Exception as e:
-        await callback.answer(f"⚠️ Системная ошибка: {str(e)}")
-        print(f"Callback error: {e}")
+async def handle_code_callback(callback: CallbackQuery):
+    await handle_status_update(callback, "СНИМАЮТ")
 
 @router.callback_query(F.data.startswith('error'))
-async def handle_done_callback(callback: CallbackQuery):
+async def handle_error_callback(callback: CallbackQuery):
+    await handle_status_update(callback, "")
+
+async def handle_status_update(callback: CallbackQuery, status: str):
     try:
-        _, row_str, col_str = callback.data.split(':')
+        # Правильно парсим callback_data
+        _, row_str, col_str, msg_id = callback.data.split(':')
         row = int(row_str)
         col = int(col_str)
-        # # Добавим логирование для отладки
-        # print(f"DEBUG: Writing to row={row}, col={col}")
-        # Вызов метода из менеджера
-        result = await fu.write_error(row, col)
-        if result:
-            await callback.answer(result)
+        target_message_id = int(msg_id)  # Это ключевое изменение
+
+        # Обновляем ячейку в таблице
+        result = None
+        if status == "СНЯТО":
+            result = await fu.write_done(row, col)
+        elif status == "ОТМЕНА":
+            result = await fu.write_cancel(row, col)
+        elif status == "СНИМАЮТ":
+            result = await fu.write_state(row, col)
         else:
-            await callback.answer("⚠️ Ошибка записи в таблицу")
-    except ValueError:
-        await callback.answer("⚠️ Некорректные данные")
+            result = await fu.write_error(row, col)
+
+        if not result:
+            await callback.answer("⚠️ Ошибка обновления")
+            return
+
+        # Получаем актуальные данные
+        current_code = await fu.get_cell_value(row, col)
+        current_status = await fu.get_cell_value(row + 1, col)
+        above_values = await fu.get_above_values(row, col, 3)
+
+        # Формируем новый текст
+        new_text = (
+            f"📌 Записали ответ\n"
+            f"💡 Код: {current_code}\n"
+            f"✅ Статус: {current_status}\n"
+            "📚 Детали:\n"
+        )
+        for label, val in zip(["Время", "Место", "Событие"], (above_values)):
+            if val:  # Добавляем только непустые значения
+                new_text += f"   ▫️ {label}: {val}\n"
+
+        # Редактируем целевое сообщение
+        await callback.bot.edit_message_text(
+            chat_id=callback.from_user.id,
+            message_id=target_message_id,  # Используем целевой ID
+            text=new_text,
+            reply_markup=None
+        )
+        await callback.answer(f"✅ Статус обновлен: {status}")
+
     except Exception as e:
-        await callback.answer(f"⚠️ Системная ошибка: {str(e)}")
-        print(f"Callback error: {e}")
-
-
+        await callback.answer(f"⚠️ Ошибка: {str(e)}")
+        print(f"Error in handle_status_update: {e}")
 
 
 # # Вывод одним сообщением точного совпадения из поиска по таблице
@@ -1616,10 +1888,10 @@ async def handle_done_callback(callback: CallbackQuery):
 #     await message.answer(f'Вот что я нашел: {result}')
 #     await state.clear()
 
-#-------------------------------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------------------------------
 # Функция сохранения данных в TSV по сообщению Файл. Дописать на нажатие кнопки и выбор, что сохранить первую страницу
 # или лист ПУТЬ.
-#-------------------------------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------------------------------
 
 @router.message(F.text.lower() == "файл")
 async def handle_report_request(message: types.Message, bot: Bot):

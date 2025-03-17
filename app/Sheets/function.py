@@ -60,50 +60,50 @@ async def number_row(data: dict):
         await sh.update(values, "A{}".format(next_row))
 
 
-async def write_done(row: int, col: int) -> Optional[str]:
+async def write_done(row: int, col: int) -> Tuple[Optional[str], Optional[str]]:
     """Записывает 'СНЯТО' в ячейку под указанной"""
     try:
         agc = await agcm.authorize()
         wks = await agc.open("Архипелаг 2024")
         sh = await wks.worksheet("Расписание фото")
         await sh.update_cell(row + 1, col, "СНЯТО")
-        return "✅ СНЯТО успешно записано!"
+        return "✅ СНЯТО успешно записано!", "СНЯТО"
     except Exception as e:
         print(f"Google Sheets error: {e}")
         return None
 
-async def write_cancel(row: int, col: int) -> Optional[str]:
+async def write_cancel(row: int, col: int) -> Tuple[Optional[str], Optional[str]]:
     """Записывает 'СНЯТО' в ячейку под указанной"""
     try:
         agc = await agcm.authorize()
         wks = await agc.open("Архипелаг 2024")
         sh = await wks.worksheet("Расписание фото")
         await sh.update_cell(row + 1, col, "ОТМЕНА")
-        return "✅ ОТМЕНА успешно записано!"
+        return "✅ ОТМЕНА успешно записано!", "ОТМЕНА"
     except Exception as e:
         print(f"Google Sheets error: {e}")
         return None
 
-async def write_state(row: int, col: int) -> Optional[str]:
+async def write_state(row: int, col: int) -> Tuple[Optional[str], Optional[str]]:
     """Записывает 'СНИМАЮТ' в ячейку под указанной"""
     try:
         agc = await agcm.authorize()
         wks = await agc.open("Архипелаг 2024")
         sh = await wks.worksheet("Расписание фото")
         await sh.update_cell(row + 1, col, "СНИМАЮТ")
-        return "✅ СНИМАЮТ успешно записано!"
+        return "✅ СНИМАЮТ успешно записано!", "СНИМАЮТ"
     except Exception as e:
         print(f"Google Sheets error: {e}")
         return None
 
-async def write_error(row: int, col: int) -> Optional[str]:
-    """Записывает 'СНИМАЮТ' в ячейку под указанной"""
+async def write_error(row: int, col: int) -> Tuple[Optional[str], Optional[str]]:
+    """Записывает 'ОШИБКА' в ячейку под указанной"""
     try:
         agc = await agcm.authorize()
         wks = await agc.open("Архипелаг 2024")
         sh = await wks.worksheet("Расписание фото")
         await sh.update_cell(row + 1, col, "")
-        return "✅ Отменил пометку успешно!"
+        return "✅ Отменил пометку успешно!", " НЕТ СТАТУСА"
     except Exception as e:
         print(f"Google Sheets error: {e}")
         return None
@@ -185,36 +185,102 @@ async def find_cod(
 
 # функция ищет все совпадения по началу слова и исключает точное совпадение без продолжения.
 
+# async def find_all_text_code(
+#         prefix: str,
+#         spreadsheet_name: str = "Архипелаг 2024",
+#         sheet_name: str = "Расписание фото",
+#         case_sensitive: bool = False,
+#         exclude_words: Optional[List[str]] = []  # Новый параметр для исключения # Устанавливаем пустой список по умолчанию
+# ) -> List[Tuple[int, int, str, List[str]]]:
+#     """
+#     Ищет все ячейки с указанным префиксом и возвращает:
+#     - Координаты (строка, колонка)
+#     - Значение ячейки
+#     - 3 значения выше (только непустые)
+#
+#     :param prefix: Префикс для поиска.
+#     :param spreadsheet_name: Название таблицы.
+#     :param sheet_name: Название листа.
+#     :param case_sensitive: Учитывать регистр при поиске.
+#     :param exclude_words: Список слов для исключения (проверка под найденным текстом).
+#     :return: Список кортежей с результатами.
+#     """
+#     agc: AsyncioGspreadClient = await agcm.authorize()
+#     spreadsheet = await agc.open(spreadsheet_name)
+#     worksheet: AsyncioGspreadWorksheet = await spreadsheet.worksheet(sheet_name)
+#
+#     all_values = await worksheet.get_all_values()
+#     search_prefix = prefix.strip()
+#     matches = []
+#
+#     if not case_sensitive:
+#         search_prefix_lower = search_prefix.lower()
+#
+#     for row_idx, row in enumerate(all_values):
+#         for col_idx, value in enumerate(row):
+#             current_value = value.strip()
+#             if not current_value:
+#                 continue
+#
+#             if case_sensitive:
+#                 compare_value = current_value
+#                 target_prefix = search_prefix
+#             else:
+#                 compare_value = current_value.lower()
+#                 target_prefix = search_prefix_lower
+#
+#             # Проверяем, что значение начинается с префикса и не равно ему
+#             if compare_value.startswith(target_prefix) and compare_value != target_prefix:
+#                 # Проверяем ячейку под найденным текстом
+#                 below_row_idx = row_idx + 1
+#                 if below_row_idx < len(all_values) and col_idx < len(all_values[below_row_idx]):
+#                     below_value = all_values[below_row_idx][col_idx].strip()
+#                     if below_value in exclude_words:  # Проверяем на исключения
+#                         continue  # Пропускаем этот результат
+#
+#                 # Сбор данных выше
+#                 above_values = []
+#                 for offset in range(1, 4):
+#                     above_row_idx = row_idx - offset
+#                     cell_value = ""
+#
+#                     if above_row_idx >= 0 and col_idx < len(all_values[above_row_idx]):
+#                         cell_value = all_values[above_row_idx][col_idx].strip()
+#
+#                     above_values.append(cell_value)
+#
+#                 # Фильтрация пустых значений
+#                 filtered_above = [v for v in above_values if v]
+#
+#                 if filtered_above:
+#                     matches.append((
+#                         row_idx + 1,
+#                         col_idx + 1,
+#                         current_value,
+#                         filtered_above
+#                     ))
+#
+#     return matches
+
+
 async def find_all_text_code(
         prefix: str,
         spreadsheet_name: str = "Архипелаг 2024",
         sheet_name: str = "Расписание фото",
         case_sensitive: bool = False,
-        exclude_words: Optional[List[str]] = []  # Новый параметр для исключения # Устанавливаем пустой список по умолчанию
+        exclude_words: Optional[List[str]] = None,
+        include_values: Optional[List[str]] = None
 ) -> List[Tuple[int, int, str, List[str]]]:
-    """
-    Ищет все ячейки с указанным префиксом и возвращает:
-    - Координаты (строка, колонка)
-    - Значение ячейки
-    - 3 значения выше (только непустые)
-
-    :param prefix: Префикс для поиска.
-    :param spreadsheet_name: Название таблицы.
-    :param sheet_name: Название листа.
-    :param case_sensitive: Учитывать регистр при поиске.
-    :param exclude_words: Список слов для исключения (проверка под найденным текстом).
-    :return: Список кортежей с результатами.
-    """
     agc: AsyncioGspreadClient = await agcm.authorize()
     spreadsheet = await agc.open(spreadsheet_name)
     worksheet: AsyncioGspreadWorksheet = await spreadsheet.worksheet(sheet_name)
-
     all_values = await worksheet.get_all_values()
+
     search_prefix = prefix.strip()
     matches = []
 
     if not case_sensitive:
-        search_prefix_lower = search_prefix.lower()
+        search_prefix = search_prefix.lower()
 
     for row_idx, row in enumerate(all_values):
         for col_idx, value in enumerate(row):
@@ -222,45 +288,88 @@ async def find_all_text_code(
             if not current_value:
                 continue
 
-            if case_sensitive:
-                compare_value = current_value
-                target_prefix = search_prefix
-            else:
-                compare_value = current_value.lower()
-                target_prefix = search_prefix_lower
+            # Проверка префикса
+            compare_value = current_value.lower() if not case_sensitive else current_value
+            if not compare_value.startswith(search_prefix):
+                continue
+            if compare_value == search_prefix:
+                continue
 
-            # Проверяем, что значение начинается с префикса и не равно ему
-            if compare_value.startswith(target_prefix) and compare_value != target_prefix:
-                # Проверяем ячейку под найденным текстом
-                below_row_idx = row_idx + 1
-                if below_row_idx < len(all_values) and col_idx < len(all_values[below_row_idx]):
-                    below_value = all_values[below_row_idx][col_idx].strip()
-                    if below_value in exclude_words:  # Проверяем на исключения
-                        continue  # Пропускаем этот результат
+            # Проверка ячейки снизу
+            below_value = ""
+            if row_idx + 1 < len(all_values):
+                below_row = all_values[row_idx + 1]
+                if col_idx < len(below_row):
+                    below_value = below_row[col_idx].strip()
 
-                # Сбор данных выше
-                above_values = []
-                for offset in range(1, 4):
-                    above_row_idx = row_idx - offset
-                    cell_value = ""
+            # Фильтрация
+            if include_values:  # Приоритет у включения
+                if below_value not in include_values:
+                    continue
+            elif exclude_words:  # Затем исключение
+                if below_value in exclude_words:
+                    continue
 
-                    if above_row_idx >= 0 and col_idx < len(all_values[above_row_idx]):
-                        cell_value = all_values[above_row_idx][col_idx].strip()
-
+            # Сбор данных выше
+            above_values = []
+            for offset in range(1, 4):
+                above_row_idx = row_idx - offset
+                if above_row_idx >= 0 and col_idx < len(all_values[above_row_idx]):
+                    cell_value = all_values[above_row_idx][col_idx].strip()
                     above_values.append(cell_value)
 
-                # Фильтрация пустых значений
-                filtered_above = [v for v in above_values if v]
+            filtered_above = [v for v in above_values if v]
 
-                if filtered_above:
-                    matches.append((
-                        row_idx + 1,
-                        col_idx + 1,
-                        current_value,
-                        filtered_above
-                    ))
+            if filtered_above:
+                matches.append((
+                    row_idx + 1,  # +1 для перевода в 1-индексацию
+                    col_idx + 1,
+                    current_value,
+                    filtered_above
+                ))
 
     return matches
+
+
+
+
+# функция для получения значения ячейки
+async def get_cell_value(row: int, col: int) -> str:
+    """Возвращает значение указанной ячейки"""
+    try:
+        agc = await agcm.authorize()
+        wks = await agc.open("Архипелаг 2024")
+        sh = await wks.worksheet("Расписание фото")
+        cell = await sh.cell(row, col)
+        return cell.value
+    except Exception as e:
+        print(f"Google Sheets error: {e}")
+        return None
+
+
+
+
+async def get_above_values(row: int, col: int, count: int) -> List[str]:
+    """Возвращает указанное количество значений сверху"""
+    try:
+        agc = await agcm.authorize()
+        wks = await agc.open("Архипелаг 2024")
+        sh = await wks.worksheet("Расписание фото")
+
+        start_row = max(1, row - count)
+        end_row = row - 1
+        if start_row > end_row:
+            return []
+
+        # Получаем диапазон ячеек
+        range_name = f"{chr(64 + col)}{start_row}:{chr(64 + col)}{end_row}"
+        values = await sh.get(range_name)
+
+        return [item[0] for item in values if item]
+
+    except Exception as e:
+        print(f"Google Sheets error: {e}")
+        return []
 
 
 #-------------------------------------------------------------------------------------------------------------------

@@ -123,21 +123,34 @@ async def edit_item(
         return keydoard.adjust(*sizes).as_markup()
 
 
-async def create_task_keyboard(row: int, col: int, code: str) -> InlineKeyboardMarkup:
-    """
-    Создаёт клавиатуру для задачи с динамическими параметрами
-    :param row: Номер строки в таблице
-    :param col: Номер колонки в таблице
-    """
-    builder = InlineKeyboardBuilder()
-    builder.button(text=Buttons.DONE, callback_data=f"done:{row}:{col}")
-    builder.button(text=Buttons.CANCEL, callback_data=f"cancel:{row}:{col}")
-    builder.button(text=Buttons.CODE.format(code), callback_data=f"code:{row}:{col}")
-    builder.button(text=Buttons.ERROR, callback_data=f"error:{row}:{col}")
+# async def create_task_keyboard(row: int, col: int, code: str) -> InlineKeyboardMarkup:
+#     """
+#     Создаёт клавиатуру для задачи с динамическими параметрами
+#     :param row: Номер строки в таблице
+#     :param col: Номер колонки в таблице
+#     """
+#     builder = InlineKeyboardBuilder()
+#     builder.button(text=Buttons.DONE, callback_data=f"done:{row}:{col}")
+#     builder.button(text=Buttons.CANCEL, callback_data=f"cancel:{row}:{col}")
+#     builder.button(text=Buttons.CODE.format(code), callback_data=f"code:{row}:{col}")
+#     builder.button(text=Buttons.ERROR, callback_data=f"error:{row}:{col}")
+#
+#     # Настройка расположения кнопок: первые две кнопки в одной строке, третья — в другой
+#     builder.adjust(2, 1, 1)
+#     return builder.as_markup()
 
-    # Настройка расположения кнопок: первые две кнопки в одной строке, третья — в другой
+# Новая клавиатура для редактирования сообщений после изменения статуса съемки.
+async def create_task_keyboard(row: int, col: int, code: str, message_id: int) -> InlineKeyboardMarkup:
+    """Добавляем message_id в callback data"""
+    builder = InlineKeyboardBuilder()
+    builder.button(text=Buttons.DONE, callback_data=f"done:{row}:{col}:{message_id}")
+    builder.button(text=Buttons.CANCEL, callback_data=f"cancel:{row}:{col}:{message_id}")
+    builder.button(text=Buttons.CODE.format(code), callback_data=f"code:{row}:{col}:{message_id}")
+    builder.button(text=Buttons.ERROR, callback_data=f"error:{row}:{col}:{message_id}")
     builder.adjust(2, 1, 1)
     return builder.as_markup()
+
+
 
 # edit_item = InlineKeyboardMarkup(inline_keyboard=[
 #     [InlineKeyboardButton(text='Удалить', callback_data='del')],
@@ -189,7 +202,7 @@ async def get_role_keyboard(role: str) -> ReplyKeyboardMarkup:
     if role == "Фотограф":
         return ReplyKeyboardMarkup(
             keyboard=[
-                [KeyboardButton(text="📸 Моё расписание")],
+                [KeyboardButton(text="расписание")],
                 [KeyboardButton(text="🔄 Редактировать данные")],
                 [KeyboardButton(text="📋 Мои серийники")]
             ],
