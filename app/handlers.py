@@ -1,7 +1,5 @@
 import logging
-import phonenumbers
 from dotenv import load_dotenv
-
 import Texts
 import os
 import re
@@ -9,10 +7,8 @@ import asyncio
 
 from datetime import datetime
 from pathlib import Path
-from typing import List
-from phonenumbers import NumberParseException, PhoneNumberFormat
 from aiogram import F, Router, types, Bot
-from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, ReplyKeyboardRemove, Update
+from aiogram.types import Message, CallbackQuery, ReplyKeyboardRemove
 from aiogram.filters import CommandStart, Command, StateFilter
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
@@ -28,6 +24,7 @@ import app.keyboards as kb
 import app.database.requests as rq
 import app.Sheets.function as fu
 import app.SerialNumber as sn
+import app.Utils.validators as vl
 
 from aiogram.utils.formatting import PhoneNumber
 from app.database.requests import get_item
@@ -311,15 +308,7 @@ async def send_typing_and_message(chat_id: int, bot: Bot, text: str, state: FSMC
     return message
 
 
-# Функция валидации номера ☎️ Телефона
-async def format_phone(phone: str) -> str:
-    try:
-        parsed = phonenumbers.parse(phone, "RU")
-        if phonenumbers.is_valid_number(parsed):
-            return phonenumbers.format_number(parsed, PhoneNumberFormat.E164)
-        return None
-    except NumberParseException:
-        return None
+
 
 #Функция получения инициалов
 async def get_initials(nameEN: str) -> str:
@@ -788,7 +777,7 @@ async def register_tel(message: Message, state: FSMContext, bot: Bot):
 async def validate_phone(message: Message, state: FSMContext, bot: Bot):
     global edit
     await mes_user_history(message, state)
-    formatted = await format_phone(message.text)
+    formatted = await vl.format_phone(message.text)
     data = await state.get_data()
     if formatted and edit !=1:
         await delete_all_previous_messages(message.chat.id, state, bot)
@@ -1517,7 +1506,7 @@ async def find_all_text_code(message: Message, state: FSMContext):
 
         if not filtered_results:
             await message.answer("🔎 Ничего не найдено")
-            await state.clear()
+            await state.set_state(Find.exclude)
             return
 
         status_msg = await message.answer(f"🔍 Найдено результатов: {len(filtered_results)}")
