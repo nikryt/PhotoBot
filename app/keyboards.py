@@ -7,6 +7,8 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder, ReplyKeyboardBuilder
 #Импортируем текст для кнопок
 from Texts import (Buttons)
 
+import app.database.requests as rq
+
 main = ReplyKeyboardMarkup(keyboard=[
     [KeyboardButton(text=Buttons.FIO)],
     [KeyboardButton(text=Buttons.CONTACTS)],
@@ -238,3 +240,17 @@ async def get_role_keyboard(role: str) -> InlineKeyboardMarkup:
             ]
         )
     return InlineKeyboardMarkup()  # Возвращаем пустую клавиатуру или основную, если есть
+
+# функция создания кнопок с именами фотографов
+async def photographers_keyboard():
+    photographers = await rq.get_all_photographers()
+    builder = InlineKeyboardBuilder()
+
+    for idn, nameRU in photographers:
+        builder.button(
+            text=nameRU,
+            callback_data=f"photographer_{idn}"
+        )
+
+    builder.adjust(1)
+    return builder.as_markup()

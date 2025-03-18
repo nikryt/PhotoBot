@@ -78,7 +78,7 @@ async def get_initials(tg_id: int):
     async with async_session() as session:
         try:
             initials = await session.scalar(select(Item.idn).where(Item.name == tg_id))
-            print(initials)
+            logging.info(initials)
             return initials
         except Exception as e:
             print(f"Ошибка при получении инициалов: {e}")
@@ -152,3 +152,25 @@ async def del_temp_changes(user_id: int):
         await session.execute(delete(TempChanges).where(TempChanges.tg_id == user_id))
         await session.commit()
         return True
+
+# получаем id роли по ее названию
+async def get_role_id_by_name(role_name: str) -> int | None:
+    async with async_session() as session:
+        role = await session.scalar(select(Role.id).where(Role.name == role_name))
+        logging.info(role)
+        return role
+
+# получаем список всех фотогарфов.
+async def get_all_photographers():
+    async with async_session() as session:
+        role_id = await get_role_id_by_name("Фотограф")
+        if not role_id:
+            return []
+
+        result = await session.execute(
+            select(Item.idn, Item.nameRU)
+            .where(Item.role == role_id)
+            .order_by(Item.nameRU)
+        )
+        logging.info(result)
+        return result.all()  # Возвращаем список кортежей (idn, nameRU)

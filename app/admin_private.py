@@ -3,11 +3,14 @@
 from aiogram import F, Router, types, Bot
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
-from aiogram.types import CallbackQuery
+from aiogram.fsm.context import FSMContext
+from aiogram.types import CallbackQuery, Message
 
 from app.Filters.chat_types import ChatTypeFilter, IsAdmin  # импортировали наши личные фильтры
 import app.keyboards as kb
 import app.database.requests as rq
+from app.generate import ai_generate
+from app.handlers import Gen
 
 admin_router = Router()
 admin_router.message.filter(ChatTypeFilter(["private"]), IsAdmin())
@@ -66,3 +69,26 @@ async def delete_item(callback: CallbackQuery):
     await  rq.del_item(int(item_id))
     await callback.answer(text=f'Запись удалена')
     await callback.message.answer(text=f'Запись удалена')
+
+
+#=======================================================================================================================
+# DeepSeek
+#=======================================================================================================================
+@admin_router.message(F.text == "поговори", )
+async def deepseek(message: Message, state: FSMContext):
+    await message.answer('Напиши что ты хочешь?')
+    await state.set_state(Gen.result)
+
+@admin_router.message(Gen.result)
+async def generating(message: Message, state: FSMContext):
+    await state.set_state(Gen.wait)
+    responses = await ai_generate(message.text)
+    await message.answer(responses)
+    await state.clear()
+
+@admin_router.message(Gen.wait)
+async def stop_flood(message: Message):
+    await message.answer('Подожди ты, не так быстро, эй!')
+#=======================================================================================================================
+# DeepSeek
+#=======================================================================================================================

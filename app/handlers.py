@@ -1429,30 +1429,6 @@ async def reject_changes(callback: CallbackQuery):
     await callback.bot.send_message(user_id, "❌ Ваши изменения были отклонены")
 
 
-#=======================================================================================================================
-# DeepSeek
-#=======================================================================================================================
-@router.message(F.text == "поговори", )
-async def deepseek(message: Message, state: FSMContext):
-    await message.answer('Напиши что ты хочешь?')
-    await state.set_state(Gen.result)
-
-@router.message(Gen.result)
-async def generating(message: Message, state: FSMContext):
-    await state.set_state(Gen.wait)
-    responses = await ai_generate(message.text)
-    await message.answer(responses)
-    await state.clear()
-
-@router.message(Gen.wait)
-async def stop_flood(message: Message):
-    await message.answer('Подожди ты, не так быстро, эй!')
-#=======================================================================================================================
-# DeepSeek
-#=======================================================================================================================
-
-
-
 # Обработчик inline-кнопки "расписание"
 @router.callback_query(F.data == 'schedule_pers')
 async def schedule_pers(callback_query: types.CallbackQuery, state: FSMContext):
@@ -1472,6 +1448,11 @@ async def schedule_pers(callback_query: types.CallbackQuery, state: FSMContext):
 # Обработчик нажатий на кнопки инлайн-клавиатуры
 @router.callback_query(Find.exclude)
 async def process_exclude_words(callback: CallbackQuery, state: FSMContext):
+    # Игнорируем невалидные callback_data
+    if callback.data not in {'ready', 'clear', 'new', ''}:
+        await callback.answer("⚠️ Действие недоступно")
+        return
+
     # Подтверждаем обработку callback-запроса
     await callback.answer('Пойду поищу')
 
@@ -1492,14 +1473,21 @@ async def process_exclude_words(callback: CallbackQuery, state: FSMContext):
     # Сохраняем список исключений в state
     await state.update_data(exclude_words=exclude_words, include_values=include_values)
 
-    # Получаем инициалы из базы данных
-    tg_id = callback.from_user.id
-    try:
-        initials = await rq.get_initials(tg_id)
-    except Exception as e:
-        await callback.message.answer("🔎 Произошла ошибка при получении инициалов.")
-        await state.clear()
-        return
+    # Получаем текущие данные состояния
+    data = await state.get_data()
+    # Если инициалы уже были установлены (например, через выбор фотографа), используем их
+    initials = data.get("initials")
+
+    # Если инициалов нет - получаем из БД
+    if not initials:
+        # Получаем инициалы из базы данных
+        tg_id = callback.from_user.id
+        try:
+            initials = await rq.get_initials(tg_id)
+        except Exception as e:
+            await callback.message.answer("🔎 Произошла ошибка при получении инициалов.")
+            await state.clear()
+            return
 
     if not initials:
         await callback.message.answer("🔎 Инициалы не найдены в базе данных.")
@@ -1584,6 +1572,7 @@ async def find_all_text_code(message: Message, state: FSMContext):
     exclude_words = data.get("exclude_words", [])
     include_values = data.get("include_values", [])
     initials = data.get("initials", "")
+    logging.info(f'Инициалы в FSM: {initials}')
 
     if not initials:
         await message.answer("🔎 Инициалы не найдены.")
@@ -2022,4 +2011,41 @@ async def handle_report_request(message: types.Message, bot: Bot):
     except Exception as e:
         await message.answer(f"❌ Ошибка при сохранении файла: {str(e)}")
         print(f"Error: {str(e)}")
+#-----------------------------------------------------------------------------------------------------------------------
+# Конец Функция сохранения данных в TSV по сообщению Файл. Дописать на нажатие кнопки и выбор, что сохранить первую страницу
+# или лист ПУТЬ.
+#-----------------------------------------------------------------------------------------------------------------------
 
+#-----------------------------------------------------------------------------------------------------------------------
+# Обработка нажатий на кнопку билд-редатора Все фотографы
+#-----------------------------------------------------------------------------------------------------------------------
+# Обработчик кнопки "Все фотографы"
+@router.callback_query(F.data == 'all_photographers', StateFilter(None))
+async def all_photographers_handler(callback: CallbackQuery):
+    await callback.answer()
+    keyboard = await kb.photographers_keyboard()
+    await callback.message.answer(
+        "📸 Список фотографов:",
+        reply_markup=keyboard
+    )
+
+
+# Обработчик выбора фотографа
+@router.callback_query(F.data.startswith('photographer_'))
+async def photographer_selected(callback: CallbackQuery, state: FSMContext):
+    await state.clear()  # Сбрасываем возможные предыдущие состояния
+    idn = callback.data.split('_')[1]
+    # Полностью обновляем состояние, сохраняя только инициалы
+    await state.set_data({
+        "initials": idn  # Сбрасываем фильтры при новом выборе
+    })
+
+    await callback.message.answer(
+        "🔎 Выберите тип поиска:",
+        reply_markup=kb.find
+    )
+    await state.set_state(Find.exclude)
+    await callback.answer()
+#-----------------------------------------------------------------------------------------------------------------------
+# Обработка нажатий на кнопку билд-редатора Все фотографы
+#-----------------------------------------------------------------------------------------------------------------------
