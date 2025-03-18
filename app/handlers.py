@@ -148,11 +148,6 @@ async def cmd_start(message: Message, state: FSMContext, bot: Bot):
         await message.answer(text=Messages.INTRO, parse_mode=ParseMode.HTML
         )
 
-
-
-
-
-
 # # Старое приветсвие без проверки на регистрацию
 # @router.message(CommandStart())
 # # асинхронная функция cmd_start которая принимает в себя объект Massage
@@ -194,33 +189,129 @@ async def  cmd_help(message: Message, state: FSMContext, bot: Bot):
     )
 
 
-@router.message(StateFilter('*'), Command('register'))
-async def register(message: Message, state: FSMContext, bot: Bot):
+# Общая логика для обработки регистрации вызов ко команде или нажатию инлайн кнопки (callback)
+async def register_handler(message: Message, state: FSMContext, bot: Bot):
     await state.clear()
     current_user = await rq.get_item_by_tg_id(message.from_user.id)
-    # запишем команды для ее удаления
     await mes_user_history(message, state)
-    if current_user:  # Если пользователь уже зарегистрирован
+
+    if current_user:
         await state.update_data(is_edit=True)
-        await send_typing_and_message(
-            message.chat.id, bot,
+        text = (
             "✏️ Режим редактирования. Введите новые данные.\n"
-            "Сперва ФИО на русском языке:",
-            state, reply_markup=ReplyKeyboardRemove()
+            "Сперва ФИО на русском языке:"
         )
     else:
-        await send_typing_and_message(
-            message.chat.id, bot,
-            "✅ Начнём регистрацию.",
-            state, reply_markup=ReplyKeyboardRemove()
-        )
-        await send_typing_and_message(
-            message.chat.id, bot,
-            f'Введите ваше ФИО на русском языке',
-            state
-        )
-    # Активируем состояние диалога
+        text = "✅ Начнём регистрацию.\nВведите ваше ФИО на русском языке"
+
+    await send_typing_and_message(
+        message.chat.id,
+        bot,
+        text,
+        state,
+        reply_markup=ReplyKeyboardRemove()
+    )
     await state.set_state(Register.nameRU)
+
+# Обработчик команды /register
+@router.message(StateFilter('*'), Command('register'))
+async def register_via_command(message: Message, state: FSMContext, bot: Bot):
+    await register_handler(message, state, bot)
+
+
+# Обработчик inline-кнопки "расписание"
+@router.callback_query(F.data == 'edit_data')
+async def register_via_schedule(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    await callback.answer()  # Обязательно отвечаем на callback
+    await register_handler(callback.message, state, bot)
+
+
+
+# # Функция регистрации вызов только по обычной команде
+# @router.message(StateFilter('*'), Command('register'))
+# async def register(message: Message, state: FSMContext, bot: Bot):
+#     await state.clear()
+#     current_user = await rq.get_item_by_tg_id(message.from_user.id)
+#     # запишем команды для ее удаления
+#     await mes_user_history(message, state)
+#     if current_user:  # Если пользователь уже зарегистрирован
+#         await state.update_data(is_edit=True)
+#         await send_typing_and_message(
+#             message.chat.id, bot,
+#             "✏️ Режим редактирования. Введите новые данные.\n"
+#             "Сперва ФИО на русском языке:",
+#             state, reply_markup=ReplyKeyboardRemove()
+#         )
+#     else:
+#         await send_typing_and_message(
+#             message.chat.id, bot,
+#             "✅ Начнём регистрацию.",
+#             state, reply_markup=ReplyKeyboardRemove()
+#         )
+#         await send_typing_and_message(
+#             message.chat.id, bot,
+#             f'Введите ваше ФИО на русском языке',
+#             state
+#         )
+#     # Активируем состояние диалога
+#     await state.set_state(Register.nameRU)
+
+
+async def menu_core_handler(source: Message | CallbackQuery, state: FSMContext, bot: Bot):
+    await state.clear()
+
+    # Получаем объект сообщения в зависимости от типа источника
+    message = source if isinstance(source, Message) else source.message
+
+    # Проверяем наличие пользователя в системе
+    user_item = await rq.get_item_by_tg_id(message.from_user.id)
+
+    if user_item:
+        # Пользователь зарегистрирован - показываем персональное меню
+        await bot.send_chat_action(message.chat.id, ChatAction.TYPING)
+        await asyncio.sleep(1)
+
+        role_name = await rq.get_role_name(user_item.role)
+        keyboard = await kb.get_role_keyboard(role_name)
+
+        # Формируем ответ аналогично /start
+        caption = f"👋 {role_name}: {user_item.nameRU}!"
+        text = {
+            "Фотограф": Messages.INTRO_PHOTO,
+            "Билд-редактор": Messages.INTRO_BILD,
+            "Менеджер": Messages.INTRO_MANAGER
+        }.get(role_name, Messages.INTRO_MANAGER)
+
+        # await message.answer_photo(
+        #     photo='AgACAgIAAxkBAAPgZ361se9D_xn8AwRI7Y1gBmdmTiwAAgfrMRsQmvlLUMXQ9_Z9HXABAAMCAAN5AAM2BA',
+        #     caption=caption
+        # )
+        await bot.send_chat_action(message.chat.id, ChatAction.TYPING)
+        await asyncio.sleep(1)
+        await message.answer(text=text, parse_mode=ParseMode.HTML, reply_markup=keyboard)
+
+    else:
+        # Пользователь не зарегистрирован - сообщаем об ошибке
+        error_text = "🚫 Персональное меню недоступно. Для доступа необходимо пройти регистрацию! /register"
+
+        if isinstance(source, CallbackQuery):
+            await source.answer(error_text, show_alert=True)
+        else:
+            await message.answer(error_text)
+
+
+# Обработчик команды /menu
+@router.message(Command('menu'))
+async def menu_command(message: Message, state: FSMContext, bot: Bot):
+    await menu_core_handler(message, state, bot)
+
+
+# Обработчик callback menu_personal
+@router.callback_query(F.data == 'menu_personal')
+async def menu_callback(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    await menu_core_handler(callback, state, bot)
+    await callback.answer()  # Убираем "часики" на кнопке
+
 
 
 #-----------------------------------------------------------------------------------------------------------------------
@@ -1362,13 +1453,21 @@ async def stop_flood(message: Message):
 
 
 
-
-#Поиск по таблице
-@router.message(F.text.lower() == "расписание")
-async def deepseek(message: Message, state: FSMContext):
-    await message.answer('Напиши что ты хочешь найти?', reply_markup=kb.find)
-    # Устанавливаем состояние ожидания выбора слов исключений
+# Обработчик inline-кнопки "расписание"
+@router.callback_query(F.data == 'schedule_pers')
+async def schedule_pers(callback_query: types.CallbackQuery, state: FSMContext):
+    await callback_query.answer()     # Обязательно отвечаем на callback
+    await callback_query.message.answer('Напиши что ты хочешь найти?', reply_markup=kb.find)
     await state.set_state(Find.exclude)
+
+
+
+# #Поиск по таблице
+# @router.message(F.text.lower() == "расписание")
+# async def deepseek(message: Message, state: FSMContext):
+#     await message.answer('Напиши что ты хочешь найти?', reply_markup=kb.find)
+#     # Устанавливаем состояние ожидания выбора слов исключений
+#     await state.set_state(Find.exclude)
 
 # Обработчик нажатий на кнопки инлайн-клавиатуры
 @router.callback_query(Find.exclude)

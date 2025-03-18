@@ -197,24 +197,44 @@ async def create_keyboard(
 
 
 
+# # функция для клавиатур в зависимости от роли
+# async def get_role_keyboard(role: str) -> ReplyKeyboardMarkup:
+#     if role == "Фотограф":
+#         return ReplyKeyboardMarkup(
+#             keyboard=[
+#                 [KeyboardButton(text="расписание")],
+#                 [KeyboardButton(text="🔄 Редактировать данные")],
+#                 [KeyboardButton(text="📋 Мои серийники")]
+#             ],
+#             resize_keyboard=True
+#         )
+#     elif role == "Билд-редактор":
+#         return ReplyKeyboardMarkup(
+#             keyboard=[
+#                 [KeyboardButton(text="📊 Таблицы")],
+#                 [KeyboardButton(text="🔍 Поиск кода")],
+#                 [KeyboardButton(text="📂 Все фотографы")]
+#             ],
+#             resize_keyboard=True
+#         )
+#     return main  # Стандартная клавиатура
+
 # функция для клавиатур в зависимости от роли
-async def get_role_keyboard(role: str) -> ReplyKeyboardMarkup:
+async def get_role_keyboard(role: str) -> InlineKeyboardMarkup:
     if role == "Фотограф":
-        return ReplyKeyboardMarkup(
-            keyboard=[
-                [KeyboardButton(text="расписание")],
-                [KeyboardButton(text="🔄 Редактировать данные")],
-                [KeyboardButton(text="📋 Мои серийники")]
-            ],
-            resize_keyboard=True
+        return InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="📸 Моё расписание", callback_data="schedule_pers")],
+                [InlineKeyboardButton(text="🔄 Редактировать данные", callback_data="edit_data")],
+                [InlineKeyboardButton(text="📋 Мои серийники", callback_data="my_serials")]
+            ]
         )
     elif role == "Билд-редактор":
-        return ReplyKeyboardMarkup(
-            keyboard=[
-                [KeyboardButton(text="📊 Таблицы")],
-                [KeyboardButton(text="🔍 Поиск кода")],
-                [KeyboardButton(text="📂 Все фотографы")]
-            ],
-            resize_keyboard=True
+        return InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="📊 Таблицы", callback_data="tables")],
+                [InlineKeyboardButton(text="🔍 Поиск кода", callback_data="search_code")],
+                [InlineKeyboardButton(text="📂 Все фотографы", callback_data="all_photographers")]
+            ]
         )
-    return main  # Стандартная клавиатура
+    return InlineKeyboardMarkup()  # Возвращаем пустую клавиатуру или основную, если есть
