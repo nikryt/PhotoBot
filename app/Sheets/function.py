@@ -45,18 +45,18 @@ async def number_row(data: dict):
     sh = await wks.worksheet(title='Лист1')
     next_row = await next_available_row(sh)
     if data["serial1"] == 'NoSerial':
-        values = [[f'//', f'{data["nameRu"]}', f'{data["nameEn"]}', f'{data["idn"]}', f'{data["mailcontact"]}', f'{data["tel"]}', f'{data["role"]}']]
+        values = [[f'//', f'{data["nameRU"]}', f'{data["nameEN"]}', f'{data["idn"]}', f'{data["mailcontact"]}', f'{data["tel"]}', f'{data["role"]}']]
         await sh.update(values, "A{}".format(next_row))
     if data ["serial1"] not in [None, 'NoSerial']:
-        values = [[f'sn{data["serial1"]}', f'{data["nameRu"]}', f'{data["nameEn"]}', f'{data["idn"]}', f'{data["mailcontact"]}', f'{data["tel"]}', f'{data["role"]}']]
+        values = [[f'sn{data["serial1"]}', f'{data["nameRU"]}', f'{data["nameEN"]}', f'{data["idn"]}', f'{data["mailcontact"]}', f'{data["tel"]}', f'{data["role"]}']]
         await sh.update(values, "A{}".format(next_row))
         next_row += 1  # Вручную увеличиваем строку для следующих данных
     if data ["serial2"] not in [None, 'NoSerial']:
-        values = [[f'sn{data["serial2"]}', f'{data["nameRu"]}', f'{data["nameEn"]}', f'{data["idn"]}', f'{data["mailcontact"]}', f'{data["tel"]}', f'{data["role"]}']]
+        values = [[f'sn{data["serial2"]}', f'{data["nameRU"]}', f'{data["nameEN"]}', f'{data["idn"]}', f'{data["mailcontact"]}', f'{data["tel"]}', f'{data["role"]}']]
         await sh.update(values, "A{}".format(next_row))
         next_row += 1  # Вручную увеличиваем строку для следующих данных
     if data ["serial3"] not in [None, 'NoSerial']:
-        values = [[f'sn{data["serial3"]}', f'{data["nameRu"]}', f'{data["nameEn"]}', f'{data["idn"]}', f'{data["mailcontact"]}', f'{data["tel"]}', f'{data["role"]}']]
+        values = [[f'sn{data["serial3"]}', f'{data["nameRU"]}', f'{data["nameEN"]}', f'{data["idn"]}', f'{data["mailcontact"]}', f'{data["tel"]}', f'{data["role"]}']]
         await sh.update(values, "A{}".format(next_row))
 
 

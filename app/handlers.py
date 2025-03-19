@@ -190,13 +190,21 @@ async def  cmd_help(message: Message, state: FSMContext, bot: Bot):
 
 
 # Общая логика для обработки регистрации вызов ко команде или нажатию инлайн кнопки (callback)
-async def register_handler(message: Message, state: FSMContext, bot: Bot):
+async def register_handler(message: Message, state: FSMContext, bot: Bot, tg_id: int = None):
     await state.clear()
-    current_user = await rq.get_item_by_tg_id(message.from_user.id)
-    await mes_user_history(message, state)
+    # Если tg_id не передан, берем из сообщения
+    if not tg_id:
+        tg_id = message.from_user.id
+    logging.info(f'Текущий id: {tg_id}')
+
+    # # Принудительная проверка дубликатов
+    # await rq.delete_duplicates(tg_id)
+
+    current_user = await rq.get_item_by_tg_id(tg_id)
+    logging.info(f'Текущий пользователь после очистки: {current_user}')
 
     if current_user:
-        await state.update_data(is_edit=True)
+        await state.update_data(is_edit=True, item_id=current_user.id)  # Сохраняем ID для обновления)
         text = (
             "✏️ Режим редактирования. Введите новые данные.\n"
             "Сперва ФИО на русском языке:"
@@ -216,14 +224,26 @@ async def register_handler(message: Message, state: FSMContext, bot: Bot):
 # Обработчик команды /register
 @router.message(StateFilter('*'), Command('register'))
 async def register_via_command(message: Message, state: FSMContext, bot: Bot):
-    await register_handler(message, state, bot)
+    # Проверяем статус регистрации
+    if not await rq.get_registration_status():
+        await message.answer("⚠️ Регистрация временно приостановлена администратором.")
+        return
+    else:
+        await register_handler(message, state, bot)
 
 
-# Обработчик inline-кнопки "расписание"
+# Обработчик inline-кнопки "редактировать данные"
 @router.callback_query(F.data == 'edit_data')
 async def register_via_schedule(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    # # Проверяем статус регистрации даже для редактирования
+    # if not await rq.get_registration_status():
+    #     await callback.answer("⚠️ Редактирование временно недоступно", show_alert=True)
+    #     return
     await callback.answer()  # Обязательно отвечаем на callback
-    await register_handler(callback.message, state, bot)
+    # Получаем ID пользователя из callback, а не из сообщения
+    tg_id = callback.from_user.id
+    logging.info(f"Обработка кнопки редактирования. User ID: {tg_id}")
+    await register_handler(callback.message, state, bot, tg_id)
 
 
 

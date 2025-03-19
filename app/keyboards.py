@@ -68,10 +68,17 @@ table = InlineKeyboardMarkup(inline_keyboard=[
     # Клавиатуры админа
     # ------------------------------------------------------------------------------------------------------------------
 
-admin = InlineKeyboardMarkup(inline_keyboard=[
-    [InlineKeyboardButton(text=Buttons.ALL, callback_data='all'), InlineKeyboardButton(text=Buttons.DONE, callback_data='ready')],
-    [InlineKeyboardButton(text=Buttons.ERROR, callback_data='clear'), InlineKeyboardButton(text=Buttons.NEW, callback_data='new')]
-])
+async def admin_keyboard(registration_enabled: bool) -> InlineKeyboardMarkup:
+    buttons = [
+        [InlineKeyboardButton(
+            text=f"Регистрация: {'ON' if registration_enabled else 'OFF'}",
+            callback_data='toggle_registration'
+        )],
+        [InlineKeyboardButton(text="Можно всех посмотреть", callback_data='view_all')],
+        [InlineKeyboardButton(text="DeepSeek", callback_data='deepseek')]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
 
 # Клавиатура для админ-подтверждения
 def admin_approval_kb(user_id: int) -> InlineKeyboardMarkup:

@@ -1,5 +1,5 @@
 from pydantic_core.core_schema import with_info_wrap_validator_function
-from sqlalchemy import  BigInteger, String,ForeignKey
+from sqlalchemy import BigInteger, String, ForeignKey, Column
 from sqlalchemy.orm import  DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.ext.asyncio import AsyncAttrs, async_sessionmaker, create_async_engine
 
@@ -52,6 +52,13 @@ class TempChanges(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     tg_id = mapped_column(BigInteger)
     data: Mapped[str] = mapped_column(String(2000))
+
+
+class Setting(Base):
+    __tablename__ = "settings"
+
+    key = Column(String, primary_key=True)
+    value = Column(String)
 
 async  def async_main():
     async with engine.begin() as conn:
