@@ -1069,14 +1069,20 @@ async def handle_media_group(message: Message, bot: Bot, state: FSMContext):
                 "\n\n".join(results),
                 state
             )
-            await send_typing_and_message(
-            message.chat.id, bot,
-                f'Спасибо, вы отправили {i + 1} фотографий, этого достаточно для двух камер, завершите регистрацию нажав на кнопку внизу.\n\n'
-                f'Если у вас три камеры, пришлите еще один файл с третьего фотоаппарата.',
-                state, reply_markup=kb.getphoto)
+
             if i + 1  == 2:
+                await send_typing_and_message(
+                    message.chat.id, bot,
+                    f'Спасибо, вы отправили {i + 1} фотографий, этого достаточно для {i + 1} камер, завершите регистрацию нажав на кнопку внизу.\n\n'
+                    f'Если у вас {i + 2} камеры, пришлите еще один файл с третьего фотоаппарата.',
+                    state, reply_markup=kb.getphoto)
                 await state.set_state(Register.photofile3)
             else:
+                await send_typing_and_message(
+                    message.chat.id, bot,
+                    f'Спасибо, вы отправили {i + 1} фотографий, этого достаточно для {i + 1} камер, завершите регистрацию нажав на кнопку внизу.\n\n'
+                    f'Если у вас {i + 2} камеры, свяжитесь с рукводством.',
+                    state, reply_markup=kb.getphoto)
                 await state.set_state(Register.verify)
 
 
