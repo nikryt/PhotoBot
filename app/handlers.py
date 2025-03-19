@@ -1970,21 +1970,34 @@ async def handle_status_update(callback: CallbackQuery, status: str):
 # или лист ПУТЬ.
 #-----------------------------------------------------------------------------------------------------------------------
 
-@router.message(F.text.lower() == "файл")
-async def handle_report_request(message: types.Message, bot: Bot):
-    tg_id = message.from_user.id
+@router.callback_query(F.data.in_({"tables_day", "tables_dist"}))  # Обрабатываем два callback_data
+async def handle_report_request(callback_query: types.CallbackQuery, bot: Bot):
+    await callback_query.answer()
+    tg_id = callback_query.from_user.id
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
     temp_filename = f"TSV/report_{tg_id}_{timestamp}.tsv"
 
     try:
         role = await rq.get_role(tg_id)
-        if role == "2":
+        logging.info(f"Получена роль: {role}")  # Логируем значение role
+        # Преобразуем role в строку для сравнения
+        if str(role) == "2":  # Сравниваем со строкой "2"
             # Создаем директорию для отчетов если ее нет
             Path("TSV").mkdir(exist_ok=True)
 
+            # Определяем, какой лист нужно сохранить
+            if callback_query.data == "tables_day":
+                sheet_name = None  # Используем лист по умолчанию
+            elif callback_query.data == "tables_dist":
+                sheet_name = "ПУТЬ"  # Используем лист "ПУТЬ"
+
+
             # Сохраняем отчет
-            await message.answer("🔄 Начинаю сохранение файла...")
-            success, sheet_title = await fu.save_sheet_as_tsv(filename=temp_filename)
+            await callback_query.answer("🔄 Начинаю сохранение файла...")
+            success, sheet_title = await fu.save_sheet_as_tsv(
+                filename=temp_filename,
+                sheet_name=sheet_name  # Передаем имя листа
+            )
 
             # Генерируем безопасное имя файла
             safe_title = re.sub(r'[\\/*?:"<>|]', '', sheet_title).replace(' ', '_')
@@ -2006,10 +2019,10 @@ async def handle_report_request(message: types.Message, bot: Bot):
             # Удаляем временный файл
             Path(temp_filename).unlink(missing_ok=True)
         else:
-            await message.answer("🔄 Вам не нужен этот файл")
+            await callback_query.answer("🔄 Вам не нужен этот файл")
 
     except Exception as e:
-        await message.answer(f"❌ Ошибка при сохранении файла: {str(e)}")
+        await callback_query.answer(f"❌ Ошибка при сохранении файла: {str(e)}")
         print(f"Error: {str(e)}")
 #-----------------------------------------------------------------------------------------------------------------------
 # Конец Функция сохранения данных в TSV по сообщению Файл. Дописать на нажатие кнопки и выбор, что сохранить первую страницу
