@@ -1465,7 +1465,7 @@ async def process_exclude_words(callback: CallbackQuery, state: FSMContext):
     if callback.data == "ready":
         exclude_words = ["", "ОТМЕНА", "СНИМАЮТ"]
     elif callback.data == "clear":
-        include_values = [""]
+        include_values = ["ОТМЕНА"]
     elif callback.data == "new":
         exclude_words = ["СНЯТО", "ОТМЕНА", "СНИМАЮТ"]
     # Если callback_data == "exclude_none", список исключений останется пустым
