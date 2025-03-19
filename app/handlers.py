@@ -1449,7 +1449,7 @@ async def schedule_pers(callback_query: types.CallbackQuery, state: FSMContext):
 @router.callback_query(Find.exclude)
 async def process_exclude_words(callback: CallbackQuery, state: FSMContext):
     # Игнорируем невалидные callback_data
-    if callback.data not in {'ready', 'clear', 'new', ''}:
+    if callback.data not in {'ready', 'clear', 'new', 'all'}:
         await callback.answer("⚠️ Действие недоступно")
         return
 
@@ -2041,7 +2041,7 @@ async def photographer_selected(callback: CallbackQuery, state: FSMContext):
     })
 
     await callback.message.answer(
-        "🔎 Выберите тип поиска:",
+        "🔎 Выберите какие съемки показать:",
         reply_markup=kb.find
     )
     await state.set_state(Find.exclude)
