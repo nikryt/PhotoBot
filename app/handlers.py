@@ -1069,7 +1069,6 @@ async def handle_media_group(message: Message, bot: Bot, state: FSMContext):
                 "\n\n".join(results),
                 state
             )
-
             if i + 1  == 2:
                 await send_typing_and_message(
                     message.chat.id, bot,
