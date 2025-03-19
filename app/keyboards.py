@@ -239,7 +239,7 @@ async def get_role_keyboard(role: str) -> InlineKeyboardMarkup:
                 [InlineKeyboardButton(text="📂 Все фотографы", callback_data="all_photographers")]
             ]
         )
-    return InlineKeyboardMarkup()  # Возвращаем пустую клавиатуру или основную, если есть
+    return InlineKeyboardMarkup(inline_keyboard=[])  # Возвращаем пустую клавиатуру или основную, если есть
 
 # функция создания кнопок с именами фотографов
 async def photographers_keyboard():

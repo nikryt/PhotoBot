@@ -10,7 +10,7 @@ from app.Filters.chat_types import ChatTypeFilter, IsAdmin  # импортиро
 import app.keyboards as kb
 import app.database.requests as rq
 from app.generate import ai_generate
-from app.handlers import Gen
+from app.handlers import Gen, save_document
 
 admin_router = Router()
 admin_router.message.filter(ChatTypeFilter(["private"]), IsAdmin())
@@ -18,7 +18,33 @@ admin_router.message.filter(ChatTypeFilter(["private"]), IsAdmin())
 @admin_router.message(Command("admin"))
 async def admin_keyboard(message: types.Message):
     await message.answer("тестируем админку", reply_markup=kb.admin)
+#=======================================================================================================================
+# START Получить ID медиа данных
+#=======================================================================================================================
 
+# отвечаем на фото его ID
+@admin_router.message(F.photo)
+async def get_photo(message: Message):
+    await message.answer(f'ID фото: {message.photo[-1].file_id}')
+
+# Отвечаем на документ его ID
+@admin_router.message(F.document)
+async def get_document(message: Message):
+    await message.answer(f'ID документа: {message.document.file_id}')
+
+async def process_document(message: types.Message, bot: Bot):
+    await save_document(message, bot)
+
+
+# Отвечаем на стикер его ID и ID чата
+@admin_router.message(F.sticker)
+async def check_sticker(message: Message):
+    await message.answer(f'ID стикера: {message.sticker.file_id}')
+    await message.answer(f'id чата: {message.from_user.id, message.chat.id}')
+
+#=======================================================================================================================
+# END Получить ID медиа данных
+#=======================================================================================================================
 
 #Выводим данные из базы по запросу
 @admin_router.message(F.text == "Можно всех посмотреть")

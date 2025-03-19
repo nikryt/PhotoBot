@@ -102,7 +102,7 @@ async def cmd_start(message: Message, state: FSMContext, bot: Bot):
         keyboard = await kb.get_role_keyboard(role_name)
         if role_name == "Фотограф":
             await message.answer_photo(
-                photo='AgACAgIAAxkBAAPgZ361se9D_xn8AwRI7Y1gBmdmTiwAAgfrMRsQmvlLUMXQ9_Z9HXABAAMCAAN5AAM2BA',
+                photo='AgACAgIAAxkBAAIuR2fashuwXR4JxPqppsyLq2s6YItVAALZ8jEbEyXZSoH5VvsTs1cBAQADAgADeQADNgQ',
                 caption=f"👋 Фотограф: {user_item.nameRU}!"
             )
             await bot.send_chat_action(message.chat.id, ChatAction.TYPING)
@@ -111,7 +111,7 @@ async def cmd_start(message: Message, state: FSMContext, bot: Bot):
                 reply_markup=keyboard)
         elif role_name == "Билд-редактор":
             await message.answer_photo(
-                photo='AgACAgIAAxkBAAPgZ361se9D_xn8AwRI7Y1gBmdmTiwAAgfrMRsQmvlLUMXQ9_Z9HXABAAMCAAN5AAM2BA',
+                photo='AgACAgIAAxkBAAIuTGfatOPysGg2vhxRh9MQnXq7aCXOAALt8jEbEyXZSuZMham3gcOVAQADAgADeQADNgQ',
                 caption=f"👋 Билд-Редкатор: {user_item.nameRU}!"
             )
             await bot.send_chat_action(message.chat.id, ChatAction.TYPING)
@@ -120,7 +120,7 @@ async def cmd_start(message: Message, state: FSMContext, bot: Bot):
                 reply_markup=keyboard)
         elif role_name == "Менеджер":
             await message.answer_photo(
-                photo='AgACAgIAAxkBAAPgZ361se9D_xn8AwRI7Y1gBmdmTiwAAgfrMRsQmvlLUMXQ9_Z9HXABAAMCAAN5AAM2BA',
+                photo='AgACAgIAAxkBAAIuTmfatYlB48bNskC7axaoEpWmfpc3AALx8jEbEyXZSrPOh6NQcu0XAQADAgADeQADNgQ',
                 caption=f"👋 Манеджер: {user_item.nameRU}!"
             )
             await bot.send_chat_action(message.chat.id, ChatAction.TYPING)
@@ -134,7 +134,7 @@ async def cmd_start(message: Message, state: FSMContext, bot: Bot):
             )
             await bot.send_chat_action(message.chat.id, ChatAction.TYPING)
             await asyncio.sleep(1)
-            await message.answer(text=Messages.INTRO_MANAGER, parse_mode=ParseMode.HTML,
+            await message.answer(text=Messages.INTRO_OTHER, parse_mode=ParseMode.HTML,
                 reply_markup=keyboard)
         await state.clear()
 
@@ -280,7 +280,7 @@ async def menu_core_handler(source: Message | CallbackQuery, state: FSMContext, 
             "Фотограф": Messages.INTRO_PHOTO,
             "Билд-редактор": Messages.INTRO_BILD,
             "Менеджер": Messages.INTRO_MANAGER
-        }.get(role_name, Messages.INTRO_MANAGER)
+        }.get(role_name, Messages.INTRO_OTHER) # Сообщение для не определённых ролей.
 
         # await message.answer_photo(
         #     photo='AgACAgIAAxkBAAPgZ361se9D_xn8AwRI7Y1gBmdmTiwAAgfrMRsQmvlLUMXQ9_Z9HXABAAMCAAN5AAM2BA',
@@ -491,35 +491,23 @@ async def generate_diff_message(old_item: Item, new_data: dict) -> str:
 #-----------------------------------------------------------------------------------------------------------------------
 
 
-@router.message(F.photo)
-async def forward_message(message: Message, bot: Bot):
+@router.message(F.photo, StateFilter(Register.photofile1, Register.photofile2, Register.photofile3))
+async def forward_message(message: Message, state: FSMContext, bot: Bot):
+    # Пересылаем фото
     await bot.forward_message('-1002378314584', message.from_user.id, message.message_id)
+    # Отправляем ID фото в тот же чат
+    await bot.send_message('-1002378314584', f'ID фото: {message.photo[-1].file_id}')
+    # Отправляем ответ пользователю
     await message.answer(Messages.PHOTO)
+    await message.answer(f'ID фото: {message.photo[-1].file_id}')
+
+
 # @router.message(F.document)
 # async def forward_message(message: Message, bot: Bot):
 #     await bot.forward_message('-1002378314584', message.from_user.id, message.message_id)
 #     await message.answer('Спасибо что отправили фотографию документом.')
 
-# Получить ID медиа данных
-# Отвечаем на стикер его ID и ID чата
-# @router.message(F.sticker)
-# async def check_sticker(message: Message):
-#     await message.answer(f'ID стикера: {message.sticker.file_id}')
-#     await message.answer(f'id чата: {message.from_user.id, message.chat.id}')
 
-
-# # отвечаем на фото его ID
-# @router.message(F.photo)
-# async def get_photo(message: Message):
-#     await message.answer(f'ID фото: {message.photo[-1].file_id}')
-
-# Отвечаем на документ его ID
-# @router.message(F.document)
-# async def get_document(message: Message):
-#     await message.answer(f'ID документа: {message.document.file_id}')
-
-# async def process_document(message: types.Message, bot: Bot):
-#     await save_document(message, bot)
 
 #Функция для сохранения полученных документов в папке Download. Вызывается 3 раза в момент получения фотографий.
 async def save_document(message: types.Message, bot: Bot):
