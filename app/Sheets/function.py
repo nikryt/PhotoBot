@@ -8,7 +8,8 @@ from sqlalchemy.orm import defer
 from typing import Optional, Tuple, List
 from gspread_asyncio import AsyncioGspreadClient, AsyncioGspreadWorksheet
 
-def get_creds():
+def get_creds() -> Credentials:
+    """Возвращает учетные данные Google Sheets с нужными scope."""
     # To obtain a service account JSON file, follow these steps:
     # https://gspread.readthedocs.io/en/latest/oauth2.html#for-bots-using-service-account
     # cs = Credentials.from_service_account_file("photobot-446116-eb367a5fb308.json")
@@ -27,7 +28,8 @@ agcm = gspread_asyncio.AsyncioGspreadClientManager(get_creds)
 # Функции записи данных
 #-------------------------------------------------------------------------------------------------------------------
 
-async def next_available_row(sh, cols_to_sample=8):
+async def next_available_row(sh, cols_to_sample=8) -> int:
+    """Ищет следующую пустую строку в указанном листе."""
     # Always authorize first.
     # If you have a long-running program call authorize() repeatedly.
     agc = await agcm.authorize()
@@ -39,7 +41,8 @@ async def next_available_row(sh, cols_to_sample=8):
     print('выполнили поиск')
     return next_row
 
-async def number_row(data: dict):
+async def number_row(data: dict) -> None:
+    """Записывает данные в Google Sheets, обрабатывая ситуацию с несколькими серийными номерами."""
     agc = await agcm.authorize()
     wks = await agc.open("PhotoBot")
     sh = await wks.worksheet(title='Лист1')
@@ -271,6 +274,7 @@ async def find_all_text_code(
         exclude_words: Optional[List[str]] = None,
         include_values: Optional[List[str]] = None
 ) -> List[Tuple[int, int, str, List[str]]]:
+    """Ищет ячейки по префиксу с фильтрацией и возвращает контекст."""
     agc: AsyncioGspreadClient = await agcm.authorize()
     spreadsheet = await agc.open(spreadsheet_name)
     worksheet: AsyncioGspreadWorksheet = await spreadsheet.worksheet(sheet_name)
@@ -331,10 +335,12 @@ async def find_all_text_code(
     return matches
 
 
-
+#======================================================================================================================
+# Вспомогательные функции
+#======================================================================================================================
 
 # функция для получения значения ячейки
-async def get_cell_value(row: int, col: int) -> str:
+async def get_cell_value(row: int, col: int) -> Optional[str]:
     """Возвращает значение указанной ячейки"""
     try:
         agc = await agcm.authorize()
