@@ -1,4 +1,3 @@
-from pydantic_core.core_schema import with_info_wrap_validator_function
 from sqlalchemy import BigInteger, String, ForeignKey, Column
 from sqlalchemy.orm import  DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.ext.asyncio import AsyncAttrs, async_sessionmaker, create_async_engine

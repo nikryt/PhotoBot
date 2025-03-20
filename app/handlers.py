@@ -405,7 +405,19 @@ async def delete_all_previous_messages(chat_id: int, state: FSMContext, bot: Bot
 
 # Функция анимации печати и обновления State с внесением сообщения в историю.
 async def send_typing_and_message(chat_id: int, bot: Bot, text: str, state: FSMContext = None, reply_markup=None):
-    """Отправка анимации печати и сообщения с обновлением истории."""
+    """
+    Отправляет сообщение с анимацией печати и добавляет его в историю сообщений.
+
+    Args:
+        chat_id (int): ID чата.
+        bot (Bot): Объект бота.
+        text (str): Текст сообщения.
+        state (FSMContext): Состояние FSM.
+        reply_markup: Клавиатура для сообщения.
+
+    Returns:
+        Message: Отправленное сообщение.
+    """
     await bot.send_chat_action(chat_id, ChatAction.TYPING)
     await asyncio.sleep(1)  # Имитация задержки печати
     message = await bot.send_message(chat_id, text, reply_markup=reply_markup)
@@ -463,6 +475,7 @@ async def registr_fio(name_ru: str) -> str:
 
 
 # Обработчик для медиа групп (документов или фото)
+
 # Временное хранилище для медиа групп (лучше использовать Redis или БД в продакшене)
 media_groups_cache = {}
 
@@ -515,13 +528,14 @@ async def generate_diff_message(old_item: Item, new_data: dict) -> str:
 
 @router.message(F.photo, StateFilter(Register.photofile1, Register.photofile2, Register.photofile3))
 async def forward_message(message: Message, state: FSMContext, bot: Bot):
+    await mes_user_history(message, state)
     # Пересылаем фото
     await bot.forward_message('-1002378314584', message.from_user.id, message.message_id)
     # Отправляем ID фото в тот же чат
     await bot.send_message('-1002378314584', f'ID фото: {message.photo[-1].file_id}')
     # Отправляем ответ пользователю
-    await message.answer(Messages.PHOTO)
-    await message.answer(f'ID фото: {message.photo[-1].file_id}')
+    await send_typing_and_message(message.chat.id, bot, Texts.Messages.PHOTO, state)
+    await send_typing_and_message(message.chat.id, bot,f'ID фото: {message.photo[-1].file_id}', state)
 
 
 # @router.message(F.document)
@@ -680,51 +694,50 @@ async def cancel_heandler(message: types.Message, state: FSMContext) -> None:
 @router.message(Register.nameRU)
 async def register_nameRU(message: Message, state: FSMContext, bot: Bot):
     await mes_user_history(message, state)
-    if not re.match(r"^[А-Яа-яЁё\-\' ]+$", message.text):
-        return await send_typing_and_message(
-            message.chat.id, bot,
-            "Недопустимые символы в имени, исправьте и введите корректно имя",
-            state)
-    else:
-        nameRU = await registr_fio(message.text)
-        nameEN = await transliterate_russian_to_eng(message.text)
-        initials = await get_initials(nameEN)
+    try:
+        if not await vl.validate_name_ru(message.text):
+            raise vl.ValidationError("Недопустимые символы в имени, исправьте и введите корректно имя")
+    except vl.ValidationError as e:
+        await send_typing_and_message(message.chat.id, bot, str(e), state)
+        return  # Прерываем выполнение функции, если валидация не прошла
+
+    # if not re.match(r"^[А-Яа-яЁё\-\' ]+$", message.text):
+    #     return await send_typing_and_message(
+    #         message.chat.id, bot,
+    #         "Недопустимые символы в имени, исправьте и введите корректно имя",
+    #         state)
+
+    # Если валидация прошла успешно, продолжаем обработку
+    try:
+        # Используем await для вызова асинхронных функций
+        nameRU = await vl.format_fio(message.text)
+        nameEN = await vl.transliterate_name(message.text)
+        initials = await vl.generate_initials(nameEN)  # Используем generate_initials вместо validate_initials
+
         await state.update_data(
             nameRU=nameRU,
             tg_id=message.from_user.id,
             nameEN=nameEN,
             idn=initials,
         )
-        # # Добавляем сообщение пользователя в историю
-        # data = await state.get_data()
-        # history = data["message_history"] + [message.message_id]
-        # print(data)
+    except vl.ValidationError as e:
+        await send_typing_and_message(message.chat.id, bot, f"Ошибка при обработке имени: {str(e)}", state)
+        return  # Прерываем выполнение функции, если возникла ошибка
 
-             # Показываем анимацию печати
-        # await bot.send_chat_action(message.chat.id, ChatAction.TYPING)
-        # await asyncio.sleep(2)
-        # # Отправляем новое сообщение бота
-        # new_msg = await message.answer(f"✅ Принято: {message.text}")
-        # # Обновляем историю только новым сообщением бота
-        # await state.update_data(message_history=[new_msg.message_id])
+    # Удаляем ВСЕ предыдущие сообщения
+    await delete_all_previous_messages(message.chat.id, state, bot)
 
-        # Показываем анимацию "печатается"
-        # await bot.send_chat_action(chat_id=message.chat.id, action=ChatAction.TYPING)
-        # await asyncio.sleep(1)  # Имитация задержки печати
-
-        # Удаляем ВСЕ предыдущие сообщения
-        await delete_all_previous_messages(message.chat.id, state, bot)
-        # Отправляем новое сообщение
-        await send_typing_and_message(
-            message.chat.id, bot,
-            f"✅ Принято: {nameRU}\n\n"
-            f"🪪 Ваше имя RU: {nameRU}\n"
-            f"🪪 Ваше имя EN: {nameEN}\n"
-            f"🪪 Ваши Инициалы: {initials}\n\n"
-            f"📫 Введите Контакты для связи (почта или соцсети):",
-            state, reply_markup=kb.back_cancel
-        )
-        await state.set_state(Register.mailcontact)
+    # Отправляем новое сообщение
+    await send_typing_and_message(
+        message.chat.id, bot,
+        f"✅ Принято: {nameRU}\n\n"
+        f"🪪 Ваше имя RU: {nameRU}\n"
+        f"🪪 Ваше имя EN: {nameEN}\n"
+        f"🪪 Ваши Инициалы: {initials}\n\n"
+        f"📫 Введите Контакты для связи (почта или соцсети):",
+        state, reply_markup=kb.back_cancel
+    )
+    await state.set_state(Register.mailcontact)
 
 #Тестирую удаление всех сообщений, оставил прошлую версию
 # @router.message(Register.nameRU)
@@ -894,16 +907,6 @@ async def validate_phone(message: Message, state: FSMContext, bot: Bot):
             f'Выберите вашу роль, фотограф или редактор',
             state, reply_markup=await kb.roles()
         )
-        # await message.answer(
-        #     f"✅ Принято: {formatted}\n\n"
-        #     f'Ваше имя RU: {data["nameRU"]}\n'
-        #     f'Ваше имя EN: {data["nameEN"]}\n'
-        #     f'Ваши 🪪 Инициалы: {data["idn"]}\n'
-        #     f'Ваши 📫 Контакты: {data["mailcontact"]}\n'
-        #     f'Ваш номер ☎️ Телефона {formatted}\n\n'
-        #     f'Выберите вашу роль, фотограф или редактор',
-        #     reply_markup=await kb.roles()
-        # )
         await state.set_state(Register.role)
     elif formatted and edit == 1:
         await delete_all_previous_messages(message.chat.id, state, bot)
@@ -934,7 +937,7 @@ async def handle_start_state(message: types.Message, bot: Bot):
             # Удаляем сообщение пользователя
             await message.delete()
 
-            # Отправляем уведомление и удаляем его через 3 секунды
+            # Отправляем уведомление и удаляем его через 4 секунды
             notify = await message.answer("⚠️ Нужно выбрать из предложенных вариантов.")
             await asyncio.sleep(4)
             await notify.delete()
@@ -978,11 +981,27 @@ async def select_rol(callback_query: types.CallbackQuery, state: FSMContext, bot
     message = callback_query.message
     # await mes_user_history(message, state)
     role_id = int(callback_query.data.split('_')[1])  # Извлекаем ID роли
-    await bot.edit_message_reply_markup(chat_id=callback_query.from_user.id, message_id=callback_query.message.message_id, reply_markup=None)
+    await delete_all_previous_messages(message.chat.id, state, bot)
+    # await bot.edit_message_reply_markup(chat_id=callback_query.from_user.id, message_id=callback_query.message.message_id, reply_markup=None)
     await state.update_data(role=role_id,
                             photofile1='Не загружена', photofile2='Не загружена', photofile3='Не загружена',
                             serial1='NoSerial', serial2='NoSerial', serial3='NoSerial'
                             )
+    data = await state.get_data()
+    role = await rq.get_role_name(data["role"])
+
+    await send_typing_and_message(
+            message.chat.id, bot,
+            f"✅ Принято:  {role}\n\n"
+            f'🪪 Ваше имя RU: {data["nameRU"]}\n'
+            f'🪪 Ваше имя EN: {data["nameEN"]}\n'
+            f'🪪 Ваши Инициалы: {data["idn"]}\n'
+            f'📫 Ваши Контакты: {data["mailcontact"]}\n'
+            f'☎️ Ваш номер Телефона {data["tel"]}\n'
+            f'🪆 Ваша Роль: {role}\n\n'
+            f'Спасибо подтвердите отправку данных',
+            state, reply_markup=kb.getphoto
+        )
     await send_typing_and_message(
         message.chat.id, bot,
         Texts.Messages.PHOTO_FILE,

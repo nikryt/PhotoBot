@@ -4,7 +4,7 @@ import logging
 from app.database.models import async_session, TempChanges, Setting
 from app.database.models import User, Role, Item
 from sqlalchemy import select, update, delete, func
-from sqlalchemy.orm import defer
+
 
 # Записали при старте бота Telegram ID в таблицу User БД
 async def set_user(tg_id):
