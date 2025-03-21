@@ -1,3 +1,5 @@
+import logging
+
 import gspread_asyncio
 
 from gspread.exceptions import WorksheetNotFound
@@ -30,20 +32,75 @@ async def next_available_row(sh, cols_to_sample=8) -> int:
     # Always authorize first.
     # If you have a long-running program call authorize() repeatedly.
     agc = await agcm.authorize()
-    wks = await agc.open("PhotoBot")
-    sh = await wks.worksheet(title='Лист1')
+    # wks = await agc.open("PhotoBot")
+    # sh = await wks.worksheet(title='Лист1')
+    wks = await agc.open("MainTable")
+    sh = await wks.worksheet(title='ПУТЬ')
     # print("Spreadsheet URL: https://docs.google.com/spreadsheets/d/{0}".format(wks.id))
     cols = await sh.range(1, 1, sh.row_count, cols_to_sample)
     next_row = max([cell.row for cell in cols if cell.value]) + 1
-    print('выполнили поиск')
+    logging.info(f'нашли пустую строку: {next_row}')
     return next_row
+
+
+async def next_available_row_special(sh, cols_to_sample=8) -> int:
+    """Ищет первую пустую строку между '//##' и следующим '//sn??' с проверкой столбцов B-H."""
+    agc = await agcm.authorize()
+    wks = await agc.open("MainTable")
+    sh = await wks.worksheet('ПУТЬ')
+
+    # Получаем все данные листа
+    all_data = await sh.get_all_values()
+
+    section_ranges = []  # Список кортежей (start, end)
+    last_section_start = -1
+
+    # 1. Находим все пары "//##" → "//sn"
+    for row_idx, row in enumerate(all_data):
+        if len(row) == 0:
+            continue
+        col_a = row[0].strip()
+
+        if col_a.startswith("//##"):
+            last_section_start = row_idx
+        elif col_a.startswith("//sn") and last_section_start != -1:
+            section_ranges.append((last_section_start, row_idx))
+            last_section_start = -1
+
+    # 2. Проверяем строки между маркерами
+    empty_candidates = []
+    for start, end in section_ranges:
+        for row_idx in range(start + 1, end):
+            # Проверяем столбцы B-H (индексы 1-7 в данных)
+            if len(all_data[row_idx]) < 8:
+                # Если строка короче 8 столбцов - считаем пустой
+                empty_candidates.append(row_idx + 1)  # +1 для 1-индексации
+                continue
+
+            # Проверяем, все ли ячейки B-H пусты
+            is_empty = all(
+                cell.strip() == ""
+                for cell in all_data[row_idx][1:8]  # Срезы B-H (индексы 1-7)
+            )
+
+            if is_empty:
+                empty_candidates.append(row_idx + 1)  # Конвертация в 1-индексацию
+
+    # 3. Возвращаем первую подходящую строку
+    if empty_candidates:
+        return min(empty_candidates)
+    else:
+        logging.info('Пустых строк между секциями не найдено, используем стандартный поиск.')
+        return await next_available_row(sh)
 
 async def number_row(data: dict) -> None:
     """Записывает данные в Google Sheets, обрабатывая ситуацию с несколькими серийными номерами."""
     agc = await agcm.authorize()
-    wks = await agc.open("PhotoBot")
-    sh = await wks.worksheet(title='Лист1')
-    next_row = await next_available_row(sh)
+    # wks = await agc.open("PhotoBot")
+    # sh = await wks.worksheet(title='Лист1')
+    wks = await agc.open("MainTable")
+    sh = await wks.worksheet(title='ПУТЬ')
+    next_row = await next_available_row_special(sh)
     if data["serial1"] == 'NoSerial':
         values = [[f'//', f'{data["nameRU"]}', f'{data["nameEN"]}', f'{data["idn"]}', f'{data["mailcontact"]}', f'{data["tel"]}', f'{data["role"]}']]
         await sh.update(values, "A{}".format(next_row))
@@ -64,7 +121,9 @@ async def write_done(row: int, col: int) -> Tuple[Optional[str], Optional[str]]:
     """Записывает 'СНЯТО' в ячейку под указанной"""
     try:
         agc = await agcm.authorize()
-        wks = await agc.open("Архипелаг 2024")
+        # wks = await agc.open("MainTable")
+        # sh = await wks.worksheet("Расписание фото")
+        wks = await agc.open("MainTable")
         sh = await wks.worksheet("Расписание фото")
         await sh.update_cell(row + 1, col, "СНЯТО")
         return "✅ СНЯТО успешно записано!", "СНЯТО"
@@ -76,7 +135,7 @@ async def write_cancel(row: int, col: int) -> Tuple[Optional[str], Optional[str]
     """Записывает 'СНЯТО' в ячейку под указанной"""
     try:
         agc = await agcm.authorize()
-        wks = await agc.open("Архипелаг 2024")
+        wks = await agc.open("MainTable")
         sh = await wks.worksheet("Расписание фото")
         await sh.update_cell(row + 1, col, "ОТМЕНА")
         return "✅ ОТМЕНА успешно записано!", "ОТМЕНА"
@@ -88,7 +147,9 @@ async def write_state(row: int, col: int) -> Tuple[Optional[str], Optional[str]]
     """Записывает 'СНИМАЮТ' в ячейку под указанной"""
     try:
         agc = await agcm.authorize()
-        wks = await agc.open("Архипелаг 2024")
+        # wks = await agc.open("MainTable")
+        # sh = await wks.worksheet("Расписание фото")
+        wks = await agc.open("MainTable")
         sh = await wks.worksheet("Расписание фото")
         await sh.update_cell(row + 1, col, "СНИМАЮТ")
         return "✅ СНИМАЮТ успешно записано!", "СНИМАЮТ"
@@ -100,7 +161,9 @@ async def write_error(row: int, col: int) -> Tuple[Optional[str], Optional[str]]
     """Записывает 'ОШИБКА' в ячейку под указанной"""
     try:
         agc = await agcm.authorize()
-        wks = await agc.open("Архипелаг 2024")
+        # wks = await agc.open("MainTable")
+        # sh = await wks.worksheet("Расписание фото")
+        wks = await agc.open("MainTable")
         sh = await wks.worksheet("Расписание фото")
         await sh.update_cell(row + 1, col, "")
         return "✅ Отменил пометку успешно!", " НЕТ СТАТУСА"
@@ -116,7 +179,7 @@ async def write_error(row: int, col: int) -> Tuple[Optional[str], Optional[str]]
 
 async def find_text_in_sheet(
         text: str,
-        spreadsheet_name: str = "Архипелаг 2024",
+        spreadsheet_name: str = "MainTable",
         sheet_name: str = "Расписание фото"
 ) -> List[Tuple[int, int, str]]:
     """
@@ -147,7 +210,7 @@ async def find_text_in_sheet(
 
 async def find_cod(
         prefix: str,
-        spreadsheet_name: str = "Архипелаг 2024",
+        spreadsheet_name: str = "MainTable",
         sheet_name: str = "Расписание фото",
         case_sensitive: bool = False
 ) -> List[Tuple[int, int, str]]:
@@ -156,10 +219,10 @@ async def find_cod(
     Возвращает список кортежей: (строка, колонка, полное значение).
     """
     agc: AsyncioGspreadClient = await agcm.authorize()
-    spreadsheet = await agc.open(spreadsheet_name)
-    worksheet: AsyncioGspreadWorksheet = await spreadsheet.worksheet(sheet_name)
+    sh = await agc.open(spreadsheet_name)
+    wks: AsyncioGspreadWorksheet = await sh.worksheet(sheet_name)
 
-    all_values = await worksheet.get_all_values()
+    all_values = await wks.get_all_values()
     matches = []
 
     # Подготовка префикса для сравнения
@@ -187,7 +250,7 @@ async def find_cod(
 
 # async def find_all_text_code(
 #         prefix: str,
-#         spreadsheet_name: str = "Архипелаг 2024",
+#         spreadsheet_name: str = "MainTable",
 #         sheet_name: str = "Расписание фото",
 #         case_sensitive: bool = False,
 #         exclude_words: Optional[List[str]] = []  # Новый параметр для исключения # Устанавливаем пустой список по умолчанию
@@ -265,7 +328,7 @@ async def find_cod(
 
 async def find_all_text_code(
         prefix: str,
-        spreadsheet_name: str = "Архипелаг 2024",
+        spreadsheet_name: str = "MainTable",
         sheet_name: str = "Расписание фото",
         case_sensitive: bool = False,
         exclude_words: Optional[List[str]] = None,
@@ -273,9 +336,9 @@ async def find_all_text_code(
 ) -> List[Tuple[int, int, str, List[str]]]:
     """Ищет ячейки по префиксу с фильтрацией и возвращает контекст."""
     agc: AsyncioGspreadClient = await agcm.authorize()
-    spreadsheet = await agc.open(spreadsheet_name)
-    worksheet: AsyncioGspreadWorksheet = await spreadsheet.worksheet(sheet_name)
-    all_values = await worksheet.get_all_values()
+    sh= await agc.open(spreadsheet_name)
+    wks: AsyncioGspreadWorksheet = await sh.worksheet(sheet_name)
+    all_values = await wks.get_all_values()
 
     search_prefix = prefix.strip()
     matches = []
@@ -341,7 +404,7 @@ async def get_cell_value(row: int, col: int) -> Optional[str]:
     """Возвращает значение указанной ячейки"""
     try:
         agc = await agcm.authorize()
-        wks = await agc.open("Архипелаг 2024")
+        wks = await agc.open("MainTable")
         sh = await wks.worksheet("Расписание фото")
         cell = await sh.cell(row, col)
         return cell.value
@@ -356,7 +419,7 @@ async def get_above_values(row: int, col: int, count: int) -> List[str]:
     """Возвращает указанное количество значений сверху"""
     try:
         agc = await agcm.authorize()
-        wks = await agc.open("Архипелаг 2024")
+        wks = await agc.open("MainTable")
         sh = await wks.worksheet("Расписание фото")
 
         start_row = max(1, row - count)
@@ -424,7 +487,7 @@ async def save_sheet_as_tsv(
 
 # async def find_all_text_code(
 #         prefix: str,
-#         spreadsheet_name: str = "Архипелаг 2024",
+#         spreadsheet_name: str = "MainTable",
 #         sheet_name: str = "Расписание фото",
 #         case_sensitive: bool = False
 # ) -> List[Tuple[int, int, str, List[str]]]:
@@ -486,7 +549,7 @@ async def save_sheet_as_tsv(
 
 # async def find_all_text_code(
 #         prefix: str,
-#         spreadsheet_name: str = "Архипелаг 2024",
+#         spreadsheet_name: str = "MainTable",
 #         sheet_name: str = "Расписание фото",
 #         case_sensitive: bool = False
 # ) -> List[Tuple[int, int, str, List[str]]]:
@@ -562,7 +625,7 @@ async def save_sheet_as_tsv(
 #Ищем точное одно совпадение и выводим три строки выше
 async def find_text_code(
         text: str,
-        spreadsheet_name: str = "Архипелаг 2024",
+        spreadsheet_name: str = "MainTable",
         sheet_name: str = "Расписание фото"
 ) -> List[Tuple[int, int, str, List[str]]]:
     """
@@ -572,10 +635,10 @@ async def find_text_code(
     - Список из трёх значений выше (от ближайшей к дальней)
     """
     agc: AsyncioGspreadClient = await agcm.authorize()
-    spreadsheet = await agc.open(spreadsheet_name)
-    worksheet: AsyncioGspreadWorksheet = await spreadsheet.worksheet(sheet_name)
+    sh = await agc.open(spreadsheet_name)
+    wks: AsyncioGspreadWorksheet = await sh.worksheet(sheet_name)
 
-    all_values = await worksheet.get_all_values()
+    all_values = await wks.get_all_values()
     search_text = text.strip().lower()
     matches = []
 
