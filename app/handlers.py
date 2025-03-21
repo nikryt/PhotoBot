@@ -433,47 +433,6 @@ async def send_typing_and_message(chat_id: int, bot: Bot, text: str, state: FSMC
     return message
 
 
-
-
-#Функция получения инициалов
-async def get_initials(nameEN: str) -> str:
-    return ''.join([part[0].upper() for part in nameEN.split() if part])
-
-#Функция перевода в латиницу
-async def transliterate_russian_to_eng(name_ru: str) -> str:
-    """
-    Транслитерирует русские ФИО в английские согласно правилам загранпаспортов РФ.
-    Пример: 'Иванов Иван Иванович' → 'Ivanov Ivan Ivanovich'
-    """
-    translit_dict = Texts.Translit_en.EN
-    translated = []
-    for part in name_ru.split():
-        translit_part = []
-        for char in part:
-            translit_part.append(translit_dict.get(char, char))
-
-        # Собираем часть имени и форматируем регистр
-        formatted_part = ''.join(translit_part)
-        if formatted_part:
-            formatted_part = formatted_part[0].upper() + formatted_part[1:].lower()
-        translated.append(formatted_part)
-
-    return ' '.join(translated)
-
-#Функция проверки регистра текста ФИО
-async def registr_fio(name_ru: str) -> str:
-    # Инициализация списка
-    translated = []
-    # Обработка каждой части имени
-    for part in name_ru.split():
-        # Форматирование (первая буква заглавная, остальные строчные)
-        formatted_part = part.strip().capitalize()
-        if formatted_part:  # Пропускаем пустые строки
-            translated.append(formatted_part)
-
-    return " ".join(translated) if translated else "Ошибка: пустое имя"
-
-
 # Обработчик для медиа групп (документов или фото)
 
 # Временное хранилище для медиа групп (лучше использовать Redis или БД в продакшене)
