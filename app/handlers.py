@@ -1265,7 +1265,7 @@ async  def verify(message: types.Message, state: FSMContext, bot: Bot):
 async  def proverka_no(callback: CallbackQuery, state: FSMContext, bot: Bot):
     # удаляем инлайн клавиатуру по callback
     await bot.edit_message_reply_markup(chat_id=callback.from_user.id, message_id=callback.message.message_id, reply_markup=None)
-    await callback.answer('Что Вы хотите изменить?.', show_alert=True)
+    await callback.answer('Выберите что изменить.', show_alert=True)
     data = await state.get_data()
     role = await rq.get_role_name(data["role"])
     await callback.message.edit_text(
@@ -1284,8 +1284,30 @@ async def register_nameRU2(callback_query: types.CallbackQuery, state: FSMContex
     await callback_query.message.answer(text='Введите исправления в ваше ФИО на русском языке')
 
 @router.message(Register.nameRU2)
-async def register_nameRU2(message: Message, state: FSMContext):
-    await state.update_data(nameRU=message.text)
+async def register_nameRU2(message: Message, state: FSMContext, bot: Bot):
+    await mes_user_history(message, state)
+    try:
+        if not await vl.validate_name_ru(message.text):
+            raise vl.ValidationError("Недопустимые символы в имени, исправьте и введите корректно имя")
+    except vl.ValidationError as e:
+        await send_typing_and_message(message.chat.id, bot, str(e), state)
+        return  # Прерываем выполнение функции, если валидация не прошла
+    try:
+        # Используем await для вызова асинхронных функций
+        nameRU = await vl.format_fio(message.text)
+        nameEN = await vl.transliterate_name(message.text)
+        initials = await vl.generate_initials(nameEN)  # Используем generate_initials вместо validate_initials
+
+        await state.update_data(
+            nameRU=nameRU,
+            tg_id=message.from_user.id,
+            nameEN=nameEN,
+            idn=initials,
+        )
+    except vl.ValidationError as e:
+        await send_typing_and_message(message.chat.id, bot, f"Ошибка при обработке имени: {str(e)}", state)
+        return  # Прерываем выполнение функции, если возникла ошибка
+
     await state.set_state(Register.verify)
     await message.answer('Подтвердите изменения',
                          reply_markup=kb.getphoto)
