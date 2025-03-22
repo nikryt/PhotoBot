@@ -2109,7 +2109,7 @@ async def process_search_code(message: Message, state: FSMContext):
         # Используем функцию для точного поиска
         results = await fu.find_text_code(
             text=search_text,
-            spreadsheet_name="Архипелаг 2024",
+            spreadsheet_name="MainTable",
             sheet_name="Расписание фото"
         )
 

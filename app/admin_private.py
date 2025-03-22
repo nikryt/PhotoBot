@@ -1,16 +1,19 @@
-
-
 from aiogram import F, Router, types, Bot
+from aiogram.enums import ParseMode
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
 from app.Filters.chat_types import ChatTypeFilter, IsAdmin  # импортировали наши личные фильтры
-import app.keyboards as kb
-import app.database.requests as rq
 from app.generate import ai_generate
 from app.handlers import Gen, save_document
+
+import app.keyboards as kb
+import app.database.requests as rq
+import app.Sheets.function as fu
+import app.Utils.validators as vl
+
 
 admin_router = Router()
 admin_router.message.filter(ChatTypeFilter(["private"]), IsAdmin())
@@ -147,3 +150,60 @@ async def toggle_registration(callback: CallbackQuery):
 #=======================================================================================================================
 # END Открытие или закрытие регистрации
 #=======================================================================================================================
+
+#=======================================================================================================================
+# START Права на доступ к таблице для менеджера
+#=======================================================================================================================
+@admin_router.callback_query(F.data == "add_editors_list")
+async def show_editors_list(callback: CallbackQuery):
+    editors = await rq.get_editors()
+
+    if not editors:
+        await callback.message.answer("❌ Нет кандидатов для добавления")
+        return
+
+    await callback.message.answer(
+        "📋 Список кандидатов в редакторы:",
+        reply_markup=await kb.editors_list_keyboard(editors)
+    )
+    await callback.answer()
+
+
+@admin_router.callback_query(F.data.startswith("confirm_editor_"))
+async def confirm_editor(callback: CallbackQuery):
+    editor_id = int(callback.data.split("_")[-1])
+    editor = await rq.get_editor_by_id(editor_id)
+
+    if not editor:
+        await callback.message.answer("❌ Пользователь не найден")
+        return
+
+    valid_emails = vl.extract_valid_emails(editor.mailcontact)
+    if not valid_emails:
+        await callback.message.answer("❌ Нет валидных email в профиле")
+        return
+
+    await callback.message.answer(
+        f"Добавить пользователя:\n <b>{editor.nameRU}</b>\n"
+        f"Email: <code>{valid_emails[0]}</code> в редакторы?",
+        parse_mode=ParseMode.HTML,
+        reply_markup=await kb.confirmation_keyboard(editor_id, editor.nameRU)
+    )
+    await callback.answer()
+
+@admin_router.callback_query(F.data.startswith("add_editor_"))
+async def add_editor_final(callback: CallbackQuery):
+    editor_id = int(callback.data.split("_")[-1])
+    editor = await rq.get_editor_by_id(editor_id)
+
+    if not editor:
+        await callback.message.answer("❌ Ошибка: пользователь не найден")
+        return
+
+    success = await fu.add_editor_to_sheet(editor.mailcontact)
+    if success:
+        await callback.message.answer(f"✅ Пользователь {editor.nameRU} добавлен в редакторы!")
+    else:
+        await callback.message.answer(f"❌ Не удалось добавить {editor.nameRU}")
+
+    await callback.answer()

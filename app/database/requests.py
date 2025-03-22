@@ -5,6 +5,8 @@ from app.database.models import async_session, TempChanges, Setting
 from app.database.models import User, Role, Item
 from sqlalchemy import select, update, delete, func
 
+import app.Utils.validators as vl
+
 
 # Записали при старте бота Telegram ID в таблицу User БД
 async def set_user(tg_id):
@@ -263,3 +265,26 @@ async def set_registration_status(enabled: bool):
 #=======================================================================================================================
 # END Функции для обработки состояния регистрации
 #=======================================================================================================================
+
+#=======================================================================================================================
+# START Функции для обработки добавления редактора
+#=======================================================================================================================
+
+async def get_editors() -> list[tuple]:
+    """Получает редакторов с валидными email"""
+    async with async_session() as session:
+        result = await session.execute(
+            select(Item.id, Item.nameRU, Item.mailcontact)
+            .where(Item.role == 3)
+        )
+        editors = []
+        for row in result.all():
+            valid_emails = vl.extract_valid_emails(row.mailcontact)
+            if valid_emails:
+                editors.append((row.id, row.nameRU, valid_emails[0]))  # Берем первый валидный
+        return editors
+
+async def get_editor_by_id(editor_id: int) -> Item | None:
+    """Получает пользователя по ID."""
+    async with async_session() as session:
+        return await session.get(Item, editor_id)

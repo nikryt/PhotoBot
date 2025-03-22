@@ -154,3 +154,8 @@ async def format_phone(phone: str) -> Optional[str]:
         return None
     except NumberParseException:
         return None
+
+def extract_valid_emails(email_str: str) -> list[str]:
+    """Извлекает валидные email из строки"""
+    email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
+    return re.findall(email_pattern, email_str)

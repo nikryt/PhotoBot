@@ -1,4 +1,5 @@
 import logging
+import os
 
 import gspread_asyncio
 
@@ -72,7 +73,7 @@ async def next_available_row_special(sh, cols_to_sample=8) -> int:
     for start, end in section_ranges:
         for row_idx in range(start + 1, end):
             # Проверяем столбцы B-H (индексы 1-7 в данных)
-            if len(all_data[row_idx]) < 8:
+            if len(all_data[row_idx]) < cols_to_sample:
                 # Если строка короче 8 столбцов - считаем пустой
                 empty_candidates.append(row_idx + 1)  # +1 для 1-индексации
                 continue
@@ -438,6 +439,54 @@ async def get_above_values(row: int, col: int, count: int) -> List[str]:
         return []
 
 
+async def get_sheet_url(
+        spreadsheet_name: str,
+        sheet_name: Optional[str] = None,
+        include_sheet: bool = False
+) -> str:
+    """Возвращает URL таблицы с опциональным указанием листа"""
+    agc = await agcm.authorize()
+    sh = await agc.open(spreadsheet_name)
+
+    if include_sheet and sheet_name:
+        wks = await sh.worksheet(sheet_name)
+        return f"https://docs.google.com/spreadsheets/d/{sh.id}/edit#gid={wks.id}"
+
+    return f"https://docs.google.com/spreadsheets/d/{sh.id}/edit"
+
+
+async def add_editor_to_sheet(email: str) -> bool:
+    """Добавляет редактора через gspread-asyncio"""
+    try:
+        agc = await agcm.authorize()
+        spreadsheet = await agc.open(os.getenv('TABLE_NAME_MANAGER'))
+
+        # Логирование данных
+        logging.info(f"Добавление редактора: {email}")
+        logging.info(f"ID таблицы: {spreadsheet.id}")
+
+        # Проверка существующих прав
+        existing_perms = await spreadsheet.list_permissions()
+        logging.info(f"Текущие права: {existing_perms}")
+
+        if any(perm.get("emailAddress") == email for perm in existing_perms):
+            logging.warning(f"Email {email} уже имеет доступ")
+            return False
+
+        # Добавляем права через клиент
+        await agc.insert_permission(
+            file_id=spreadsheet.id,
+            value=email.strip(),
+            perm_type="user",
+            role="writer",
+            notify=False
+        )
+        logging.info(f"Успешно добавлен: {email}")
+        return True
+
+    except Exception as e:
+        logging.error(f"Ошибка добавления {email}: {str(e)}", exc_info=True)
+        return False
 #-------------------------------------------------------------------------------------------------------------------
 # Функция сохранения данных в TSV
 #-------------------------------------------------------------------------------------------------------------------

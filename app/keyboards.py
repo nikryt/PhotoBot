@@ -75,13 +75,14 @@ async def admin_keyboard(registration_enabled: bool) -> InlineKeyboardMarkup:
             callback_data='toggle_registration'
         )],
         [InlineKeyboardButton(text="Можно всех посмотреть", callback_data='view_all')],
-        [InlineKeyboardButton(text="DeepSeek", callback_data='deepseek')]
+        [InlineKeyboardButton(text="DeepSeek", callback_data='deepseek')],
+        [InlineKeyboardButton(text="👥 Добавить редакторов", callback_data='add_editors_list')]
     ]
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
 # Клавиатура для админ-подтверждения
-def admin_approval_kb(user_id: int) -> InlineKeyboardMarkup:
+async def admin_approval_kb(user_id: int) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(
@@ -94,6 +95,28 @@ def admin_approval_kb(user_id: int) -> InlineKeyboardMarkup:
             )
         ]
     ])
+
+async def editors_list_keyboard(editors: list[tuple]) -> InlineKeyboardMarkup:
+    """Клавиатура со списком редакторов"""
+    builder = InlineKeyboardBuilder()
+    for editor_id, name_ru, _ in editors:
+        builder.button(
+            text=f"👤 {name_ru}",
+            callback_data=f"confirm_editor_{editor_id}"
+        )
+    builder.adjust(1)
+    return builder.as_markup()
+
+async def confirmation_keyboard(editor_id: int, name_ru: str) -> InlineKeyboardMarkup:
+    """Клавиатура подтверждения добавления"""
+    builder = InlineKeyboardBuilder()
+    builder.button(
+        text=f"✅ Да, добавить {name_ru}",
+        callback_data=f"add_editor_{editor_id}"
+    )
+    builder.button(text="❌ Отмена", callback_data="cancel_action")
+    builder.adjust(1)
+    return builder.as_markup()
 
     # ------------------------------------------------------------------------------------------------------------------
     # Клавиатуры админа
@@ -242,6 +265,14 @@ async def get_role_keyboard(role: str) -> InlineKeyboardMarkup:
         return InlineKeyboardMarkup(
             inline_keyboard=[
                 [InlineKeyboardButton(text="📊 Таблица Day", callback_data="tables_day"), InlineKeyboardButton(text="📊 Таблица путь", callback_data="tables_dist")],
+                [InlineKeyboardButton(text="🔍 Поиск кода", callback_data="search_code")],
+                [InlineKeyboardButton(text="📂 Все фотографы", callback_data="all_photographers")]
+            ]
+        )
+    elif role == "Менеджер":
+        return InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="📊 Таблица Фото", callback_data="tables_photo"), InlineKeyboardButton(text="📊 Таблица Расписание", callback_data="tables_shedule")],
                 [InlineKeyboardButton(text="🔍 Поиск кода", callback_data="search_code")],
                 [InlineKeyboardButton(text="📂 Все фотографы", callback_data="all_photographers")]
             ]
