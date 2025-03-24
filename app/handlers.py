@@ -404,7 +404,7 @@ async def delete_all_previous_messages(chat_id: int, state: FSMContext, bot: Bot
     await state.update_data(message_history=[])
 
 # Функция анимации печати и обновления State с внесением сообщения в историю.
-async def send_typing_and_message(chat_id: int, bot: Bot, text: str, state: FSMContext = None, reply_markup=None):
+async def send_typing_and_message(chat_id: int, bot: Bot, text: str, state: FSMContext = None, parse_mode=None, reply_markup=None):
     """
     Отправляет сообщение с анимацией печати и добавляет его в историю сообщений.
 
@@ -417,10 +417,11 @@ async def send_typing_and_message(chat_id: int, bot: Bot, text: str, state: FSMC
 
     Returns:
         Message: Отправленное сообщение.
+        :param parse_mode:
     """
     await bot.send_chat_action(chat_id, ChatAction.TYPING)
     await asyncio.sleep(1)  # Имитация задержки печати
-    message = await bot.send_message(chat_id, text, reply_markup=reply_markup)
+    message = await bot.send_message(chat_id, text, parse_mode=parse_mode, reply_markup=reply_markup)
     # if state:
     #     await state.update_data(message_history=[message.message_id])
     # Обновление истории сообщений
@@ -493,7 +494,7 @@ async def forward_message(message: Message, state: FSMContext, bot: Bot):
     # Отправляем ID фото в тот же чат
     await bot.send_message('-1002378314584', f'ID фото: {message.photo[-1].file_id}')
     # Отправляем ответ пользователю
-    await send_typing_and_message(message.chat.id, bot, Texts.Messages.PHOTO, state)
+    await send_typing_and_message(message.chat.id, bot, Texts.Messages.PHOTO, state, parse_mode=ParseMode.HTML)
     await send_typing_and_message(message.chat.id, bot,f'ID фото: {message.photo[-1].file_id}', state)
 
 
@@ -951,20 +952,20 @@ async def select_rol(callback_query: types.CallbackQuery, state: FSMContext, bot
 
     await send_typing_and_message(
             message.chat.id, bot,
-            f"✅ Принято:  {role}\n\n"
-            f'🪪 Ваше имя RU: {data["nameRU"]}\n'
-            f'🪪 Ваше имя EN: {data["nameEN"]}\n'
-            f'🪪 Ваши Инициалы: {data["idn"]}\n'
-            f'📫 Ваши Контакты: {data["mailcontact"]}\n'
-            f'☎️ Ваш номер Телефона {data["tel"]}\n'
-            f'🪆 Ваша Роль: {role}\n\n'
-            f'Спасибо подтвердите отправку данных',
-            state, reply_markup=kb.getphoto
+        Texts.Messages.MES_PHOTOGRAPHER_FILE1.format(
+            role=role,
+            nameRU=data["nameRU"],
+            nameEN=data["nameEN"],
+            idn=data["idn"],
+            mailcontact=data["mailcontact"],
+            tel=data["tel"],
+        ),
+            state, parse_mode=ParseMode.HTML, reply_markup=kb.getphoto
         )
     await send_typing_and_message(
         message.chat.id, bot,
         Texts.Messages.PHOTO_FILE,
-        state, reply_markup=kb.getphoto
+        state, parse_mode=ParseMode.HTML, reply_markup=kb.getphoto
     )
     await state.set_state(Register.photofile1)
 
@@ -1397,9 +1398,9 @@ async def proverka_yes(callback: CallbackQuery, state: FSMContext, bot: Bot):
         await bot.send_message(
             chat_id=admin,
             text=f"🛠 Запрос на изменения от @{callback.from_user.username}:\n{admin_text}",
-            reply_markup=kb.admin_approval_kb(callback.from_user.id)
+            reply_markup=await kb.admin_approval_kb(callback.from_user.id)
         )
-        await callback.message.answer("✅ Запрос отправлен администратору")
+        await callback.message.answer(Texts.Messages.EDIT_REQUEST_SENT, parse_mode=ParseMode.HTML)
     else:
         try:
             await rq.set_item(data)

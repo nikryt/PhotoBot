@@ -1,5 +1,4 @@
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardMarkup, \
-    InlineKeyboardButton, Update
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 # Импортируем определенную функцию, а не все для рабаты функции клавиатуры из БД
 from app.database.requests import get_roles
 # Импортируем билдер клавиатуры

@@ -74,7 +74,7 @@ async def next_available_row_special(sh, cols_to_sample=8) -> int:
         for row_idx in range(start + 1, end):
             # Проверяем столбцы B-H (индексы 1-7 в данных)
             if len(all_data[row_idx]) < cols_to_sample:
-                # Если строка короче 8 столбцов - считаем пустой
+                # Если строка короче 8 столбцов — считаем пустой
                 empty_candidates.append(row_idx + 1)  # +1 для 1-индексации
                 continue
 
@@ -130,7 +130,7 @@ async def write_done(row: int, col: int) -> Tuple[Optional[str], Optional[str]]:
         return "✅ СНЯТО успешно записано!", "СНЯТО"
     except Exception as e:
         print(f"Google Sheets error: {e}")
-        return None
+        return None, None
 
 async def write_cancel(row: int, col: int) -> Tuple[Optional[str], Optional[str]]:
     """Записывает 'СНЯТО' в ячейку под указанной"""
@@ -142,7 +142,7 @@ async def write_cancel(row: int, col: int) -> Tuple[Optional[str], Optional[str]
         return "✅ ОТМЕНА успешно записано!", "ОТМЕНА"
     except Exception as e:
         print(f"Google Sheets error: {e}")
-        return None
+        return None, None
 
 async def write_state(row: int, col: int) -> Tuple[Optional[str], Optional[str]]:
     """Записывает 'СНИМАЮТ' в ячейку под указанной"""
@@ -156,7 +156,7 @@ async def write_state(row: int, col: int) -> Tuple[Optional[str], Optional[str]]
         return "✅ СНИМАЮТ успешно записано!", "СНИМАЮТ"
     except Exception as e:
         print(f"Google Sheets error: {e}")
-        return None
+        return None, None
 
 async def write_error(row: int, col: int) -> Tuple[Optional[str], Optional[str]]:
     """Записывает 'ОШИБКА' в ячейку под указанной"""
@@ -170,8 +170,7 @@ async def write_error(row: int, col: int) -> Tuple[Optional[str], Optional[str]]
         return "✅ Отменил пометку успешно!", " НЕТ СТАТУСА"
     except Exception as e:
         print(f"Google Sheets error: {e}")
-        return None
-
+        return None, None
 
 
 #-------------------------------------------------------------------------------------------------------------------

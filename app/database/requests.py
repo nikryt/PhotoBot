@@ -3,7 +3,7 @@ import logging
 
 from app.database.models import async_session, TempChanges, Setting
 from app.database.models import User, Role, Item
-from sqlalchemy import select, update, delete, func
+from sqlalchemy import select, delete
 
 import app.Utils.validators as vl
 
@@ -11,7 +11,7 @@ import app.Utils.validators as vl
 # Записали при старте бота Telegram ID в таблицу User БД
 async def set_user(tg_id):
     async with async_session() as session:
-        user = await  session.scalar(select(User).where(User.tg_id == tg_id))
+        user = await  session.scalar(select(User).where(User.tg_id == tg_id)) # type: ignore
 
         if not user:
             session.add(User(tg_id=tg_id))
@@ -66,9 +66,9 @@ async def get_item():
         return items
 
 # Пишем удаление из базы данных
-async def del_item(id):
+async def del_item(item_id):
     async with async_session() as session:
-        await session.execute(delete(Item).where(Item.id == id))
+        await session.execute(delete(Item).where(Item.id == item_id))
         await session.commit()
 
 #-------------------------------------------------------------------------------------------------------------------
@@ -162,20 +162,20 @@ async def get_role_name(role_id: int) -> str | None:
 
 async def save_temp_changes(tg_id: int, data: dict):
     async with async_session() as session:
-        await session.execute(delete(TempChanges).where(TempChanges.tg_id == tg_id))
+        await session.execute(delete(TempChanges).where(TempChanges.tg_id == tg_id)) # type: ignore
         session.add(TempChanges(tg_id=tg_id, data=json.dumps(data)))
         await session.commit()
 
 
 async def get_temp_changes(tg_id: int) -> dict | None:
     async with async_session() as session:
-        temp = await session.scalar(select(TempChanges).where(TempChanges.tg_id == tg_id))
+        temp = await session.scalar(select(TempChanges).where(TempChanges.tg_id == tg_id)) # type: ignore
         return json.loads(temp.data) if temp else None
 
 
 async def apply_temp_changes(tg_id: int):
     async with async_session() as session:
-        temp = await session.scalar(select(TempChanges).where(TempChanges.tg_id == tg_id))
+        temp = await session.scalar(select(TempChanges).where(TempChanges.tg_id == tg_id)) # type: ignore
         if not temp:
             return False
 
@@ -193,7 +193,7 @@ async def apply_temp_changes(tg_id: int):
 
 async def del_temp_changes(user_id: int):
     async with async_session() as session:
-        await session.execute(delete(TempChanges).where(TempChanges.tg_id == user_id))
+        await session.execute(delete(TempChanges).where(TempChanges.tg_id == user_id)) # type: ignore
         await session.commit()
         return True
 
@@ -248,9 +248,20 @@ async def delete_duplicates(tg_id: int):
 async def get_registration_status() -> bool:
     # Возвращает текущий статус регистрации (по умолчанию True)
     async with async_session() as session:
-        result = await session.execute(select(Setting.value).where(Setting.key == 'registration_enabled'))
+        result = await session.execute(select(Setting.value).where(Setting.key == 'registration_enabled')) # type: ignore
         status = result.scalar()
         return status == 'true' if status else True
+
+
+# async def get_registration_status() -> bool:
+#     async with async_session() as session:
+#         # Добавляем комментарий для игнорирования типа
+#         query = select(Setting.value).where(
+#             Setting.key == 'registration_enabled'  # type: ignore
+#         )
+#         result = await session.execute(query)
+#         status = result.scalar()
+#         return str(status).lower() == 'true' if status else True
 
 async def set_registration_status(enabled: bool):
     # Обновляет статус регистрации в базе
