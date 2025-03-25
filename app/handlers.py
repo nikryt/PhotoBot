@@ -123,7 +123,7 @@ async def cmd_start(message: Message, state: FSMContext, bot: Bot):
         elif role_name == "Менеджер":
             await message.answer_photo(
                 photo='AgACAgIAAxkBAAIuTmfatYlB48bNskC7axaoEpWmfpc3AALx8jEbEyXZSrPOh6NQcu0XAQADAgADeQADNgQ',
-                caption=f"👋 Манеджер: {user_item.nameRU}!"
+                caption=f"👋 Менеджер: {user_item.nameRU}!"
             )
             await bot.send_chat_action(message.chat.id, ChatAction.TYPING)
             await asyncio.sleep(1)
@@ -207,12 +207,9 @@ async def register_handler(message: Message, state: FSMContext, bot: Bot, tg_id:
 
     if current_user:
         await state.update_data(is_edit=True, item_id=current_user.id)  # Сохраняем ID для обновления)
-        text = (
-            "✏️ Режим редактирования. Введите новые данные.\n"
-            "Сперва ФИО на русском языке:"
-        )
+        text = Texts.Messages.REGISTER_START_EDIT
     else:
-        text = "✅ Начнём регистрацию.\nВведите ваше ФИО на русском языке"
+        text = Texts.Messages.REGISTER_START
 
     await send_typing_and_message(
         message.chat.id,
@@ -228,7 +225,7 @@ async def register_handler(message: Message, state: FSMContext, bot: Bot, tg_id:
 async def register_via_command(message: Message, state: FSMContext, bot: Bot):
     # Проверяем статус регистрации
     if not await rq.get_registration_status():
-        await message.answer("⚠️ Регистрация временно приостановлена администратором.")
+        await message.answer(Texts.Messages.REGISTER_DISABLE)
         return
     else:
         await register_handler(message, state, bot)
@@ -314,7 +311,7 @@ async def menu_core_handler(source: Message | CallbackQuery, state: FSMContext, 
 
     else:
         # Пользователь не зарегистрирован - сообщаем об ошибке
-        error_text = "🚫 Персональное меню недоступно. Для доступа необходимо пройти регистрацию! /register"
+        error_text = Texts.Messages.MENU_NO_REG
 
         if isinstance(source, CallbackQuery):
             await source.answer(error_text, show_alert=True)
