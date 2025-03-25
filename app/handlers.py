@@ -1601,7 +1601,8 @@ async def find_all_text_code(message: Message, state: FSMContext):
         results = await fu.find_all_text_code(
             prefix=initials,
             exclude_words=exclude_words,
-            include_values=include_values
+            include_values=include_values,
+            search_range="A1:AF62"
         )
 
         filtered_results = [
@@ -1646,7 +1647,7 @@ async def find_all_text_code(message: Message, state: FSMContext):
 
             # Обновляем сообщение с клавиатурой
             await sent_message.edit_reply_markup(reply_markup=keyboard)
-            await asyncio.sleep(0.3)
+            await asyncio.sleep(0.2)
 
         # Сохраняем ID всех сообщений в state
         await state.update_data(message_ids=message_ids)
@@ -1973,13 +1974,13 @@ async def handle_status_update(callback: CallbackQuery, status: str):
 
         # Обновляем сообщение
         new_text = (
-            f"📌 Записали ответ\n"
+            f"📌 Записали ответ\n\n"
             f"💡 Код: {current_code}\n"
             f"✅ Статус: {current_status}\n"
-            "📚 Детали:\n"
+            #"📚 Детали:\n"
         )
-        for label, val in zip(["Время", "Место", "Событие"], above_values):
-            if val: new_text += f"   ▫️ {label}: {val}\n"
+        # for label, val in zip(["Время", "Место", "Событие"], above_values):
+        #     if val: new_text += f"   ▫️ {label}: {val}\n"
 
         await callback.bot.edit_message_text(
             chat_id=callback.from_user.id,

@@ -1,9 +1,14 @@
+import asyncio
 import logging
 import os
+import re
 
+import gspread
 import gspread_asyncio
 
 from datetime import datetime
+
+from gspread import Cell
 from gspread.exceptions import WorksheetNotFound
 from google.oauth2.service_account import Credentials
 from typing import Optional, Tuple, List
@@ -394,25 +399,102 @@ async def find_cod(
 #     return matches
 
 
+# async def find_all_text_code(
+#         prefix: str,
+#         spreadsheet_name: str = "MainTable",
+#         sheet_name: str = "Расписание фото",
+#         case_sensitive: bool = False,
+#         exclude_words: Optional[List[str]] = None,
+#         include_values: Optional[List[str]] = None
+# ) -> List[Tuple[int, int, str, List[str]]]:
+#     """Ищет ячейки по префиксу с фильтрацией и возвращает контекст."""
+#     agc: AsyncioGspreadClient = await agcm.authorize()
+#     sh= await agc.open(spreadsheet_name)
+#     wks: AsyncioGspreadWorksheet = await sh.worksheet(sheet_name)
+#     all_values = await wks.get_all_values()
+#
+#     search_prefix = prefix.strip()
+#     matches = []
+#
+#     if not case_sensitive:
+#         search_prefix = search_prefix.lower()
+#
+#     for row_idx, row in enumerate(all_values):
+#         for col_idx, value in enumerate(row):
+#             current_value = value.strip()
+#             if not current_value:
+#                 continue
+#
+#             # Проверка префикса
+#             compare_value = current_value.lower() if not case_sensitive else current_value
+#             if not compare_value.startswith(search_prefix):
+#                 continue
+#             if compare_value == search_prefix:
+#                 continue
+#
+#             # Проверка ячейки снизу
+#             below_value = ""
+#             if row_idx + 1 < len(all_values):
+#                 below_row = all_values[row_idx + 1]
+#                 if col_idx < len(below_row):
+#                     below_value = below_row[col_idx].strip()
+#
+#             # Фильтрация
+#             if include_values:  # Приоритет у включения
+#                 if below_value not in include_values:
+#                     continue
+#             elif exclude_words:  # Затем исключение
+#                 if below_value in exclude_words:
+#                     continue
+#
+#             # Сбор данных выше
+#             above_values = []
+#             for offset in range(1, 4):
+#                 above_row_idx = row_idx - offset
+#                 if above_row_idx >= 0 and col_idx < len(all_values[above_row_idx]):
+#                     cell_value = all_values[above_row_idx][col_idx].strip()
+#                     above_values.append(cell_value)
+#
+#             filtered_above = [v for v in above_values if v]
+#
+#             if filtered_above:
+#                 matches.append((
+#                     row_idx + 1,  # +1 для перевода в 1-индексацию
+#                     col_idx + 1,
+#                     current_value,
+#                     filtered_above
+#                 ))
+#
+#     return matches
+
 async def find_all_text_code(
         prefix: str,
         spreadsheet_name: str = "MainTable",
         sheet_name: str = "Расписание фото",
         case_sensitive: bool = False,
         exclude_words: Optional[List[str]] = None,
-        include_values: Optional[List[str]] = None
+        include_values: Optional[List[str]] = None,
+        search_range: Optional[str] = None  # Новый параметр для диапазона
 ) -> List[Tuple[int, int, str, List[str]]]:
-    """Ищет ячейки по префиксу с фильтрацией и возвращает контекст."""
+    """Ищет ячейки по префиксу с фильтрацией в указанном диапазоне."""
     agc: AsyncioGspreadClient = await agcm.authorize()
-    sh= await agc.open(spreadsheet_name)
+    sh = await agc.open(spreadsheet_name)
     wks: AsyncioGspreadWorksheet = await sh.worksheet(sheet_name)
-    all_values = await wks.get_all_values()
+
+    # Получаем данные только из указанного диапазона
+    all_values = await wks.get_values(search_range) if search_range else await wks.get_all_values()
 
     search_prefix = prefix.strip()
-    matches = []
-
     if not case_sensitive:
         search_prefix = search_prefix.lower()
+
+    matches = []
+    has_filters = include_values is not None or exclude_words is not None
+
+    # Предобработка exclude_words и include_values в нижний регистр, если нужно
+    if not case_sensitive:
+        exclude_words = [w.lower() for w in exclude_words] if exclude_words else None
+        include_values = [v.lower() for v in include_values] if include_values else None
 
     for row_idx, row in enumerate(all_values):
         for col_idx, value in enumerate(row):
@@ -421,47 +503,45 @@ async def find_all_text_code(
                 continue
 
             # Проверка префикса
-            compare_value = current_value.lower() if not case_sensitive else current_value
-            if not compare_value.startswith(search_prefix):
-                continue
-            if compare_value == search_prefix:
+            compare_value = current_value if case_sensitive else current_value.lower()
+            if not compare_value.startswith(search_prefix) or compare_value == search_prefix:
                 continue
 
-            # Проверка ячейки снизу
+            # Проверка ячейки снизу (только если есть фильтры)
             below_value = ""
-            if row_idx + 1 < len(all_values):
+            if has_filters and row_idx + 1 < len(all_values):
                 below_row = all_values[row_idx + 1]
                 if col_idx < len(below_row):
                     below_value = below_row[col_idx].strip()
+                    if not case_sensitive:
+                        below_value = below_value.lower()
 
-            # Фильтрация
-            if include_values:  # Приоритет у включения
+            # Применение фильтров
+            if include_values:
                 if below_value not in include_values:
                     continue
-            elif exclude_words:  # Затем исключение
-                if below_value in exclude_words:
-                    continue
+            elif exclude_words and below_value in exclude_words:
+                continue
 
-            # Сбор данных выше
+            # Сбор данных выше (только до 3-х ячеек)
             above_values = []
             for offset in range(1, 4):
                 above_row_idx = row_idx - offset
                 if above_row_idx >= 0 and col_idx < len(all_values[above_row_idx]):
                     cell_value = all_values[above_row_idx][col_idx].strip()
-                    above_values.append(cell_value)
+                    if cell_value:
+                        above_values.append(cell_value)
 
-            filtered_above = [v for v in above_values if v]
-
-            if filtered_above:
+            if above_values:
+                # Корректируем индексы для глобальной таблицы, если search_range задан
                 matches.append((
-                    row_idx + 1,  # +1 для перевода в 1-индексацию
+                    row_idx + 1,
                     col_idx + 1,
                     current_value,
-                    filtered_above
+                    above_values
                 ))
 
     return matches
-
 
 #======================================================================================================================
 # Вспомогательные функции
