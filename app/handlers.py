@@ -653,7 +653,7 @@ async def register_nameRU(message: Message, state: FSMContext, bot: Bot):
     await mes_user_history(message, state)
     try:
         if not await vl.validate_name_ru(message.text):
-            raise vl.ValidationError("Недопустимые символы в имени, исправьте и введите корректно имя")
+            raise vl.ValidationError(Texts.Messages.INVALID_NAME)
     except vl.ValidationError as e:
         await send_typing_and_message(message.chat.id, bot, str(e), state)
         return  # Прерываем выполнение функции, если валидация не прошла
