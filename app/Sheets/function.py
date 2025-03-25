@@ -8,6 +8,8 @@ from google.oauth2.service_account import Credentials
 from typing import Optional, Tuple, List
 from gspread_asyncio import AsyncioGspreadClient, AsyncioGspreadWorksheet
 
+
+
 def get_creds() -> Credentials:
     """Возвращает учетные данные Google Sheets с нужными scope."""
     # To obtain a service account JSON file, follow these steps:
@@ -18,6 +20,7 @@ def get_creds() -> Credentials:
         "https://spreadsheets.google.com/feeds",
         "https://www.googleapis.com/auth/spreadsheets",
         "https://www.googleapis.com/auth/drive",
+        "https://www.googleapis.com/auth/script.projects" # Добавлен новый scope для запуска функций в таблицах через API
     ])
     return scoped
 
@@ -132,8 +135,9 @@ async def write_done(row: int, col: int) -> Tuple[Optional[str], Optional[str]]:
         print(f"Google Sheets error: {e}")
         return None, None
 
+
 async def write_cancel(row: int, col: int) -> Tuple[Optional[str], Optional[str]]:
-    """Записывает 'СНЯТО' в ячейку под указанной"""
+    """Записывает 'ОТМЕНА' в ячейку под указанной"""
     try:
         agc = await agcm.authorize()
         wks = await agc.open("MainTable")
@@ -171,6 +175,60 @@ async def write_error(row: int, col: int) -> Tuple[Optional[str], Optional[str]]
     except Exception as e:
         print(f"Google Sheets error: {e}")
         return None, None
+
+
+async def update_external_table_status(
+        code: str,
+        status: str,
+        spreadsheet_name: str = "Расписание от Организаторов",
+        sheet_name: str = "23_Марта"
+) -> bool:
+    """
+    Записывает статус в ячейку слева от найденного кода во внешней таблице.
+    Возвращает True при успешной записи, False при ошибках.
+    """
+    try:
+        if not code:
+            return False
+
+        # Ищем код во внешней таблице
+        matches = await find_text_code(
+            text=code.strip(),
+            spreadsheet_name=spreadsheet_name,
+            sheet_name=sheet_name
+        )
+
+        if not matches:
+            logging.info(f"Код {code} не найден во внешней таблице")
+            return False
+
+        # Обновляем ячейки
+        agc = await agcm.authorize()
+        org_table = await agc.open(spreadsheet_name)
+        org_sheet = await org_table.worksheet(sheet_name)
+
+        success = False
+        for match in matches:
+            target_row, target_col, _, _ = match
+
+            if target_col > 1:
+                await org_sheet.update_cell(
+                    row=target_row,
+                    col=target_col - 1,
+                    value=status
+                )
+                success = True
+            else:
+                logging.warning(f"Невозможно записать в колонку 0 для кода: {code}")
+
+        return success
+
+    except WorksheetNotFound:
+        logging.error(f"Таблица {spreadsheet_name} или лист {sheet_name} не найден")
+        return False
+    except Exception as e:
+        logging.error(f"Ошибка обновления внешней таблицы: {str(e)}")
+        return False
 
 
 #-------------------------------------------------------------------------------------------------------------------
@@ -486,6 +544,26 @@ async def add_editor_to_sheet(email: str) -> bool:
     except Exception as e:
         logging.error(f"Ошибка добавления {email}: {str(e)}", exc_info=True)
         return False
+
+
+# async def trigger_sync():
+#     SCOPES = ['https://www.googleapis.com/auth/script.projects']
+#     creds = service_account.Credentials.from_service_account_file(
+#         'service-account.json',
+#         scopes=SCOPES
+#     )
+#
+#     # Делегирование прав (если нужно действовать от имени пользователя)
+#     delegated_creds = creds.with_subject('nikryt@gmail.com')
+#
+#     response = requests.post(
+#         f"https://script.googleapis.com/v1/scripts/{SCRIPT_ID}:run",
+#         json={"function": "forceSync"},
+#         headers={
+#             "Authorization": f"Bearer {delegated_creds.token}",
+#             "Content-Type": "application/json"
+#         }
+#     )
 #-------------------------------------------------------------------------------------------------------------------
 # Функция сохранения данных в TSV
 #-------------------------------------------------------------------------------------------------------------------

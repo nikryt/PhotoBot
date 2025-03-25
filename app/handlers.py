@@ -1880,15 +1880,68 @@ async def handle_code_callback(callback: CallbackQuery):
 async def handle_error_callback(callback: CallbackQuery):
     await handle_status_update(callback, "")
 
+# async def handle_status_update(callback: CallbackQuery, status: str):
+#     try:
+#         # Правильно парсим callback_data
+#         _, row_str, col_str, msg_id = callback.data.split(':')
+#         row = int(row_str)
+#         col = int(col_str)
+#         target_message_id = int(msg_id)  # Это ключевое изменение
+#
+#         # Обновляем ячейку в таблице
+#         result = None
+#         if status == "СНЯТО":
+#             result = await fu.write_done(row, col)
+#         elif status == "ОТМЕНА":
+#             result = await fu.write_cancel(row, col)
+#         elif status == "СНИМАЮТ":
+#             result = await fu.write_state(row, col)
+#         else:
+#             result = await fu.write_error(row, col)
+#
+#         if not result:
+#             await callback.answer("⚠️ Ошибка обновления")
+#             return
+#
+#         # Получаем актуальные данные
+#         current_code = await fu.get_cell_value(row, col)
+#         current_status = await fu.get_cell_value(row + 1, col)
+#         above_values = await fu.get_above_values(row, col, 3)
+#
+#         # Формируем новый текст
+#         new_text = (
+#             f"📌 Записали ответ\n"
+#             f"💡 Код: {current_code}\n"
+#             f"✅ Статус: {current_status}\n"
+#             "📚 Детали:\n"
+#         )
+#         for label, val in zip(["Время", "Место", "Событие"], (above_values)):
+#             if val:  # Добавляем только непустые значения
+#                 new_text += f"   ▫️ {label}: {val}\n"
+#
+#         # Редактируем целевое сообщение
+#         await callback.bot.edit_message_text(
+#             chat_id=callback.from_user.id,
+#             message_id=target_message_id,  # Используем целевой ID
+#             text=new_text,
+#             reply_markup=None
+#         )
+#         await callback.answer(f"✅ Статус обновлен: {status}")
+#
+#     except Exception as e:
+#         await callback.answer(f"⚠️ Ошибка: {str(e)}")
+#         print(f"Error in handle_status_update: {e}")
+
+
 async def handle_status_update(callback: CallbackQuery, status: str):
     try:
-        # Правильно парсим callback_data
+        # Парсим данные из callback
         _, row_str, col_str, msg_id = callback.data.split(':')
         row = int(row_str)
         col = int(col_str)
-        target_message_id = int(msg_id)  # Это ключевое изменение
+        target_message_id = int(msg_id)
 
-        # Обновляем ячейку в таблице
+        # Обновляем статус в основной таблице
         result = None
         if status == "СНЯТО":
             result = await fu.write_done(row, col)
@@ -1899,38 +1952,46 @@ async def handle_status_update(callback: CallbackQuery, status: str):
         else:
             result = await fu.write_error(row, col)
 
-        if not result:
-            await callback.answer("⚠️ Ошибка обновления")
+        if not result or not result[0]:
+            await callback.answer("⚠️ Ошибка обновления статуса")
             return
 
-        # Получаем актуальные данные
+        # Получаем данные из основной таблицы
         current_code = await fu.get_cell_value(row, col)
         current_status = await fu.get_cell_value(row + 1, col)
         above_values = await fu.get_above_values(row, col, 3)
 
-        # Формируем новый текст
+        # Синхронизируем с внешней таблицей
+        if current_code:
+            sync_success = await fu.update_external_table_status(
+                code=current_code,
+                status=status
+            )
+
+            if not sync_success:
+                logging.warning(f"Не удалось синхронизировать статус для {current_code}")
+
+        # Обновляем сообщение
         new_text = (
             f"📌 Записали ответ\n"
             f"💡 Код: {current_code}\n"
             f"✅ Статус: {current_status}\n"
             "📚 Детали:\n"
         )
-        for label, val in zip(["Время", "Место", "Событие"], (above_values)):
-            if val:  # Добавляем только непустые значения
-                new_text += f"   ▫️ {label}: {val}\n"
+        for label, val in zip(["Время", "Место", "Событие"], above_values):
+            if val: new_text += f"   ▫️ {label}: {val}\n"
 
-        # Редактируем целевое сообщение
         await callback.bot.edit_message_text(
             chat_id=callback.from_user.id,
-            message_id=target_message_id,  # Используем целевой ID
+            message_id=target_message_id,
             text=new_text,
             reply_markup=None
         )
         await callback.answer(f"✅ Статус обновлен: {status}")
 
     except Exception as e:
-        await callback.answer(f"⚠️ Ошибка: {str(e)}")
-        print(f"Error in handle_status_update: {e}")
+        await callback.answer(f"⚠️ Критическая ошибка: {str(e)}")
+        logging.error(f"Error in handle_status_update: {e}")
 
 
 # # Вывод одним сообщением точного совпадения из поиска по таблице
