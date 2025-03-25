@@ -1963,7 +1963,7 @@ async def handle_status_update(callback: CallbackQuery, status: str):
 
         # Синхронизируем с внешней таблицей
         if current_code:
-            sync_success = await fu.update_external_table_status(
+            sync_success = await fu.update_org_table_status(
                 code=current_code,
                 status=status
             )

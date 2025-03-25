@@ -3,9 +3,12 @@ import os
 
 import gspread_asyncio
 
+from datetime import datetime
 from gspread.exceptions import WorksheetNotFound
 from google.oauth2.service_account import Credentials
 from typing import Optional, Tuple, List
+
+from gspread.utils import rowcol_to_a1
 from gspread_asyncio import AsyncioGspreadClient, AsyncioGspreadWorksheet
 
 
@@ -20,7 +23,7 @@ def get_creds() -> Credentials:
         "https://spreadsheets.google.com/feeds",
         "https://www.googleapis.com/auth/spreadsheets",
         "https://www.googleapis.com/auth/drive",
-        "https://www.googleapis.com/auth/script.projects" # Добавлен новый scope для запуска функций в таблицах через API
+        "https://www.googleapis.com/auth/script.projects" # Добавлен новый scope для работы с комментариями
     ])
     return scoped
 
@@ -177,14 +180,14 @@ async def write_error(row: int, col: int) -> Tuple[Optional[str], Optional[str]]
         return None, None
 
 
-async def update_external_table_status(
+async def update_org_table_status(
         code: str,
         status: str,
         spreadsheet_name: str = "Расписание от Организаторов",
         sheet_name: str = "23_Марта"
 ) -> bool:
     """
-    Записывает статус в ячейку слева от найденного кода во внешней таблице.
+    Записывает статус и комментарий с временем в ячейку слева от найденного кода.
     Возвращает True при успешной записи, False при ошибках.
     """
     try:
@@ -202,6 +205,10 @@ async def update_external_table_status(
             logging.info(f"Код {code} не найден во внешней таблице")
             return False
 
+        # Получаем текущее время
+        timestamp = datetime.now().strftime("%d.%m.%Y %H:%M:%S")
+        comment = f"Фотограф отметил в: {timestamp}"
+
         # Обновляем ячейки
         agc = await agcm.authorize()
         org_table = await agc.open(spreadsheet_name)
@@ -212,11 +219,14 @@ async def update_external_table_status(
             target_row, target_col, _, _ = match
 
             if target_col > 1:
-                await org_sheet.update_cell(
-                    row=target_row,
-                    col=target_col - 1,
-                    value=status
-                )
+                # Конвертируем координаты в формат A1
+                cell_address = rowcol_to_a1(target_row, target_col - 1)
+
+                # Записываем стorgатус
+                await org_sheet.update_cell(target_row, target_col - 1, status)
+
+                # Добавляем комментарий
+                await org_sheet.insert_note(cell_address, comment)
                 success = True
             else:
                 logging.warning(f"Невозможно записать в колонку 0 для кода: {code}")
