@@ -72,7 +72,7 @@ async def async_get_camera_serial_number(image_path):
 
 
 # Пример вызова
-async def main(message: types.Message):
+async def main_serial(message: types.Message):
     document = message.document
     file_name = document.file_name  # Получаем имя документа
     sender_name = message.from_user.username  # Получаем имя отправителя сообщения

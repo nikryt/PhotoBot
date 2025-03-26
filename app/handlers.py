@@ -15,9 +15,8 @@ from aiogram.fsm.context import FSMContext
 from aiogram.enums import ContentType, ChatAction
 from aiogram.enums import ParseMode
 #Импортировали тексты из отдельного файла
-from Texts import Messages, Buttons, StatesText, Help
+from Texts import Messages, StatesText, Help
 from app.database.models import Item
-from app.generate import ai_generate
 from app.Filters.chat_types import ChatTypeFilter # импортировали наши личные фильтры
 
 import app.keyboards as kb
@@ -26,12 +25,8 @@ import app.Sheets.function as fu
 import app.SerialNumber as sn
 import app.Utils.validators as vl
 
-from aiogram.utils.formatting import PhoneNumber
-from app.database.requests import get_item
-from requests import session
 
-#from aiohttp.web_fileresponse import content_type
-#from google.auth import message
+
 
 #Объект класса router Router
 router = Router()
@@ -1079,7 +1074,7 @@ async def handle_media_group(message: Message, bot: Bot, state: FSMContext):
 async def register_photofile(message: types.Message, state: FSMContext, bot: Bot):
     await mes_user_history(message, state)
     await save_document(message, bot)
-    serial = await sn.main(message)
+    serial = await sn.main_serial(message)
     await state.update_data(photofile1=message.document.file_id)
     await state.update_data(serial1=serial)
     await message.answer('Вы отправили один файл.\nОтправьте фотографию  с другой камеры так же файлом, или завершите отправку фотографий '
@@ -1093,7 +1088,7 @@ async def register_photofile(message: types.Message, state: FSMContext, bot: Bot
 async def register_photofile(message: types.Message, state: FSMContext, bot: Bot):
     await mes_user_history(message, state)
     await save_document(message, bot)
-    serial = await sn.main(message)
+    serial = await sn.main_serial(message)
     await state.update_data(serial2=serial)
     await state.update_data(photofile2=message.document.file_id)
     await state.set_state(Register.photofile3)
@@ -1109,7 +1104,7 @@ async def register_photofile(message: types.Message, state: FSMContext, bot: Bot
     await mes_user_history(message, state)
     if data["serial3"] == None or data["serial3"] == 'NoSerial':
         await save_document(message, bot)
-        serial = await sn.main(message)
+        serial = await sn.main_serial(message)
         await state.update_data(serial3=serial)
         await state.update_data(photofile3=message.document.file_id)
         await save_document(message, bot)
