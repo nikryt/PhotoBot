@@ -1,5 +1,4 @@
 import asyncio
-import exifread
 from exiftool import ExifToolHelper
 
 from aiogram import types
