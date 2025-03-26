@@ -1937,11 +1937,12 @@ async def handle_error_callback(callback: CallbackQuery):
 async def handle_status_update(callback: CallbackQuery, status: str):
     try:
         # Парсим данные из callback
-        _, row_str, col_str, msg_id, code_str = callback.data.split(':')
+        _, row_str, col_str, code_str, msg_id = callback.data.split(':')
         row = int(row_str)
         col = int(col_str)
-        target_message_id = int(msg_id)
         code = str(code_str)
+        target_message_id = int(msg_id)
+
 
         # Обновляем статус в основной таблице
         result = None
@@ -1963,11 +1964,15 @@ async def handle_status_update(callback: CallbackQuery, status: str):
         current_status = await fu.get_cell_value(row + 1, col)
         above_values = await fu.get_above_values(row, col, 3)
 
+
+        current_date = datetime.now()
+        sheet_name = f"{current_date.day}_{Texts.MonthName.NAMES[current_date.month]}"
         # Синхронизируем с внешней таблицей
         if current_code:
             sync_success = await fu.update_org_table_status(
                 code=current_code,
-                status=status
+                status=status,
+                sheet_name=sheet_name  # Передаем сформированное название
             )
 
             if not sync_success:

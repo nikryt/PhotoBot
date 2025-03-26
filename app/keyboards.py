@@ -175,18 +175,18 @@ async def create_task_keyboard(row: int, col: int, code: str, message_id: int) -
     """Добавляем message_id в callback data"""
     builder = InlineKeyboardBuilder()
     # builder.button(text=Buttons., callback_data=f"done:{row}:{col}:{message_id}")
-    builder.button(text=Buttons.DONE, callback_data=f"done:{row}:{col}:{message_id}:{code}")
-    builder.button(text=Buttons.CODE.format(code), callback_data=f"code:{row}:{col}:{message_id}:{code}")
-    builder.button(text=Buttons.CANCEL, callback_data=f"cancel:{row}:{col}:{message_id}:{code}")
-    builder.button(text=Buttons.ERROR, callback_data=f"error:{row}:{col}:{message_id}:{code}")
+    builder.button(text=Buttons.DONE, callback_data=f"done:{row}:{col}:{code}:{message_id}")
+    builder.button(text=Buttons.CODE.format(code), callback_data=f"code:{row}:{col}:{code}:{message_id}")
+    builder.button(text=Buttons.CANCEL, callback_data=f"cancel:{row}:{col}:{code}:{message_id}")
+    builder.button(text=Buttons.ERROR, callback_data=f"error:{row}:{col}:{code}:{message_id}")
     builder.adjust(1, 1, 2)
     return builder.as_markup()
 
 async def status_done_error(row: int, col: int, code: str, message_id: int) -> InlineKeyboardMarkup:
     """Добавляем message_id в callback data"""
     builder = InlineKeyboardBuilder()
-    builder.button(text=Buttons.DONE, callback_data=f"done:{row}:{col}:{message_id}:{code}")
-    builder.button(text=Buttons.ERROR, callback_data=f"error:{row}:{col}:{message_id}:{code}")
+    builder.button(text=Buttons.DONE, callback_data=f"done:{row}:{col}:{code}:{message_id}")
+    builder.button(text=Buttons.ERROR, callback_data=f"error:{row}:{col}:{code}:{message_id}")
     builder.adjust( 1, 1)
     return builder.as_markup()
 

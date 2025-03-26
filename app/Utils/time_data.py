@@ -4,11 +4,16 @@ from aiogram import Bot
 from aiogram.types import Message
 from aiogram.fsm.context import FSMContext
 
+
 # Конфигурация таймаута
 TIMEOUT_SECONDS_300 = 300  # 5 минут
 TIMEOUT_SECONDS_30 = 30  # 30 секунд
 COUNTDOWN_STEP_10 = 10  # Шаг отсчёта в секундах
 COUNTDOWN_STEP_5 = 5  # Шаг отсчёта в секундах
+
+
+
+
 
 
 async def schedule_countdown(
