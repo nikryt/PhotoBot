@@ -58,5 +58,5 @@ async def main(message: types.Message):
 # Запуск асинхронного кода
 # asyncio.run(main())
 
-# file_path = "../downloads/nikryt/2024-10-01_12-27-23_KN2_4220.jpg"
+# file_path = "../downloads/downloads/BELOVERIK/ERIK0789.CR3"
 # file_path = "../downloads/nikryt/KN3_7580.jpg"

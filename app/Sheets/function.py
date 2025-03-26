@@ -189,7 +189,7 @@ async def update_org_table_status(
         code: str,
         status: str,
         spreadsheet_name: str = "Расписание от Организаторов",
-        sheet_name: str = "23_Марта"
+        sheet_name: str = "27_Марта"
 ) -> bool:
     """
     Записывает статус и комментарий с временем в ячейку слева от найденного кода.

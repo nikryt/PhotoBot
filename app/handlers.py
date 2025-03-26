@@ -141,10 +141,15 @@ async def cmd_start(message: Message, state: FSMContext, bot: Bot):
         await state.clear()
 
     else:
+
         await message.answer_photo(
-            photo='AgACAgIAAxkBAAPgZ361se9D_xn8AwRI7Y1gBmdmTiwAAgfrMRsQmvlLUMXQ9_Z9HXABAAMCAAN5AAM2BA',
+            photo='AgACAgIAAxkBAAIzc2fkS212HK92krQwBN0jZ_V9_vkwAAJO6jEbAiMhSypAR-6ivIdJAQADAgADeQADNgQ',
             caption=Messages.START.format(name=message.from_user.full_name),
         )
+        # await message.answer_photo(
+        #     photo='AgACAgIAAxkBAAPgZ361se9D_xn8AwRI7Y1gBmdmTiwAAgfrMRsQmvlLUMXQ9_Z9HXABAAMCAAN5AAM2BA',
+        #     caption=Messages.START.format(name=message.from_user.full_name),
+        # )
         await bot.send_chat_action(message.chat.id, ChatAction.TYPING)
         await asyncio.sleep(1)
         await message.answer(text=Messages.INTRO, parse_mode=ParseMode.HTML
@@ -1937,10 +1942,11 @@ async def handle_error_callback(callback: CallbackQuery):
 async def handle_status_update(callback: CallbackQuery, status: str):
     try:
         # Парсим данные из callback
-        _, row_str, col_str, msg_id = callback.data.split(':')
+        _, row_str, col_str, msg_id, code_str = callback.data.split(':')
         row = int(row_str)
         col = int(col_str)
         target_message_id = int(msg_id)
+        code = str(code_str)
 
         # Обновляем статус в основной таблице
         result = None
@@ -1982,11 +1988,18 @@ async def handle_status_update(callback: CallbackQuery, status: str):
         # for label, val in zip(["Время", "Место", "Событие"], above_values):
         #     if val: new_text += f"   ▫️ {label}: {val}\n"
 
+        # Создаем клавиатуру ТОЛЬКО для статуса "СНИМАЮТ"
+        reply_markup = None
+        if status == "СНИМАЮТ":
+            reply_markup = await kb.status_done_error(row, col, code, target_message_id)
+        elif status == "":
+            reply_markup = await kb.create_task_keyboard(row, col, code, target_message_id)
+
         await callback.bot.edit_message_text(
             chat_id=callback.from_user.id,
             message_id=target_message_id,
             text=new_text,
-            reply_markup=None
+            reply_markup=reply_markup  # Передаем клавиатуру или None
         )
         await callback.answer(f"✅ Статус обновлен: {status}")
 
