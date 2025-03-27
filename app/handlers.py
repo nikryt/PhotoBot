@@ -1,4 +1,6 @@
 import logging
+
+from aiogram.exceptions import TelegramBadRequest
 from dotenv import load_dotenv
 import Texts
 import os
@@ -18,6 +20,7 @@ from aiogram.enums import ParseMode
 from Texts import Messages, StatesText, Help
 from app.database.models import Item
 from app.Filters.chat_types import ChatTypeFilter # импортировали наши личные фильтры
+
 
 import app.keyboards as kb
 import app.database.requests as rq
@@ -1934,78 +1937,214 @@ async def handle_error_callback(callback: CallbackQuery):
 #         print(f"Error in handle_status_update: {e}")
 
 
+# async def handle_status_update(callback: CallbackQuery, status: str):
+#     try:
+#         # Парсим данные из callback
+#         _, row_str, col_str, code_str, msg_id = callback.data.split(':')
+#         row = int(row_str)
+#         col = int(col_str)
+#         code = str(code_str)
+#         target_message_id = int(msg_id)
+#
+#
+#         # Обновляем статус в основной таблице
+#         result = None
+#         if status == "СНЯТО":
+#             result = await fu.write_done(row, col)
+#         elif status == "ОТМЕНА":
+#             result = await fu.write_cancel(row, col)
+#         elif status == "СНИМАЮТ":
+#             result = await fu.write_state(row, col)
+#         else:
+#             result = await fu.write_error(row, col)
+#
+#         if not result or not result[0]:
+#             await callback.answer("⚠️ Ошибка обновления статуса")
+#             return
+#
+#         # Получаем данные из основной таблицы
+#         current_code = await fu.get_cell_value(row, col)
+#         current_status = await fu.get_cell_value(row + 1, col)
+#         above_values = await fu.get_above_values(row, col, 3)
+#
+#
+#         current_date = datetime.now()
+#         sheet_name = f"{current_date.day}_{Texts.MonthName.NAMES[current_date.month]}"
+#         # Синхронизируем с внешней таблицей
+#         if current_code:
+#             sync_success = await fu.update_org_table_status(
+#                 code=current_code,
+#                 status=status,
+#                 sheet_name=sheet_name  # Передаем сформированное название
+#             )
+#
+#             if not sync_success:
+#                 logging.warning(f"Не удалось синхронизировать статус для {current_code}")
+#
+#         # Обновляем сообщение
+#         new_text = (
+#             f"📌 Записали ответ\n\n"
+#             f"💡 Код: {current_code}\n"
+#             f"✅ Статус: {current_status}\n"
+#             #"📚 Детали:\n"
+#         )
+#         for label, val in zip(["Время", "Место", "Событие"], above_values):
+#             if val: new_text += f"   ▫️ {label}: {val}\n"
+#
+#         # Создаем клавиатуру ТОЛЬКО для статуса "СНИМАЮТ"
+#         reply_markup = None
+#         if status == "СНИМАЮТ":
+#             reply_markup = await kb.status_done_error(row, col, code, target_message_id)
+#         elif status == "":
+#             reply_markup = await kb.create_task_keyboard(row, col, code, target_message_id)
+#
+#         try:
+#             await callback.bot.edit_message_text(
+#                 chat_id=callback.from_user.id,
+#                 message_id=target_message_id,
+#                 text=new_text,
+#                 reply_markup=reply_markup
+#             )
+#             await callback.answer(f"✅ Статус обновлен: {status}")
+#         except TelegramBadRequest as e:
+#             if "message is not modified" in str(e):
+#                 # Просто игнорируем эту ошибку
+#                 await callback.answer("✅ Статус уже актуален")
+#             elif "query is too old" in str(e):
+#                 await callback.answer("⚠️ Время действия кнопки истекло, запросите новые через /menu")
+#             else:
+#                 raise
+#
+#     except Exception as e:
+#         await callback.answer(f"⚠️ Критическая ошибка: {str(e)}")
+#         logging.error(f"Error in handle_status_update: {e}")
+
+
+# оптимизированная версия кода с улучшенной обработкой исключений и ускоренным ответом пользователю:
 async def handle_status_update(callback: CallbackQuery, status: str):
     try:
-        # Парсим данные из callback
+        # Быстрый парсинг данных из callback
         _, row_str, col_str, code_str, msg_id = callback.data.split(':')
         row = int(row_str)
         col = int(col_str)
         code = str(code_str)
         target_message_id = int(msg_id)
 
-
-        # Обновляем статус в основной таблице
-        result = None
-        if status == "СНЯТО":
-            result = await fu.write_done(row, col)
-        elif status == "ОТМЕНА":
-            result = await fu.write_cancel(row, col)
-        elif status == "СНИМАЮТ":
-            result = await fu.write_state(row, col)
-        else:
-            result = await fu.write_error(row, col)
-
-        if not result or not result[0]:
-            await callback.answer("⚠️ Ошибка обновления статуса")
-            return
-
-        # Получаем данные из основной таблицы
-        current_code = await fu.get_cell_value(row, col)
-        current_status = await fu.get_cell_value(row + 1, col)
-        above_values = await fu.get_above_values(row, col, 3)
-
-
-        current_date = datetime.now()
-        sheet_name = f"{current_date.day}_{Texts.MonthName.NAMES[current_date.month]}"
-        # Синхронизируем с внешней таблицей
-        if current_code:
-            sync_success = await fu.update_org_table_status(
-                code=current_code,
-                status=status,
-                sheet_name=sheet_name  # Передаем сформированное название
-            )
-
-            if not sync_success:
-                logging.warning(f"Не удалось синхронизировать статус для {current_code}")
-
-        # Обновляем сообщение
-        new_text = (
-            f"📌 Записали ответ\n\n"
-            f"💡 Код: {current_code}\n"
-            f"✅ Статус: {current_status}\n"
-            #"📚 Детали:\n"
-        )
-        # for label, val in zip(["Время", "Место", "Событие"], above_values):
-        #     if val: new_text += f"   ▫️ {label}: {val}\n"
-
-        # Создаем клавиатуру ТОЛЬКО для статуса "СНИМАЮТ"
+        # Формируем базовый ответ
+        new_text = f"📌 Обрабатываем ваш запрос...\n💡 Код: {code}"
         reply_markup = None
-        if status == "СНИМАЮТ":
-            reply_markup = await kb.status_done_error(row, col, code, target_message_id)
-        elif status == "":
-            reply_markup = await kb.create_task_keyboard(row, col, code, target_message_id)
 
-        await callback.bot.edit_message_text(
-            chat_id=callback.from_user.id,
-            message_id=target_message_id,
-            text=new_text,
-            reply_markup=reply_markup  # Передаем клавиатуру или None
-        )
-        await callback.answer(f"✅ Статус обновлен: {status}")
+        # Быстрый ответ пользователю
+        try:
+            await callback.answer("⏳ Обрабатываю запрос...")
+            await callback.bot.edit_message_text(
+                chat_id=callback.from_user.id,
+                message_id=target_message_id,
+                text=new_text,
+                reply_markup=reply_markup
+            )
+        except TelegramBadRequest as e:
+            if "message is not modified" not in str(e):
+                logging.warning(f"Ошибка при быстром ответе: {e}")
+
+        # Основная логика обработки
+        try:
+            # Обновляем статус в основной таблице
+            result = None
+            if status == "СНЯТО":
+                result = await fu.write_done(row, col)
+            elif status == "ОТМЕНА":
+                result = await fu.write_cancel(row, col)
+            elif status == "СНИМАЮТ":
+                result = await fu.write_state(row, col)
+            else:
+                result = await fu.write_error(row, col)
+
+            if not result or not result[0]:
+                raise ValueError("Ошибка обновления статуса в таблице")
+
+            # Получаем данные для ответа
+            current_code = await fu.get_cell_value(row, col)
+            current_status = await fu.get_cell_value(row + 1, col)
+            above_values = await fu.get_above_values(row, col, 3)
+
+            # Формируем финальное сообщение
+            new_text = (
+                f"📌 Записали ответ\n\n"
+                f"💡 Код: {current_code}\n"
+                f"✅ Статус: {current_status}\n"
+            )
+            # Берем только третий элемент (индекс 2) и соответствующую метку
+            labels = ["Время", "Место", "Событие"]
+            if len(above_values) >= 3 and above_values[2]:
+                new_text += f"   ▫️ {labels[2]}: {above_values[2]}\n"
+
+            # Создаем клавиатуру (если нужно)
+            if status == "СНИМАЮТ":
+                reply_markup = await kb.status_done_error(row, col, code, target_message_id)
+            elif status == "":
+                reply_markup = await kb.create_task_keyboard(row, col, code, target_message_id)
+
+            # Обновляем сообщение
+            try:
+                await callback.bot.edit_message_text(
+                    chat_id=callback.from_user.id,
+                    message_id=target_message_id,
+                    text=new_text,
+                    reply_markup=reply_markup
+                )
+                await callback.answer(f"✅ Статус обновлен: {status}")
+            except TelegramBadRequest as e:
+                if "message is not modified" in str(e):
+                    await callback.answer("✅ Статус уже актуален")
+                elif "message to edit not found" in str(e):
+                    await callback.answer("⚠️ Сообщение не найдено")
+                elif "message can't be edited" in str(e):
+                    await callback.answer("⚠️ Это сообщение нельзя изменить")
+                else:
+                    raise
+
+            # Синхронизация с внешней таблицей (после ответа пользователю)
+            current_date = datetime.now()
+            sheet_name = f"{current_date.day}_{Texts.MonthName.NAMES[current_date.month]}"
+
+            if current_code:
+                try:
+                    sync_success = await fu.update_org_table_status(
+                        code=current_code,
+                        status=status,
+                        sheet_name=sheet_name
+                    )
+                    if not sync_success:
+                        logging.warning(f"Не удалось синхронизировать статус для {current_code}")
+                except Exception as sync_error:
+                    logging.error(f"Ошибка синхронизации: {sync_error}")
+
+        except Exception as processing_error:
+            logging.error(f"Ошибка обработки: {processing_error}")
+            await callback.answer("⚠️ Ошибка при обработке запроса")
+            try:
+                await callback.bot.edit_message_text(
+                    chat_id=callback.from_user.id,
+                    message_id=target_message_id,
+                    text="⚠️ Произошла ошибка при обработке"
+                )
+            except:
+                pass
+
+    except TelegramBadRequest as e:
+        if "query is too old" in str(e):
+            await callback.answer("⚠️ Время действия кнопки истекло, запросите новые через /menu")
+        else:
+            logging.error(f"TelegramBadRequest: {e}")
+            await callback.answer("⚠️ Ошибка Telegram API")
+
+    except ValueError as e:
+        await callback.answer(str(e))
 
     except Exception as e:
-        await callback.answer(f"⚠️ Критическая ошибка: {str(e)}")
-        logging.error(f"Error in handle_status_update: {e}")
+        logging.error(f"Необработанная ошибка: {e}")
+        await callback.answer("⚠️ Произошла непредвиденная ошибка")
 
 
 # # Вывод одним сообщением точного совпадения из поиска по таблице
