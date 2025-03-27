@@ -1466,6 +1466,48 @@ async def schedule_pers(callback_query: types.CallbackQuery, state: FSMContext):
 #     # Устанавливаем состояние ожидания выбора слов исключений
 #     await state.set_state(Find.exclude)
 
+# Выполняет поиск по инициалам "ABC" и отправляет результаты без клавиатуры.
+@router.callback_query(F.data == 'general')
+async def handle_general_search(callback: CallbackQuery):
+    await callback.answer("Пойду поищу общие съемки")
+
+    try:
+        results = await fu.find_all_text_code(
+            prefix="ABC",
+            exclude_words=None,
+            include_values=None,
+            return_below_value=True
+        )
+    except Exception as e:
+        await callback.message.answer("🔍 Произошла ошибка при поиске")
+        return
+
+    if not results:
+        await callback.message.answer("🔍 По запросу ABC ничего не найдено")
+        return
+
+    for i, (row_gs, col_gs, value, above, below_value) in enumerate(results, 1):
+        # Проверяем, есть ли хотя бы одно непустое значение в above
+        if not any(val.strip() for val in above):
+            continue  # Пропускаем если все элементы пустые
+
+        # Формируем детали только для непустых значений
+        details = []
+        labels = ["Событие", "Место", "Вertime"]  # Порядок соответствует reversed(above)
+
+        for label, val in zip(labels, reversed(above)):
+            if val.strip():  # Добавляем только непустые значения
+                details.append(f"   ▫️ {label}: {val.strip()}")
+
+        # Формируем сообщение (гарантировано есть код и хотя бы одна деталь)
+        response = (
+           f"📌 Результат {i}:\n"
+           f"💡 Код: {value}\n"
+           "📚 Детали:\n"
+           + "\n".join(details))
+
+        await callback.message.answer(response)
+
 # Обработчик нажатий на кнопки инлайн-клавиатуры
 @router.callback_query(Find.exclude)
 async def process_exclude_words(callback: CallbackQuery, state: FSMContext):
@@ -1586,77 +1628,128 @@ async def process_exclude_words(callback: CallbackQuery, state: FSMContext):
 #     await state.clear()
 
 
-# Новая функция с учётом редактирования Вывод каждого кода отдельным сообщением
+# # Новая функция с учётом редактирования Вывод каждого кода отдельным сообщением
+# @router.message(Find.send)
+# async def find_all_text_code(message: Message, state: FSMContext):
+#     data = await state.get_data()
+#     exclude_words = data.get("exclude_words", [])
+#     include_values = data.get("include_values", [])
+#     initials = data.get("initials", "")
+#     logging.info(f'Инициалы в FSM: {initials}')
+#
+#     if not initials:
+#         await message.answer("🔎 Инициалы не найдены.")
+#         await state.clear()
+#         return
+#
+#     try:
+#         results = await fu.find_all_text_code(
+#             prefix=initials,
+#             exclude_words=exclude_words,
+#             include_values=include_values,
+#             search_range="A1:AF67",
+#         )
+#
+#         filtered_results = [
+#             (row, col, val, above)
+#             for row, col, val, above in results
+#             if any(above)
+#         ]
+#
+#         if not filtered_results:
+#             await message.answer("🔎 Ничего не найдено")
+#             await state.set_state(Find.exclude)
+#             return
+#
+#         status_msg = await message.answer(f"🔍 Найдено результатов: {len(filtered_results)}")
+#
+#         # Создаем список для хранения ID сообщений
+#         message_ids = []
+#
+#         for i, (row, col, value, above) in enumerate(filtered_results, 1):
+#             below_value = await fu.get_cell_value(row + 1, col)
+#
+#             response = (
+#                 f"📌 Результат {i}:\n"
+#                 f"💡 Код: {value}\n"
+#                 f"✅ Статус: {below_value}\n"
+#                 "📚 Детали:\n"
+#             )
+#
+#             for label, val in zip(["Время", "Место", "Событие"], reversed(above)):
+#                 response += f"   ▫️ {label}: {val}\n"
+#
+#             # Сначала отправляем сообщение
+#             sent_message = await message.answer(response)
+#
+#             # Создаем клавиатуру с REAL message_id
+#             keyboard = await kb.create_task_keyboard(
+#                 row=row,
+#                 col=col,
+#                 code=value,
+#                 message_id=sent_message.message_id  # Используем реальный ID
+#             )
+#
+#             # Обновляем сообщение с клавиатурой
+#             await sent_message.edit_reply_markup(reply_markup=keyboard)
+#             await asyncio.sleep(0.2)
+#
+#         # Сохраняем ID всех сообщений в state
+#         await state.update_data(message_ids=message_ids)
+#
+#     except Exception as e:
+#         await message.answer(f"⚠️ Ошибка поиска: {str(e)}")
+#
+#     await state.clear()
+
 @router.message(Find.send)
 async def find_all_text_code(message: Message, state: FSMContext):
     data = await state.get_data()
     exclude_words = data.get("exclude_words", [])
     include_values = data.get("include_values", [])
     initials = data.get("initials", "")
-    logging.info(f'Инициалы в FSM: {initials}')
-
-    if not initials:
-        await message.answer("🔎 Инициалы не найдены.")
-        await state.clear()
-        return
 
     try:
         results = await fu.find_all_text_code(
             prefix=initials,
             exclude_words=exclude_words,
             include_values=include_values,
-            search_range="A1:AF62"
+            search_range="A1:AF67",
+            return_below_value=False  # Отключаем возврат below_value
         )
 
-        filtered_results = [
-            (row, col, val, above)
-            for row, col, val, above in results
-            if any(above)
-        ]
+        # Фильтруем только результаты с непустыми above
+        filtered_results = [res for res in results if res[3]]
 
         if not filtered_results:
             await message.answer("🔎 Ничего не найдено")
-            await state.set_state(Find.exclude)
             return
 
-        status_msg = await message.answer(f"🔍 Найдено результатов: {len(filtered_results)}")
-
-        # Создаем список для хранения ID сообщений
-        message_ids = []
-
         for i, (row, col, value, above) in enumerate(filtered_results, 1):
-            below_value = await fu.get_cell_value(row + 1, col)
+            below_value = await fu.get_cell_value(row + 1, col)  # Получаем статус отдельно
 
             response = (
                 f"📌 Результат {i}:\n"
                 f"💡 Код: {value}\n"
-                f"✅ Статус: {below_value}\n"
+                f"✅ Статус: {below_value or 'не указан'}\n"
                 "📚 Детали:\n"
             )
 
-            for label, val in zip(["Время", "Место", "Событие"], reversed(above)):
-                response += f"   ▫️ {label}: {val}\n"
+            # Формируем только непустые значения
+            details = []
+            for label, val in zip(["Событие", "Место", "Время"], reversed(above)):
+                if val.strip():
+                    details.append(f"   ▫️ {label}: {val.strip()}")
 
-            # Сначала отправляем сообщение
-            sent_message = await message.answer(response)
+            response += "\n".join(details) if details else "   └ Нет данных"
 
-            # Создаем клавиатуру с REAL message_id
-            keyboard = await kb.create_task_keyboard(
-                row=row,
-                col=col,
-                code=value,
-                message_id=sent_message.message_id  # Используем реальный ID
-            )
-
-            # Обновляем сообщение с клавиатурой
-            await sent_message.edit_reply_markup(reply_markup=keyboard)
+            sent_msg = await message.answer(response)
+            keyboard = await kb.create_task_keyboard(row, col, value, sent_msg.message_id)
+            await sent_msg.edit_reply_markup(reply_markup=keyboard)
             await asyncio.sleep(0.2)
 
-        # Сохраняем ID всех сообщений в state
-        await state.update_data(message_ids=message_ids)
-
     except Exception as e:
-        await message.answer(f"⚠️ Ошибка поиска: {str(e)}")
+        await message.answer(f"⚠️ Ошибка: {str(e)}")
 
     await state.clear()
 

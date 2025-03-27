@@ -120,6 +120,7 @@ class Buttons:
     FIO = "ФИО"
     CONTACTS = "Контакты"
     PHOTO = "Фотографии"
+    GENERAL = "👬🚽 Общие съёмки 🚽👬"
     DONE = "✅ Снято"
     ERROR = "🗑 Ошибся"
     CODE = "#️⃣ Снимаю: {}"
