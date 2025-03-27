@@ -1,5 +1,6 @@
 import json
 import logging
+from typing import Optional, Dict, Any, List, Tuple
 
 from app.database.models import async_session, TempChanges, Setting
 from app.database.models import User, Role, Item
@@ -9,23 +10,26 @@ import app.Utils.validators as vl
 
 
 # Записали при старте бота Telegram ID в таблицу User БД
-async def set_user(tg_id):
+async def set_user(tg_id: int) -> None:
+    """Добавляет пользователя в БД если его нет"""
     async with async_session() as session:
         user = await  session.scalar(select(User).where(User.tg_id == tg_id)) # type: ignore
-
         if not user:
             session.add(User(tg_id=tg_id))
             await session.commit()
+            logging.info(f"Добавлен новый пользователь: {tg_id}")
 
-async def get_roles():
+async def get_roles() -> List[Role]:
+    """Возвращает список всех ролей"""
     async with async_session() as session:
         return await session.scalars(select(Role))
 
 # начал писать пока не закончил
-async def set_item(data: dict):
+async def set_item(data: Dict[str, Any]) -> None:
+    """Создает новую запись Item"""
     async with async_session() as session:
 #         # проверяем есть ли уже запись от этого аккаунта в БД
-#         name = await  session.scalar(select(Item).where(Item.name == data["tg_id"]))
+#         name = await session.scalar(select(Item).where(Item.name == data["tg_id"]))
 #
 # # Если нет еще записи от этого аккаунта то записываем в новую строчку
 #         if not name:
@@ -45,6 +49,7 @@ async def set_item(data: dict):
                 photo3=data["photofile3"])
             )
             await session.commit()
+            logging.info(f"Добавлен новый Item для пользователя {data['tg_id']}")
 
 
 async def set_item_sn(serial: str):
@@ -102,7 +107,8 @@ async def get_role(tg_id: int):
 #     async with async_session() as session:
 #         return await session.scalar(select(Item).where(Item.name == str(tg_id)))
 
-async def get_item_by_tg_id(tg_id: int) -> Item | None:
+async def get_item_by_tg_id(tg_id: int) -> Optional[Item]:
+    """Возвращает последнюю запись Item по tg_id"""
     async with async_session() as session:
         str_tg_id = str(tg_id)  # Явное преобразование в строку
         result = await session.execute(
@@ -111,7 +117,7 @@ async def get_item_by_tg_id(tg_id: int) -> Item | None:
             .order_by(Item.id.desc())
         )
         item = result.scalars().first()
-        logging.info(f"Поиск пользователя: tg_id={str_tg_id}, результат={item}")
+        logging.debug(f"Поиск пользователя: tg_id={str_tg_id}, результат={item}")
         return item
 
 # async def get_item_by_tg_id(tg_id: int) -> Item | None:
@@ -146,9 +152,61 @@ async def get_item_by_tg_id(tg_id: int) -> Item | None:
 
 # Функция получения данных о роли по id в таблице
 async def get_role_name(role_id: int) -> str | None:
+    """Возвращает название роли по ID"""
     async with async_session() as session:
         role = await session.scalar(select(Role.name).where(Role.id == role_id))
         return role if role else "Не указана"
+
+# Функция, которая получает все поля пользователя из базы данных по его tg_id
+async def get_user_data(tg_id: int) -> Optional[Dict[str, Any]]:
+    """
+    Получает все данные пользователя из таблицы Item по telegram ID.
+
+    Args:
+        tg_id: Идентификатор пользователя в Telegram
+
+    Returns:
+        Словарь с данными пользователя или None, если пользователь не найден
+    """
+    async with async_session() as session:
+        try:
+            # Ищем последнюю запись пользователя
+            result = await session.execute(
+                select(Item)
+                .where(Item.name == str(tg_id))
+                .order_by(Item.id.desc())
+            )
+            user = result.scalars().first()
+
+            if not user:
+                logging.warning(f"Пользователь с tg_id={tg_id} не найден")
+                return None
+
+            # Формируем словарь с данными
+            user_data = {
+                'id': user.id,
+                'name': user.name,
+                'nameRU': user.nameRU,
+                'nameEN': user.nameEN,
+                'idn': user.idn,
+                'mailcontact': user.mailcontact,
+                'tel': user.tel,
+                'serial1': user.serial1,
+                'serial2': user.serial2,
+                'serial3': user.serial3,
+                'photo1': user.photo1,
+                'photo2': user.photo2,
+                'photo3': user.photo3,
+                'role': user.role
+            }
+
+            logging.info(f"Получены данные пользователя {tg_id}")
+            return user_data
+
+        except Exception as e:
+            logging.error(f"Ошибка при получении данных пользователя {tg_id}: {e}")
+            return None
+
 
 #-------------------------------------------------------------------------------------------------------------------
 # Конец Функции получения данных
@@ -160,20 +218,24 @@ async def get_role_name(role_id: int) -> str | None:
 # Функции для обработки временных сохранений и подтверждения сохранения данных
 #-------------------------------------------------------------------------------------------------------------------
 
-async def save_temp_changes(tg_id: int, data: dict):
+async def save_temp_changes(tg_id: int, data: Dict[str, Any]) -> None:
+    """Сохраняет временные изменения"""
     async with async_session() as session:
         await session.execute(delete(TempChanges).where(TempChanges.tg_id == tg_id)) # type: ignore
         session.add(TempChanges(tg_id=tg_id, data=json.dumps(data)))
         await session.commit()
+        logging.info(f"Сохранены временные изменения для {tg_id}")
 
 
-async def get_temp_changes(tg_id: int) -> dict | None:
+async def get_temp_changes(tg_id: int) -> Optional[Dict[str, Any]]:
+    """Возвращает временные изменения"""
     async with async_session() as session:
         temp = await session.scalar(select(TempChanges).where(TempChanges.tg_id == tg_id)) # type: ignore
         return json.loads(temp.data) if temp else None
 
 
-async def apply_temp_changes(tg_id: int):
+async def apply_temp_changes(tg_id: int) -> bool:
+    """Применяет временные изменения к основной записи"""
     async with async_session() as session:
         temp = await session.scalar(select(TempChanges).where(TempChanges.tg_id == tg_id)) # type: ignore
         if not temp:
@@ -189,6 +251,7 @@ async def apply_temp_changes(tg_id: int):
 
         await session.delete(temp)
         await session.commit()
+        logging.info(f"Применены изменения для {tg_id}")
         return True
 
 async def del_temp_changes(user_id: int):
@@ -198,14 +261,16 @@ async def del_temp_changes(user_id: int):
         return True
 
 # получаем id роли по ее названию
-async def get_role_id_by_name(role_name: str) -> int | None:
+async def get_role_id_by_name(role_name: str) -> Optional[int]:
+    """Возвращает ID роли по названию"""
     async with async_session() as session:
         role = await session.scalar(select(Role.id).where(Role.name == role_name))
         logging.info(role)
         return role
 
 # получаем список всех фотогарфов.
-async def get_all_photographers():
+async def get_all_photographers() -> List[Tuple[str, str]]:
+    """Возвращает список фотографов (idn, nameRU)"""
     async with async_session() as session:
         role_id = await get_role_id_by_name("Фотограф")
         if not role_id:
@@ -263,8 +328,8 @@ async def get_registration_status() -> bool:
 #         status = result.scalar()
 #         return str(status).lower() == 'true' if status else True
 
-async def set_registration_status(enabled: bool):
-    # Обновляет статус регистрации в базе
+async def set_registration_status(enabled: bool) -> None:
+    """Устанавливает статус регистрации"""
     async with async_session() as session:
         setting = await session.get(Setting, 'registration_enabled')
         if not setting:
@@ -281,8 +346,8 @@ async def set_registration_status(enabled: bool):
 # START Функции для обработки добавления редактора
 #=======================================================================================================================
 
-async def get_editors() -> list[tuple]:
-    """Получает редакторов с валидными email"""
+async def get_editors() -> List[Tuple[int, str, str]]:
+    """Возвращает список редакторов с валидными email"""
     async with async_session() as session:
         result = await session.execute(
             select(Item.id, Item.nameRU, Item.mailcontact)

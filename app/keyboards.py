@@ -274,6 +274,7 @@ async def get_role_keyboard(role: str) -> InlineKeyboardMarkup:
             inline_keyboard=[
                 [InlineKeyboardButton(text="📊 Таблица Day", callback_data="tables_day"), InlineKeyboardButton(text="📊 Таблица путь", callback_data="tables_dist")],
                 [InlineKeyboardButton(text="📊 Таблица Расписание Фото", callback_data="tables_photo")],
+                [InlineKeyboardButton(text="Подготовить PhotoMechanic", callback_data="PM_data")],
                 [InlineKeyboardButton(text="🔍 Поиск кода", callback_data="search_code")],
                 [InlineKeyboardButton(text="📂 Все фотографы", callback_data="all_photographers")]
             ]

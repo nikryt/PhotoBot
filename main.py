@@ -13,6 +13,7 @@ from app.handlers import router
 from app.handles_gr import gr_router
 from  app.admin_private import admin_router
 from app.handlers_manager import manager_router
+from app.handlers_bild import bild_router
 # заменил на env
 #from config import TOKEN
 #from config import ID_GS
@@ -34,6 +35,7 @@ async def main():
     dp.include_router(gr_router) # этот роутер сработает если первый не сработал
     dp.include_router(admin_router)
     dp.include_router(manager_router)
+    dp.include_router(bild_router)
     # Создаём кнопку меню с командами
     await  bot.set_my_commands(commands=private, scope=types.BotCommandScopeAllPrivateChats())
     # # Удаление кнопок
