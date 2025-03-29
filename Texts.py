@@ -74,6 +74,20 @@ class Messages:
         "   • На Mac: <code>Просмотр</code> → <code>Инспектор</code>"
     )
 
+    BILD_PM = (
+        "🖼️ <b>Подготовим всё настройки для PhotoMechanic</b> 📁\n\n"
+
+    )
+    BILD_STORAGE = ("Введите путь к диску для хранения RAW:")
+    BILD_STORAGE_ERR = ("❌ Некорректный путь. Попробуйте снова:")
+    BILD_FOLDER = ("Выберите формат имени папок:")
+    BID_MANUAL = (
+        "В этих директориях хранятся файлы"
+        "C:\%USERPROFILE%\AppData\Roaming\Camera Bits, Inc\Photo Mechanic\IngestDialogSettings"
+        "C:\%USERPROFILE%\AppData\Roaming\Camera Bits, Inc\Photo Mechanic\IPTCDialogSettings"
+        "C:\%USERPROFILE%\AppData\Roaming\Camera Bits, Inc\Photo Mechanic\RenameDialogSettings"
+
+    )
 
     # Подтверждение
     VERIFICATION = """Проверьте данные:

@@ -1,3 +1,4 @@
+from aiogram import types
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 # Импортируем определенную функцию, а не все для рабаты функции клавиатуры из БД
 from app.database.requests import get_roles
@@ -122,7 +123,39 @@ async def confirmation_keyboard(editor_id: int, name_ru: str) -> InlineKeyboardM
     # Клавиатуры админа
     # ------------------------------------------------------------------------------------------------------------------
 
+    # ------------------------------------------------------------------------------------------------------------------
+    # Клавиатуры билда
+    # ------------------------------------------------------------------------------------------------------------------
 
+async def os_select_keyboard() -> types.InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(text="Windows 🖥️", callback_data="windows"),
+        InlineKeyboardButton(text="MacOS 🍎", callback_data="macos"),
+        width=2
+    )
+    builder.row(
+        InlineKeyboardButton(text="❌ Отмена", callback_data="cancel_setup"),
+        width=1
+    )
+    return builder.as_markup()
+
+async def folder_format_keyboard() -> types.InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(text="YYYY-MM-DD", callback_data="format_ymd"),
+        InlineKeyboardButton(text="DD-MM-YYYY", callback_data="format_dmy"),
+        InlineKeyboardButton(text="Custom Format", callback_data="format_custom"),
+        width=1
+    )
+    builder.row(
+        InlineKeyboardButton(text="❌ Отмена", callback_data="cancel_setup"),
+        width=1
+    )
+    return builder.as_markup()
+    # ------------------------------------------------------------------------------------------------------------------
+    # Клавиатуры билда
+    # ------------------------------------------------------------------------------------------------------------------
 
     # ------------------------------------------------------------------------------------------------------------------
     # Клавиатуры, которые генерируются функциями
