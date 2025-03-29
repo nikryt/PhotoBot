@@ -131,7 +131,7 @@ async def os_select_keyboard() -> types.InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(text="Windows 🖥️", callback_data="windows"),
-        InlineKeyboardButton(text="MacOS 🍎", callback_data="macos"),
+        InlineKeyboardButton(text="MacOS 🍏", callback_data="macos"),
         width=2
     )
     builder.row(
@@ -143,9 +143,9 @@ async def os_select_keyboard() -> types.InlineKeyboardMarkup:
 async def folder_format_keyboard() -> types.InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
-        InlineKeyboardButton(text="YYYY-MM-DD", callback_data="format_ymd"),
-        InlineKeyboardButton(text="DD-MM-YYYY", callback_data="format_dmy"),
-        InlineKeyboardButton(text="Custom Format", callback_data="format_custom"),
+        InlineKeyboardButton(text="1: Число_Месяц/Название_Съёмки", callback_data="format_1"),
+        InlineKeyboardButton(text="2: Число_Месяц/Время Название_Съёмки", callback_data="format_2"),
+        InlineKeyboardButton(text="3: Месяц/Число/Название_Съёмки", callback_data="format_3"),
         width=1
     )
     builder.row(

@@ -44,21 +44,51 @@ async def start_setup(message: types.Message, state: FSMContext):
     await state.set_state(BildStates.os_type)
 
 
-# Обработка выбора ОС
 @bild_router.callback_query(BildStates.os_type, F.data.in_(['windows', 'macos']))
 async def process_os_select(callback: CallbackQuery, state: FSMContext):
-    await state.update_data(os_type=callback.data)
-    await callback.message.edit_text(Texts.Messages.BILD_STORAGE, parse_mode=ParseMode.HTML)
+    os_type = callback.data
+    await state.update_data(os_type=os_type)
+
+    # Выбираем текст в зависимости от ОС
+    if os_type == 'windows':
+        text = Texts.Messages.BILD_STORAGE_WIN
+    else:
+        text = Texts.Messages.BILD_STORAGE_MAC
+
+    await callback.message.edit_text(text, parse_mode=ParseMode.HTML)
     await state.set_state(BildStates.raw_path)
 
 
 # Обработка ввода пути
 @bild_router.message(BildStates.raw_path)
 async def process_raw_path(message: types.Message, state: FSMContext):
-    if len(message.text) < 3:  # Минимальная проверка пути
-        return await message.answer(Texts.Messages.BILD_STORAGE_ERR, parse_mode = ParseMode.HTML)
+    user_path = message.text.strip()
+    data = await state.get_data()
+    os_type = data.get('os_type', 'windows')
 
-    await state.update_data(raw_path=message.text)
+    # Минимальная проверка длины
+    if len(user_path) < 3:
+        return await message.answer(Texts.Messages.BILD_STORAGE_ERR, parse_mode=ParseMode.HTML)
+
+    # Валидация пути
+    is_valid, error_msg = False, ""
+
+    if os_type == 'windows':
+        is_valid, error_msg = await vl.validate_windows_path(user_path)
+    elif os_type in ('macos'):
+        is_valid, error_msg = await vl.validate_unix_path(user_path, os_type)
+
+    if not is_valid:
+        return await message.answer(error_msg, parse_mode=ParseMode.HTML)
+
+    # Нормализация пути
+    try:
+        normalized_path = await vl.normalize_path(user_path, os_type)
+    except ValueError as e:
+        return await message.answer(f"❌ {str(e)}", parse_mode=ParseMode.HTML)
+
+    # Сохраняем и переходим к следующему шагу
+    await state.update_data(raw_path=normalized_path)
     await message.answer(
         Texts.Messages.BILD_MANUAL,
         parse_mode=ParseMode.HTML,

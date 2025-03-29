@@ -1,6 +1,8 @@
 import re
 import phonenumbers
 from phonenumbers import NumberParseException, PhoneNumberFormat
+from pathlib import Path
+from typing import Tuple
 from typing import Optional, List, Dict, Any
 from Texts import Translit_en  # Импорт словаря транслитерации
 
@@ -176,3 +178,80 @@ async def filter_emails(text: str) -> Optional[str]:
     cleaned_text = re.sub(email_pattern, '', text).strip()
 
     return cleaned_text if cleaned_text else None
+#=======================================================================================================================
+# Проверка путей операционных систем
+#=======================================================================================================================
+async def validate_windows_path(path: str) -> Tuple[bool, str]:
+    """
+    Валидация пути Windows
+    Возвращает (is_valid, error_message)
+    """
+    if not re.match(r'^(?:[a-zA-Z]:\\|\\\\[^\\]+\\)', path):
+        return False, "❌ Неверный формат пути Windows. Пример: <code>C:\\Папка\\Файл.txt</code>"
+    return True, ""
+
+
+async def validate_unix_path(path: str, os_name: str = "macOS") -> Tuple[bool, str]:
+    """
+    Валидация Unix-путей с полной поддержкой:
+    - Русских символов
+    - Пробелов в именах
+    - Переменных окружения
+    - Относительных путей
+    - Специальных символов (-_)
+    """
+    # Основное регулярное выражение
+    unix_path_pattern = re.compile(
+        r'^'
+        r'(~)?'  # Домашняя директория
+        r'((/?\$?[A-Za-z_][A-Za-z0-9_]*)'  # Переменные окружения
+        r'|(\${[A-Za-z_][A-Za-z0-9_]*})'  # Переменные в фигурных скобках
+        r'|([/.]{1,2}(?=/))'  # Относительные пути ./ и ../
+        r'|([/][^\0<>:"|?*]+))'  # Основные компоненты пути
+        r'([/][^\0<>:"|?*]*)*'  # Дополнительные компоненты
+        r'$',
+        re.UNICODE
+    )
+
+    # Проверка запрещенных символов
+    if re.search(r'[\x00-\x1F\x7F<>:"|?*]', path):
+        forbidden_chars = ''.join([chr(c) for c in range(0x20) if c != 0]) + '\x7F<>:"|?*'
+        return False, f"❌ Путь содержит запрещенные символы: {forbidden_chars}"
+
+    # Проверка общей структуры пути
+    if not unix_path_pattern.fullmatch(path):
+        examples = [
+            "Абсолютный: <code>/Users/Иван/Документы/file.txt</code>",
+            "С пробелом: <code>~/Мои документы/file.pdf</code>",
+            "С переменными: <code>$HOME/Загрузки</code>",
+            "Относительный: <code>../родительская папка/file</code>"
+        ]
+        return False, (
+            f"❌ Неверный формат пути {os_name}.\n"
+            f"Допустимые форматы:\n" + "\n".join(examples)
+        )
+
+    # Дополнительные проверки
+    if path.count('/') > 100:  # Защита от слишком глубоких путей
+        return False, "❌ Слишком сложная структура пути"
+
+    return True, ""
+
+async def normalize_path(path: str, os_type: str) -> str:
+    """
+    Нормализация пути для конкретной ОС
+    """
+    try:
+        if os_type == 'windows':
+            path = path.replace('/', '\\')
+        else:
+            path = path.replace('\\', '/')
+            if path.startswith('~'):
+                path = str(Path(path).expanduser())
+        return path
+    except Exception as e:
+        raise ValueError(f"Ошибка нормализации пути: {str(e)}")
+
+#=======================================================================================================================
+# Проверка путей операционных систем
+#=======================================================================================================================
