@@ -60,6 +60,8 @@ class Messages:
     INVALID_PHONE = "Пожалуйста, введите корректный номер в формате +71234567890"
     MEDIA_LIMIT = "❌ Максимум 3 файла в группе!"
     GENERIC_ERROR = "⚠️ Ошибка: {error}"
+    PM_BILD_DATA_NOFIND = "❌ Ваши данные не найдены"
+    PM_BILD_DATA_ERR = "❌ Отсутствуют необходимые данные (инициалы или контакты)"
 
 
     # Инструкции при регистрации
@@ -81,12 +83,11 @@ class Messages:
     BILD_STORAGE = ("Введите путь к диску для хранения RAW:")
     BILD_STORAGE_ERR = ("❌ Некорректный путь. Попробуйте снова:")
     BILD_FOLDER = ("Выберите формат имени папок:")
-    BID_MANUAL = (
-        "В этих директориях хранятся файлы"
-        "C:\%USERPROFILE%\AppData\Roaming\Camera Bits, Inc\Photo Mechanic\IngestDialogSettings"
-        "C:\%USERPROFILE%\AppData\Roaming\Camera Bits, Inc\Photo Mechanic\IPTCDialogSettings"
-        "C:\%USERPROFILE%\AppData\Roaming\Camera Bits, Inc\Photo Mechanic\RenameDialogSettings"
-
+    BILD_MANUAL = (
+        "В этих директориях хранятся файлы:\n"
+        "<code>C:\\%USERPROFILE%\\AppData\\Roaming\\Camera Bits, Inc\\Photo Mechanic\\IngestDialogSettings</code>\n"
+        "<code>C:\\%USERPROFILE%\\AppData\\Roaming\\Camera Bits, Inc\\Photo Mechanic\\IPTCDialogSettings</code>\n"
+        "<code>C:\\%USERPROFILE%\\AppData\\Roaming\\Camera Bits, Inc\\Photo Mechanic\\RenameDialogSettings</code>"
     )
 
     # Подтверждение
@@ -153,6 +154,10 @@ class Help:
     IDN = "помощь по инициалам"
     TEL = "помощь по телефону"
     PHOTO = "помощь по фото"
+
+class Caption:
+    XMP_IPTC = "Промежуточный XMP файл"
+    SNAP_IPTC = "✅ Ваши файлы готовы (XMP + SNAP)"
 
 
 class StatesText:

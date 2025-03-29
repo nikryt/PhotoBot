@@ -178,7 +178,7 @@ async def confirm_editor(callback: CallbackQuery):
         await callback.message.answer("❌ Пользователь не найден")
         return
 
-    valid_emails = vl.extract_valid_emails(editor.mailcontact)
+    valid_emails = await vl.extract_valid_emails(editor.mailcontact)
     if not valid_emails:
         await callback.message.answer("❌ Нет валидных email в профиле")
         return

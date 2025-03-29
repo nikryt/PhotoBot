@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+import re
 from pathlib import Path
 
 from aiogram.enums import ParseMode
@@ -12,6 +13,7 @@ import app.database.requests as rq
 import app.Sheets.function as fu
 import app.keyboards as kb
 import app.Utils.XMP_edit as pm
+import app.Utils.validators as vl
 
 from aiogram import Router, F, types
 from aiogram.types import CallbackQuery, FSInputFile
@@ -58,7 +60,7 @@ async def process_raw_path(message: types.Message, state: FSMContext):
 
     await state.update_data(raw_path=message.text)
     await message.answer(
-        Texts.Messages.BILD_FOLDER,
+        Texts.Messages.BILD_MANUAL,
         parse_mode=ParseMode.HTML,
         reply_markup=await kb.folder_format_keyboard()
     )
@@ -143,14 +145,21 @@ async def handle_pm_data_request(callback: types.CallbackQuery):
 
         # Получаем данные пользователя
         if not (user_data := await rq.get_user_data(user_id)):
-            await callback.answer("❌ Ваши данные не найдены", show_alert=True)
+            await callback.answer(Texts.Messages.PM_BILD_DATA_NOFIND, show_alert=True)
             return
 
         # Проверяем обязательные поля
         required_fields = ['idn', 'mailcontact']
         if not all(user_data.get(field) for field in required_fields):
-            await callback.answer("❌ Отсутствуют необходимые данные (инициалы или контакты)", show_alert=True)
+            await callback.answer(Texts.Messages.PM_BILD_DATA_ERR, show_alert=True)
             return
+
+        # Фильтруем почтовые адреса из контактов
+        # Фильтрация контактов
+        contacts = await vl.filter_emails(user_data['mailcontact'])
+        if contacts is None:
+            contacts = "Контактная информация"
+            logging.warning(f"No valid contacts after filtering for user {user_id}")
 
         # Пути к файлам
         base_dir = Path('app') / 'PhotoMechanic'
@@ -161,7 +170,7 @@ async def handle_pm_data_request(callback: types.CallbackQuery):
             output_xmp = await asyncio.to_thread(
                 pm.process_single_xmp,
                 initials=user_data['idn'],
-                contacts=user_data['mailcontact'],
+                contacts=contacts,  # Используем отфильтрованные контакты
                 input_file=source_file
             )
             if not output_xmp:
@@ -188,13 +197,13 @@ async def handle_pm_data_request(callback: types.CallbackQuery):
         # Отправка SNAP файла
         await callback.message.answer_document(
             FSInputFile(output_snap),
-            caption="✅ Ваши файлы готовы (XMP + SNAP)"
+            caption=Texts.Caption.SNAP_IPTC
         )
 
         # Опционально: отправка XMP файла
         await callback.message.answer_document(
             FSInputFile(output_xmp),
-            caption="Промежуточный XMP файл"
+            caption=Texts.Caption.XMP_IPTC
         )
 
         await callback.answer()

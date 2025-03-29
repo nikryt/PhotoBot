@@ -355,7 +355,7 @@ async def get_editors() -> List[Tuple[int, str, str]]:
         )
         editors = []
         for row in result.all():
-            valid_emails = vl.extract_valid_emails(row.mailcontact)
+            valid_emails = await vl.extract_valid_emails(row.mailcontact)
             if valid_emails:
                 editors.append((row.id, row.nameRU, valid_emails[0]))  # Берем первый валидный
         return editors
