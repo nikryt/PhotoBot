@@ -1,5 +1,5 @@
 from sqlalchemy import BigInteger, String, ForeignKey, Column
-from sqlalchemy.orm import  DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy.ext.asyncio import AsyncAttrs, async_sessionmaker, create_async_engine
 
 import os
@@ -44,6 +44,12 @@ class Item(Base):
     photo3: Mapped[str] = mapped_column(String(30), nullable=True)
     role: Mapped[int] = mapped_column(ForeignKey('roles.id'), nullable=True)
 
+    # Обратная связь с BildSettings
+    bild_settings: Mapped[list["BildSettings"]] = relationship(
+        back_populates="item",
+        cascade="all, delete-orphan"
+    )
+
 
 class TempChanges(Base):
     __tablename__ = 'temp_changes'
@@ -58,6 +64,18 @@ class Setting(Base):
 
     key = Column(String, primary_key=True)
     value = Column(String)
+
+class BildSettings(Base):
+    __tablename__ = "bild_settings"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    item_id: Mapped[int] = mapped_column(ForeignKey("items.id"), nullable=False)  # Связь с Item
+    os_type: Mapped[str] = mapped_column(String(30), nullable=False)
+    raw_path: Mapped[str] = mapped_column(String(255), nullable=False)
+    folder_format: Mapped[str] = mapped_column(String(255), nullable=False)
+
+    # Связь с Item
+    item: Mapped["Item"] = relationship(back_populates="bild_settings")
 
 async  def async_main():
     async with engine.begin() as conn:

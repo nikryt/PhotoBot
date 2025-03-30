@@ -98,17 +98,33 @@ async def process_raw_path(message: types.Message, state: FSMContext):
 
 
 # Обработка выбора формата папки
-@bild_router.callback_query(BildStates.folder_format, F.data.in_(['format1', 'format2', 'format3']))
+@bild_router.callback_query(BildStates.folder_format, F.data.in_(['format_1', 'format_2', 'format_3']))
 async def process_folder_format(callback: CallbackQuery, state: FSMContext):
     data = await state.get_data()
-    await state.clear()
+    user_id = callback.from_user.id
 
-    # Сохранение данных в БД
+    # Получаем последний item пользователя
+    item = await rq.get_item_by_tg_id(user_id)
+    if not item:
+        await callback.message.edit_text("❌ Ошибка: запись пользователя не найдена")
+        await callback.answer()
+        return
+    logging.info(item)
+
+    # Получаем значение формата из Google Sheets
+    format_value = await fu.get_genm_format(callback.data)
+    if not format_value:
+        await callback.message.edit_text("❌ Ошибка: шаблон не найден")
+        await callback.answer()
+        return
+    logging.info(format_value)
+
+    # Сохранение данных
     await rq.save_bild_settings(
-        user_id=callback.from_user.id,
+        item_id=item.id,
         os_type=data['os_type'],
         raw_path=data['raw_path'],
-        folder_format=callback.data
+        folder_format=format_value
     )
 
     await callback.message.edit_text("✅ Настройки успешно сохранены!")
@@ -165,79 +181,156 @@ async def cancel_setup(callback: CallbackQuery, state: FSMContext):
 #         logging.error(f"Ошибка обработки запроса PM_data от {user_id}: {e}")
 #         await callback.answer("❌ Произошла ошибка при генерации файла", show_alert=True)
 
+# @bild_router.callback_query(F.data == 'PM_data')
+# async def handle_pm_data_request(callback: types.CallbackQuery):
+#     """
+#     Обработчик запроса на генерацию XMP и SNAP файлов
+#     """
+#     try:
+#         user_id = callback.from_user.id
+#
+#         # Получаем данные пользователя
+#         if not (user_data := await rq.get_user_data(user_id)):
+#             await callback.answer(Texts.Messages.PM_BILD_DATA_NOFIND, show_alert=True)
+#             return
+#
+#         # Проверяем обязательные поля
+#         required_fields = ['idn', 'mailcontact']
+#         if not all(user_data.get(field) for field in required_fields):
+#             await callback.answer(Texts.Messages.PM_BILD_DATA_ERR, show_alert=True)
+#             return
+#
+#         # Фильтруем почтовые адреса из контактов
+#         # Фильтрация контактов
+#         contacts = await vl.filter_emails(user_data['mailcontact'])
+#         if contacts is None:
+#             contacts = "Контактная информация"
+#             logging.warning(f"No valid contacts after filtering for user {user_id}")
+#
+#         # Пути к файлам
+#         base_dir = Path('app') / 'PhotoMechanic'
+#         source_file = base_dir / 'PM_Metadata.XMP'
+#
+#         # Асинхронно обрабатываем XMP
+#         try:
+#             output_xmp = await asyncio.to_thread(
+#                 pm.process_single_xmp,
+#                 initials=user_data['idn'],
+#                 contacts=contacts,  # Используем отфильтрованные контакты
+#                 input_file=source_file
+#             )
+#             if not output_xmp:
+#                 raise RuntimeError("XMP processing failed")
+#         except Exception as e:
+#             logging.error(f"XMP error: {e}")
+#             await callback.answer("❌ Ошибка при создании XMP", show_alert=True)
+#             return
+#
+#         # Асинхронно создаем SNAP
+#         try:
+#             output_snap = await asyncio.to_thread(
+#                 pm.create_snap_file,
+#                 initials=user_data['idn'],
+#                 input_xmp=output_xmp
+#             )
+#             if not output_snap:
+#                 raise RuntimeError("SNAP creation failed")
+#         except Exception as e:
+#             logging.error(f"SNAP error: {e}")
+#             await callback.answer("❌ Ошибка при создании SNAP", show_alert=True)
+#             return
+#
+#         # Отправка SNAP файла
+#         await callback.message.answer_document(
+#             FSInputFile(output_snap),
+#             caption=Texts.Caption.SNAP_IPTC
+#         )
+#
+#         # Опционально: отправка XMP файла
+#         await callback.message.answer_document(
+#             FSInputFile(output_xmp),
+#             caption=Texts.Caption.XMP_IPTC
+#         )
+#
+#         await callback.answer()
+#
+#     except Exception as e:
+#         logging.error(f"Global error: {e}")
+#         await callback.answer("❌ Критическая ошибка при обработке", show_alert=True)
+
 @bild_router.callback_query(F.data == 'PM_data')
-async def handle_pm_data_request(callback: types.CallbackQuery):
-    """
-    Обработчик запроса на генерацию XMP и SNAP файлов
-    """
+async def handle_pm_data_request(callback: types.CallbackQuery, state: FSMContext):
+    """Обработчик создания Ingest.snap с данными из БД"""
     try:
         user_id = callback.from_user.id
 
-        # Получаем данные пользователя
-        if not (user_data := await rq.get_user_data(user_id)):
-            await callback.answer(Texts.Messages.PM_BILD_DATA_NOFIND, show_alert=True)
+        # Получаем данные пользователя из БД
+        user_data = await rq.get_user_data(user_id)
+        if not user_data or not all(user_data.get(f) for f in ['idn', 'mailcontact']):
+            await callback.answer("❌ Данные пользователя не найдены", show_alert=True)
             return
 
-        # Проверяем обязательные поля
-        required_fields = ['idn', 'mailcontact']
-        if not all(user_data.get(field) for field in required_fields):
-            await callback.answer(Texts.Messages.PM_BILD_DATA_ERR, show_alert=True)
+        # Получаем последний item пользователя
+        item = await rq.get_item_by_tg_id(user_id)
+        if not item:
+            await callback.answer("❌ Запись пользователя не найдена", show_alert=True)
             return
 
-        # Фильтруем почтовые адреса из контактов
+        # Получаем настройки из БД
+        bild_settings = await rq.get_bild_settings(item.id)
+        if not bild_settings:
+            await callback.answer("❌ Настройки не найдены", show_alert=True)
+            return
+
         # Фильтрация контактов
-        contacts = await vl.filter_emails(user_data['mailcontact'])
-        if contacts is None:
-            contacts = "Контактная информация"
-            logging.warning(f"No valid contacts after filtering for user {user_id}")
+        contacts = await vl.filter_emails(user_data['mailcontact']) or "Контактная информация"
 
         # Пути к файлам
         base_dir = Path('app') / 'PhotoMechanic'
-        source_file = base_dir / 'PM_Metadata.XMP'
+        source_xmp = base_dir / 'PM_Metadata.XMP'
+        source_ingest = base_dir / 'Ingest.snap'
 
-        # Асинхронно обрабатываем XMP
-        try:
-            output_xmp = await asyncio.to_thread(
-                pm.process_single_xmp,
-                initials=user_data['idn'],
-                contacts=contacts,  # Используем отфильтрованные контакты
-                input_file=source_file
-            )
-            if not output_xmp:
-                raise RuntimeError("XMP processing failed")
-        except Exception as e:
-            logging.error(f"XMP error: {e}")
-            await callback.answer("❌ Ошибка при создании XMP", show_alert=True)
-            return
-
-        # Асинхронно создаем SNAP
-        try:
-            output_snap = await asyncio.to_thread(
-                pm.create_snap_file,
-                initials=user_data['idn'],
-                input_xmp=output_xmp
-            )
-            if not output_snap:
-                raise RuntimeError("SNAP creation failed")
-        except Exception as e:
-            logging.error(f"SNAP error: {e}")
-            await callback.answer("❌ Ошибка при создании SNAP", show_alert=True)
-            return
-
-        # Отправка SNAP файла
-        await callback.message.answer_document(
-            FSInputFile(output_snap),
-            caption=Texts.Caption.SNAP_IPTC
+        # Обработка файлов
+        output_xmp = await asyncio.to_thread(
+            pm.process_single_xmp,
+            user_data['idn'],
+            contacts,
+            source_xmp
         )
 
-        # Опционально: отправка XMP файла
-        await callback.message.answer_document(
-            FSInputFile(output_xmp),
-            caption=Texts.Caption.XMP_IPTC
+        output_snap = await asyncio.to_thread(
+            pm.create_snap_file,
+            user_data['idn'],
+            output_xmp
         )
+
+        # Чтение SNAP-контента
+        with open(output_snap, 'r', encoding='utf-8') as f:
+            snap_content = f.read()
+
+        # Создание модифицированного Ingest
+        output_ingest = await asyncio.to_thread(
+            pm.create_ingest_snap,
+            initials=user_data['idn'],
+            raw_path=bild_settings.raw_path,  # Данные из БД
+            folder_format=bild_settings.folder_format,  # Данные из БД
+            input_ingest=source_ingest,
+            snap_content=snap_content
+        )
+
+        # Отправка файлов
+        files = [
+            (output_ingest, "⚙️ Ingest файл с настройками"),
+            (output_snap, Texts.Caption.SNAP_IPTC),
+            (output_xmp, Texts.Caption.XMP_IPTC)
+        ]
+
+        for file, caption in files:
+            await callback.message.answer_document(FSInputFile(file), caption=caption)
 
         await callback.answer()
+        await state.clear()
 
     except Exception as e:
-        logging.error(f"Global error: {e}")
-        await callback.answer("❌ Критическая ошибка при обработке", show_alert=True)
+        logging.error(f"Ошибка обработки PM_data: {str(e)}")
+        await callback.answer("❌ Критическая ошибка при генерации", show_alert=True)

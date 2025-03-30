@@ -1,8 +1,10 @@
 import logging
+import shutil
 import xml.etree.ElementTree as ET
 import os
 from pathlib import Path
 from typing import Optional
+from urllib.parse import unquote
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO)
@@ -13,7 +15,6 @@ from pathlib import Path
 import logging
 from typing import Optional
 
-logger = logging.getLogger(__name__)
 
 
 def process_single_xmp(initials: str, contacts: str, input_file: Path) -> Optional[Path]:
@@ -164,6 +165,65 @@ def create_snap_file(initials: str, input_xmp: Path) -> Optional[Path]:
     except Exception as e:
         logger.error(f"Ошибка: {e}")
         return None
+
+
+def create_ingest_snap(
+        initials: str,
+        raw_path: str,
+        folder_format: str,
+        input_ingest: Path,
+        snap_content: str
+) -> Optional[Path]:
+    """Создает модифицированный Ingest.snap файл"""
+    try:
+        # Создаем новый файл вместо копирования
+        output_file = input_ingest.with_name(f"Ingest_{initials}.snap")
+
+        # Парсинг исходного файла
+        tree = ET.parse(input_ingest)
+        root = tree.getroot()
+
+        # Обновление SerializedState
+        if (serialized := root.find('SerializedState')) is not None:
+            parts = serialized.text.split('\t')
+            for i in range(len(parts)):
+                if parts[i] == 'IngestPrimaryDestPath':
+                    parts[i + 1] = raw_path
+                elif parts[i] == 'IngestDestFolderNameString':
+                    parts[i + 1] = folder_format
+            serialized.text = '\t'.join(parts)
+
+        # Обновление IPTC данных
+        if (iptc := root.find('IPTCStationeryPadData')) is not None:
+            # Получаем сырой XML без дополнительного экранирования
+            iptc.text = snap_content.replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">")
+
+        # Сохранение с правильным экранированием
+        tree.write(
+            output_file,
+            encoding='utf-8',
+            xml_declaration=True,
+            short_empty_elements=False,
+            method='xml'
+        )
+
+        # Ручное исправление двойного экранирования
+        with open(output_file, 'r', encoding='utf-8') as f:
+            content = f.read()
+
+        content = content.replace("&amp;amp;", "&amp;")
+        content = content.replace("&amp;lt;", "&lt;")
+        content = content.replace("&amp;gt;", "&gt;")
+
+        with open(output_file, 'w', encoding='utf-8') as f:
+            f.write(content)
+
+        return output_file
+
+    except Exception as e:
+        logger.error(f"Ошибка создания Ingest.snap: {str(e)}")
+        return None
+
 
 # if __name__ == "__main__":
 #     # Тестовый пример

@@ -974,3 +974,42 @@ async def find_text_code(
                 ))
 
     return matches
+
+
+async def get_genm_format(format_type: str) -> Optional[str]:
+    """
+    Возвращает значение из строки с 'genm' в столбце A листа 'ПУТЬ'.
+    Форматы:
+    - format1: колонка B (индекс 1)
+    - format2: колонка C (индекс 2)
+    - format3: колонка D (индекс 3)
+    """
+    try:
+        agc = await agcm.authorize()
+        wks = await agc.open("MainTable")
+        sh = await wks.worksheet("ПУТЬ")
+
+        # Поиск строки с 'genm' в столбце A
+        all_data = await sh.get_all_values()
+        for row in all_data:
+            # Проверяем точное совпадение (без учета регистра)
+            if row[0].strip().lower() == "genm":
+                # Определяем индекс колонки
+                col_index = {
+                    'format_1': 1,
+                    'format_2': 2,
+                    'format_3': 3
+                }.get(format_type)
+
+                if col_index is None:
+                    return None
+
+                # Получаем значение, если колонка существует
+                return row[col_index].strip() if len(row) > col_index else None
+        return None
+    except WorksheetNotFound:
+        logging.error("Лист 'ПУТЬ' не найден")
+        return None
+    except Exception as e:
+        logging.error(f"Ошибка в get_genm_format: {str(e)}")
+        return None

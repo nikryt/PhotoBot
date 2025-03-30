@@ -2,7 +2,7 @@ import json
 import logging
 from typing import Optional, Dict, Any, List, Tuple
 
-from app.database.models import async_session, TempChanges, Setting
+from app.database.models import async_session, TempChanges, Setting, BildSettings
 from app.database.models import User, Role, Item
 from sqlalchemy import select, delete
 
@@ -75,6 +75,25 @@ async def del_item(item_id):
     async with async_session() as session:
         await session.execute(delete(Item).where(Item.id == item_id))
         await session.commit()
+
+
+
+async def save_bild_settings(
+    item_id: int,
+    os_type: str,
+    raw_path: str,
+    folder_format: str
+) -> None:
+    """Сохраняет настройки в таблицу BildSettings"""
+    async with async_session() as session:
+        session.add(BildSettings(
+            item_id=item_id,
+            os_type=os_type,
+            raw_path=raw_path,
+            folder_format=folder_format
+        ))
+        await session.commit()
+        logging.info(f"Сохранены настройки для item_id={item_id}")
 
 #-------------------------------------------------------------------------------------------------------------------
 # Функции получения данных
@@ -207,6 +226,15 @@ async def get_user_data(tg_id: int) -> Optional[Dict[str, Any]]:
             logging.error(f"Ошибка при получении данных пользователя {tg_id}: {e}")
             return None
 
+async def get_bild_settings(item_id: int) -> Optional[BildSettings]:
+    """Возвращает последние настройки для item_id"""
+    async with async_session() as session:
+        result = await session.execute(
+            select(BildSettings)
+            .where(BildSettings.item_id == item_id)
+            .order_by(BildSettings.id.desc())
+        )
+        return result.scalars().first()
 
 #-------------------------------------------------------------------------------------------------------------------
 # Конец Функции получения данных
