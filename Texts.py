@@ -170,17 +170,19 @@ class Caption:
 
     SNAP_IPTC_WIN = ("⚙️ Поместить файл по этому адресу:\n\n"
                      "<code>C:\\%USERPROFILE%\\AppData\\Roaming\\Camera Bits, Inc\\Photo Mechanic\\IPTCDialogSettings</code>\n")
-    I
-    NGEST_SNAP_WIN = ("⚙️ Поместить файл по этому адресу:\n\n"
+
+    INGEST_SNAP_WIN = ("⚙️ Поместить файл по этому адресу:\n\n"
                        "<code>C:\\%USERPROFILE%\\AppData\\Roaming\\Camera Bits, Inc\\Photo Mechanic\\IngestDialogSettings</code>\n")
 
     XMP_IPTC_MAC = "IPTC шаблон, для загрузки вызвать ⌘Cmd + I и выбрать этот файл"
 
     SNAP_IPTC_MAC = ("⚙️ Поместить файл IPTC по этому адресу:\n\n"
-                       "<code>$USER/Library/Preferences/com.camerabits.PhotoMechanic/IngestDialogSettings/IPTCDialogSettings</code>\n")
+                     "Выберите Сохранить КАК, вызовите переход к папке клавишами ⌘Cmd + ⇧Shift + G вставьте скопированный путь\n"
+                       "<code>~/Library/Preferences/com.camerabits.PhotoMechanic/IngestDialogSettings/IPTCDialogSettings</code>\n")
 
     INGEST_SNAP_MAC = ("⚙️ Поместить файл INGEST по этому адресу:\n\n"
-                       "<code>$USER/Library/Preferences/com.camerabits.PhotoMechanic/IngestDialogSettings</code>\n")
+                       "Выберите Сохранить КАК, вызовите переход к папке клавишами ⌘Cmd + ⇧Shift + G вставьте скопированный путь\n"
+                       "<code>~/Library/Preferences/com.camerabits.PhotoMechanic/IngestDialogSettings</code>\n")
 
 
 class StatesText:
