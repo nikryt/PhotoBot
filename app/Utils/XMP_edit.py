@@ -167,6 +167,63 @@ def create_snap_file(initials: str, input_xmp: Path) -> Optional[Path]:
         return None
 
 
+# def create_ingest_snap(
+#         initials: str,
+#         raw_path: str,
+#         folder_format: str,
+#         input_ingest: Path,
+#         snap_content: str
+# ) -> Optional[Path]:
+#     """Создает модифицированный Ingest.snap файл"""
+#     try:
+#         # Создаем новый файл вместо копирования
+#         output_file = input_ingest.with_name(f"Ingest_{initials}.snap")
+#
+#         # Парсинг исходного файла
+#         tree = ET.parse(input_ingest)
+#         root = tree.getroot()
+#
+#         # Обновление SerializedState
+#         if (serialized := root.find('SerializedState')) is not None:
+#             parts = serialized.text.split('\t')
+#             for i in range(len(parts)):
+#                 if parts[i] == 'IngestPrimaryDestPath':
+#                     parts[i + 1] = raw_path
+#                 elif parts[i] == 'IngestDestFolderNameString':
+#                     parts[i + 1] = folder_format
+#             serialized.text = '\t'.join(parts)
+#
+#         # Обновление IPTC данных
+#         if (iptc := root.find('IPTCStationeryPadData')) is not None:
+#             # Получаем сырой XML без дополнительного экранирования
+#             iptc.text = snap_content.replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">")
+#
+#         # Сохранение с правильным экранированием
+#         tree.write(
+#             output_file,
+#             encoding='utf-8',
+#             xml_declaration=True,
+#             short_empty_elements=False,
+#             method='xml'
+#         )
+#
+#         # Ручное исправление двойного экранирования
+#         with open(output_file, 'r', encoding='utf-8') as f:
+#             content = f.read()
+#
+#         content = content.replace("&amp;amp;", "&amp;")
+#         content = content.replace("&amp;lt;", "&lt;")
+#         content = content.replace("&amp;gt;", "&gt;")
+#
+#         with open(output_file, 'w', encoding='utf-8') as f:
+#             f.write(content)
+#
+#         return output_file
+#
+#     except Exception as e:
+#         logger.error(f"Ошибка создания Ingest.snap: {str(e)}")
+#         return None
+
 def create_ingest_snap(
         initials: str,
         raw_path: str,
@@ -176,10 +233,7 @@ def create_ingest_snap(
 ) -> Optional[Path]:
     """Создает модифицированный Ingest.snap файл"""
     try:
-        # Создаем новый файл вместо копирования
         output_file = input_ingest.with_name(f"Ingest_{initials}.snap")
-
-        # Парсинг исходного файла
         tree = ET.parse(input_ingest)
         root = tree.getroot()
 
@@ -195,28 +249,44 @@ def create_ingest_snap(
 
         # Обновление IPTC данных
         if (iptc := root.find('IPTCStationeryPadData')) is not None:
-            # Получаем сырой XML без дополнительного экранирования
-            iptc.text = snap_content.replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">")
+            # Парсинг snap_content и добавление атрибутов
+            try:
+                # Удаление XML-декларации, если есть
+                clean_content = snap_content.split("?>", 1)[-1].strip() if "?xml" in snap_content else snap_content
+                snap_root = ET.fromstring(clean_content)
 
-        # Сохранение с правильным экранированием
-        tree.write(
-            output_file,
-            encoding='utf-8',
-            xml_declaration=True,
-            short_empty_elements=False,
-            method='xml'
-        )
+                # Находим rdf:Description с учетом namespace
+                namespaces = {
+                    'rdf': 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
+                    'photomechanic': 'http://ns.camerabits.com/photomechanic/1.0/'
+                }
+                description = snap_root.find('.//rdf:Description', namespaces)
 
-        # Ручное исправление двойного экранирования
-        with open(output_file, 'r', encoding='utf-8') as f:
+                if description is not None:
+                    # Добавляем атрибуты
+                    pm_ns = '{http://ns.camerabits.com/photomechanic/1.0/}'
+                    description.set(pm_ns + 'ColorClassEval', '[ColorClass]')
+                    description.set(pm_ns + 'ColorClassApply', 'True')
+
+                    # Сериализуем обратно в строку
+                    ET.register_namespace('photomechanic', namespaces['photomechanic'])
+                    modified_content = ET.tostring(snap_root, encoding='utf-8').decode()
+                    iptc.text = modified_content.replace("&amp;", "&").replace("&", "&amp;")  # Коррекция экранирования
+                else:
+                    logger.warning("Элемент rdf:Description не найден в snap_content")
+            except ET.ParseError as e:
+                logger.error(f"Ошибка парсинга snap_content: {e}")
+                return None
+
+        # Сохранение и исправление двойного экранирования
+        tree.write(output_file, encoding='utf-8', xml_declaration=True)
+
+        with open(output_file, 'r+', encoding='utf-8') as f:
             content = f.read()
-
-        content = content.replace("&amp;amp;", "&amp;")
-        content = content.replace("&amp;lt;", "&lt;")
-        content = content.replace("&amp;gt;", "&gt;")
-
-        with open(output_file, 'w', encoding='utf-8') as f:
+            content = content.replace("&amp;amp;", "&amp;")
+            f.seek(0)
             f.write(content)
+            f.truncate()
 
         return output_file
 

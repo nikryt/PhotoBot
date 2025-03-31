@@ -338,19 +338,22 @@ async def handle_pm_data_request(callback: types.CallbackQuery, state: FSMContex
             'windows': {
                 'ingest': Texts.Caption.INGEST_SNAP_WIN,
                 'snap': Texts.Caption.SNAP_IPTC_WIN,
-                'xmp': Texts.Caption.XMP_IPTC_WIN
+                'xmp': Texts.Caption.XMP_IPTC_WIN,
+                'name': Texts.Caption.RENAME_SNAP_WIN
             },
             'macos': {
                 'ingest': Texts.Caption.INGEST_SNAP_MAC,
                 'snap': Texts.Caption.SNAP_IPTC_MAC,
-                'xmp': Texts.Caption.XMP_IPTC_MAC
+                'xmp': Texts.Caption.XMP_IPTC_MAC,
+                'name': Texts.Caption.RENAME_SNAP_MAC
             }
         }
 
         default_captions = {
             'ingest': "⚙️ Ingest файл с настройками",
             'snap': Texts.Caption.SNAP_IPTC_WIN,
-            'xmp': Texts.Caption.XMP_IPTC_WIN
+            'xmp': Texts.Caption.XMP_IPTC_WIN,
+            'name': Texts.Caption.RENAME_SNAP_WIN
         }
 
         # Выбираем подходящие подписи
@@ -363,6 +366,15 @@ async def handle_pm_data_request(callback: types.CallbackQuery, state: FSMContex
         base_dir = Path('app') / 'PhotoMechanic'
         source_xmp = base_dir / 'PM_Metadata.XMP'
         source_ingest = base_dir / 'Ingest.snap'
+        source_rename = base_dir / 'Rename.snap'
+
+        # Проверка существования исходных файлов
+        required_files = [source_xmp, source_ingest, source_rename]
+        for file in required_files:
+            if not file.exists():
+                logging.error(f"Файл {file.name} не найден: {file}")
+                await callback.answer(f"❌ Файл {file.name} отсутствует", show_alert=True)
+                return
 
         # Обработка файлов
         output_xmp = await asyncio.to_thread(
@@ -371,16 +383,27 @@ async def handle_pm_data_request(callback: types.CallbackQuery, state: FSMContex
             contacts,
             source_xmp
         )
+        if not output_xmp or not output_xmp.exists():
+            await callback.answer("❌ Ошибка создания XMP", show_alert=True)
+            return
 
         output_snap = await asyncio.to_thread(
             pm.create_snap_file,
             user_data['idn'],
             output_xmp
         )
+        if not output_snap or not output_snap.exists():
+            await callback.answer("❌ Ошибка создания SNAP", show_alert=True)
+            return
 
         # Чтение SNAP-контента
-        with open(output_snap, 'r', encoding='utf-8') as f:
-            snap_content = f.read()
+        try:
+            with open(output_snap, 'r', encoding='utf-8') as f:
+                snap_content = f.read()
+        except Exception as e:
+            logging.error(f"Ошибка чтения SNAP: {e}")
+            await callback.answer("❌ Ошибка чтения файла", show_alert=True)
+            return
 
         # Создание модифицированного Ingest
         output_ingest = await asyncio.to_thread(
@@ -391,17 +414,24 @@ async def handle_pm_data_request(callback: types.CallbackQuery, state: FSMContex
             input_ingest=source_ingest,
             snap_content=snap_content
         )
+        if not output_ingest or not output_ingest.exists():
+            await callback.answer("❌ Ошибка создания Ingest", show_alert=True)
+            return
 
         # Формируем список файлов с подписями
         files = [
             (output_ingest, selected_captions['ingest']),
             (output_snap, selected_captions['snap']),
-            (output_xmp, selected_captions['xmp'])
+            (source_rename, selected_captions['name']),
+            (output_xmp, selected_captions['xmp']),
         ]
 
         # Отправка файлов
         for file, caption in files:
-            await callback.message.answer_document(FSInputFile(file), caption=caption, parse_mode=ParseMode.HTML)
+            if file.exists():
+                await callback.message.answer_document(FSInputFile(file), caption=caption, parse_mode=ParseMode.HTML)
+            else:
+                logging.warning(f"Файл {file.name} не найден, пропуск отправки")
 
         await callback.answer()
         await state.clear()

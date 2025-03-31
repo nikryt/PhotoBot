@@ -166,9 +166,13 @@ class Help:
     PHOTO = "помощь по фото"
 
 class Caption:
+    RENAME_SNAP_WIN = ("📝 Файл переименования для Photo Mechanic\n"
+                       "Поместить файл по этому адресу:\n\n"
+                        "<code>C:\\%USERPROFILE%\\AppData\\Roaming\\Camera Bits, Inc\\Photo Mechanic\\RenameDialogSettings</code>")
+
     XMP_IPTC_WIN = "IPTC шаблон для загрузки вызвать Ctrl+I и выбрать этот файл"
 
-    SNAP_IPTC_WIN = ("⚙️ Поместить файл по этому адресу:\n\n"
+    SNAP_IPTC_WIN = ("⚙️ <code>C:\\%USERPROFILE%\\AppData\\Roaming\\Camera Bits, Inc\\Photo Mechanic\\RenameDialogSettings</code>\n\n"
                      "<code>C:\\%USERPROFILE%\\AppData\\Roaming\\Camera Bits, Inc\\Photo Mechanic\\IPTCDialogSettings</code>\n")
 
     INGEST_SNAP_WIN = ("⚙️ Поместить файл по этому адресу:\n\n"
@@ -183,6 +187,9 @@ class Caption:
     INGEST_SNAP_MAC = ("⚙️ Поместить файл INGEST по этому адресу:\n\n"
                        "Выберите Сохранить КАК, вызовите переход к папке клавишами ⌘Cmd + ⇧Shift + G вставьте скопированный путь\n"
                        "<code>~/Library/Preferences/com.camerabits.PhotoMechanic/IngestDialogSettings</code>\n")
+    RENAME_SNAP_MAC = ("📝 Файл переименования для Photo Mechanic\n"
+                       "Поместить файл по этому адресу:\n\n"
+                       "<code>~/Library/Preferences/com.camerabits.PhotoMechanic/RenameDialogSettings</code>")
 
 
 class StatesText:
