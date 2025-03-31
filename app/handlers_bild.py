@@ -31,18 +31,60 @@ class BildStates(StatesGroup):
     os_type = State()
     raw_path = State()
     folder_format = State()
+    confirm_settings = State()
 
 
 # Начало процесса настройки
 @bild_router.message(F.text == '/setup')
 async def start_setup(message: types.Message, state: FSMContext):
-    await message.answer(
-        Messages.BILD_PM,
-        parse_mode=ParseMode.HTML,
-        reply_markup=await kb.os_select_keyboard()
-    )
-    await state.set_state(BildStates.os_type)
+    user_id = message.from_user.id
 
+    # Проверяем существующие настройки
+    item = await rq.get_item_by_tg_id(user_id)
+    if item and item.bild_settings:
+        # Получаем последние настройки
+        latest_settings = item.bild_settings[-1]
+
+        # Формируем сообщение с текущими настройками
+        settings_text = (
+            "⚙️ Текущие настройки:\n"
+            f"• ОС: {latest_settings.os_type}\n"
+            f"• Путь: {latest_settings.raw_path}\n"
+            f"• Формат: {latest_settings.folder_format}\n\n"
+            "Хотите изменить их или оставить как есть?"
+        )
+
+        await message.answer(
+            settings_text,
+            reply_markup=await kb.settings_confirmation_keyboard()  # Новая клавиатура
+        )
+        await state.set_state(BildStates.confirm_settings)
+    else:
+        # Стандартный процесс настройки
+        await message.answer(
+            Messages.BILD_PM,
+            parse_mode=ParseMode.HTML,
+            reply_markup=await kb.os_select_keyboard()
+        )
+        await state.set_state(BildStates.os_type)
+
+
+# Обработчик подтверждения настроек
+@bild_router.callback_query(BildStates.confirm_settings, F.data.in_(['keep_settings', 'change_settings']))
+async def process_settings_confirmation(callback: CallbackQuery, state: FSMContext):
+    if callback.data == 'keep_settings':
+        await callback.message.edit_text("✅ Настройки сохранены!")
+        await state.clear()
+    else:
+        # Запускаем процесс изменения настроек
+        await callback.message.edit_text(
+            Messages.BILD_PM,
+            parse_mode=ParseMode.HTML,
+            reply_markup=await kb.os_select_keyboard()
+        )
+        await state.set_state(BildStates.os_type)
+
+    await callback.answer()
 
 @bild_router.callback_query(BildStates.os_type, F.data.in_(['windows', 'macos']))
 async def process_os_select(callback: CallbackQuery, state: FSMContext):
@@ -270,11 +312,14 @@ async def handle_pm_data_request(callback: types.CallbackQuery, state: FSMContex
             await callback.answer("❌ Данные пользователя не найдены", show_alert=True)
             return
 
-        # Получаем последний item пользователя
+        # Получаем item с загруженными настройками
         item = await rq.get_item_by_tg_id(user_id)
-        if not item:
-            await callback.answer("❌ Запись пользователя не найдена", show_alert=True)
+        if not item or not item.bild_settings:
+            await callback.answer("❌ Настройки не найдены", show_alert=True)
             return
+
+        # Берем последнюю настройку
+        latest_settings = item.bild_settings[-1]
 
         # Получаем настройки из БД
         bild_settings = await rq.get_bild_settings(item.id)
@@ -312,7 +357,7 @@ async def handle_pm_data_request(callback: types.CallbackQuery, state: FSMContex
         output_ingest = await asyncio.to_thread(
             pm.create_ingest_snap,
             initials=user_data['idn'],
-            raw_path=bild_settings.raw_path,  # Данные из БД
+            raw_path=latest_settings.raw_path,  # Данные из БД
             folder_format=bild_settings.folder_format,  # Данные из БД
             input_ingest=source_ingest,
             snap_content=snap_content

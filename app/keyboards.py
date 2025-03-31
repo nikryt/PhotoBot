@@ -153,6 +153,17 @@ async def folder_format_keyboard() -> types.InlineKeyboardMarkup:
         width=1
     )
     return builder.as_markup()
+
+async def settings_confirmation_keyboard():
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="✅ Оставить как есть", callback_data="keep_settings"),
+                InlineKeyboardButton(text="✏️ Изменить", callback_data="change_settings")
+            ]
+        ]
+    )
+
     # ------------------------------------------------------------------------------------------------------------------
     # Клавиатуры билда
     # ------------------------------------------------------------------------------------------------------------------

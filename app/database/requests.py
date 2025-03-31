@@ -2,6 +2,8 @@ import json
 import logging
 from typing import Optional, Dict, Any, List, Tuple
 
+from sqlalchemy.orm import selectinload
+
 from app.database.models import async_session, TempChanges, Setting, BildSettings
 from app.database.models import User, Role, Item
 from sqlalchemy import select, delete
@@ -126,18 +128,29 @@ async def get_role(tg_id: int):
 #     async with async_session() as session:
 #         return await session.scalar(select(Item).where(Item.name == str(tg_id)))
 
+# async def get_item_by_tg_id(tg_id: int) -> Optional[Item]:
+#     """Возвращает последнюю запись Item по tg_id"""
+#     async with async_session() as session:
+#         str_tg_id = str(tg_id)  # Явное преобразование в строку
+#         result = await session.execute(
+#             select(Item)
+#             .where(Item.name == str_tg_id)  # Сравнение как строки
+#             .order_by(Item.id.desc())
+#         )
+#         item = result.scalars().first()
+#         logging.debug(f"Поиск пользователя: tg_id={str_tg_id}, результат={item}")
+#         return item
+
 async def get_item_by_tg_id(tg_id: int) -> Optional[Item]:
-    """Возвращает последнюю запись Item по tg_id"""
+    """Возвращает последнюю запись Item с загруженными настройками"""
     async with async_session() as session:
-        str_tg_id = str(tg_id)  # Явное преобразование в строку
         result = await session.execute(
             select(Item)
-            .where(Item.name == str_tg_id)  # Сравнение как строки
+            .options(selectinload(Item.bild_settings))  # Явная загрузка связанных данных
+            .where(Item.name == str(tg_id))
             .order_by(Item.id.desc())
         )
-        item = result.scalars().first()
-        logging.debug(f"Поиск пользователя: tg_id={str_tg_id}, результат={item}")
-        return item
+        return result.scalars().first()
 
 # async def get_item_by_tg_id(tg_id: int) -> Item | None:
 #     async with async_session() as session:
@@ -235,6 +248,7 @@ async def get_bild_settings(item_id: int) -> Optional[BildSettings]:
             .order_by(BildSettings.id.desc())
         )
         return result.scalars().first()
+
 
 #-------------------------------------------------------------------------------------------------------------------
 # Конец Функции получения данных
