@@ -327,6 +327,35 @@ async def handle_pm_data_request(callback: types.CallbackQuery, state: FSMContex
             await callback.answer("❌ Настройки не найдены", show_alert=True)
             return
 
+        # Проверяем наличие os_type
+        os_type = getattr(bild_settings, 'os_type', '').lower()
+        if not os_type:
+            await callback.answer("❌ Тип ОС не указан в настройках", show_alert=True)
+            return
+
+        # Определяем подписи в зависимости от OS
+        captions = {
+            'windows': {
+                'ingest': Texts.Caption.INGEST_SNAP_WIN,
+                'snap': Texts.Caption.SNAP_IPTC_WIN,
+                'xmp': Texts.Caption.XMP_IPTC_WIN
+            },
+            'macos': {
+                'ingest': Texts.Caption.INGEST_SNAP_MAC,
+                'snap': Texts.Caption.SNAP_IPTC_MAC,
+                'xmp': Texts.Caption.XMP_IPTC_MAC
+            }
+        }
+
+        default_captions = {
+            'ingest': "⚙️ Ingest файл с настройками",
+            'snap': Texts.Caption.SNAP_IPTC_WIN,
+            'xmp': Texts.Caption.XMP_IPTC_WIN
+        }
+
+        # Выбираем подходящие подписи
+        selected_captions = captions.get(os_type, default_captions)
+
         # Фильтрация контактов
         contacts = await vl.filter_emails(user_data['mailcontact']) or "Контактная информация"
 
@@ -357,21 +386,22 @@ async def handle_pm_data_request(callback: types.CallbackQuery, state: FSMContex
         output_ingest = await asyncio.to_thread(
             pm.create_ingest_snap,
             initials=user_data['idn'],
-            raw_path=latest_settings.raw_path,  # Данные из БД
-            folder_format=bild_settings.folder_format,  # Данные из БД
+            raw_path=latest_settings.raw_path,
+            folder_format=bild_settings.folder_format,
             input_ingest=source_ingest,
             snap_content=snap_content
         )
 
-        # Отправка файлов
+        # Формируем список файлов с подписями
         files = [
-            (output_ingest, "⚙️ Ingest файл с настройками"),
-            (output_snap, Texts.Caption.SNAP_IPTC),
-            (output_xmp, Texts.Caption.XMP_IPTC)
+            (output_ingest, selected_captions['ingest']),
+            (output_snap, selected_captions['snap']),
+            (output_xmp, selected_captions['xmp'])
         ]
 
+        # Отправка файлов
         for file, caption in files:
-            await callback.message.answer_document(FSInputFile(file), caption=caption)
+            await callback.message.answer_document(FSInputFile(file), caption=caption, parse_mode=ParseMode.HTML)
 
         await callback.answer()
         await state.clear()
