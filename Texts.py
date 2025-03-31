@@ -91,14 +91,9 @@ class Messages:
                     "       <code>$HOME/Pictures/RAW</code>\n"
                     "       <code>/Users/$USER/Pictures/Фотографии/Работа/Исходники</code>\n\n"
                     "По этому пути будут копироваться фотографии с карточек памяти")
-    BILD_STORAGE_ERR = ("❌ Некорректный путь. Попробуйте снова:")
-    BILD_FOLDER = ("Выберите формат имени папок:")
-    BILD_MANUAL = (
-        "В этих директориях хранятся файлы:\n"
-        "<code>C:\\%USERPROFILE%\\AppData\\Roaming\\Camera Bits, Inc\\Photo Mechanic\\IngestDialogSettings</code>\n"
-        "<code>C:\\%USERPROFILE%\\AppData\\Roaming\\Camera Bits, Inc\\Photo Mechanic\\IPTCDialogSettings</code>\n"
-        "<code>C:\\%USERPROFILE%\\AppData\\Roaming\\Camera Bits, Inc\\Photo Mechanic\\RenameDialogSettings</code>"
-    )
+    BILD_STORAGE_ERR = "❌ Некорректный путь. Попробуйте снова:"
+    BILD_FOLDER = "Выберите формат имени папок:"
+    BILD_MANUAL = "Выберите в каком формате будут хранится съемки в проекте:"
 
     # Подтверждение
     VERIFICATION = """Проверьте данные:

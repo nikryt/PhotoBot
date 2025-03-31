@@ -140,38 +140,93 @@ async def process_raw_path(message: types.Message, state: FSMContext):
 
 
 # Обработка выбора формата папки
+# @bild_router.callback_query(BildStates.folder_format, F.data.in_(['format_1', 'format_2', 'format_3']))
+# async def process_folder_format(callback: CallbackQuery, state: FSMContext):
+#     data = await state.get_data()
+#     user_id = callback.from_user.id
+#
+#     # Получаем последний item пользователя
+#     item = await rq.get_item_by_tg_id(user_id)
+#     if not item:
+#         await callback.message.edit_text("❌ Ошибка: запись пользователя не найдена")
+#         await callback.answer()
+#         return
+#     logging.info(item)
+#
+#     # Получаем значение формата из Google Sheets
+#     format_value = await fu.get_genm_format(callback.data)
+#     if not format_value:
+#         await callback.message.edit_text("❌ Ошибка: шаблон не найден")
+#         await callback.answer()
+#         return
+#     logging.info(format_value)
+#
+#     # Сохранение данных
+#     await rq.save_bild_settings(
+#         item_id=item.id,
+#         os_type=data['os_type'],
+#         raw_path=data['raw_path'],
+#         folder_format=format_value
+#     )
+#
+#     await callback.message.edit_text("✅ Настройки успешно сохранены!")
+#     await callback.answer()
+
+
 @bild_router.callback_query(BildStates.folder_format, F.data.in_(['format_1', 'format_2', 'format_3']))
 async def process_folder_format(callback: CallbackQuery, state: FSMContext):
-    data = await state.get_data()
-    user_id = callback.from_user.id
-
-    # Получаем последний item пользователя
-    item = await rq.get_item_by_tg_id(user_id)
-    if not item:
-        await callback.message.edit_text("❌ Ошибка: запись пользователя не найдена")
+    try:
+        # Уведомление о начале обработки
+        await callback.message.edit_text("⏳ Ваши данные обрабатываются...")
         await callback.answer()
-        return
-    logging.info(item)
 
-    # Получаем значение формата из Google Sheets
-    format_value = await fu.get_genm_format(callback.data)
-    if not format_value:
-        await callback.message.edit_text("❌ Ошибка: шаблон не найден")
-        await callback.answer()
-        return
-    logging.info(format_value)
+        data = await state.get_data()
+        user_id = callback.from_user.id
 
-    # Сохранение данных
-    await rq.save_bild_settings(
-        item_id=item.id,
-        os_type=data['os_type'],
-        raw_path=data['raw_path'],
-        folder_format=format_value
-    )
+        # Получаем запись пользователя с настройками
+        item = await rq.get_item_by_tg_id(user_id)
+        if not item:
+            await callback.message.edit_text("❌ Ошибка: запись пользователя не найдена")
+            return
 
-    await callback.message.edit_text("✅ Настройки успешно сохранены!")
-    await callback.answer()
+        # Получаем формат из Google Sheets
+        format_value = await fu.get_genm_format(callback.data)
+        if not format_value:
+            await callback.message.edit_text("❌ Ошибка: шаблон не найден")
+            return
 
+        # Проверяем существующие настройки через item.bild_settings
+        existing_settings = item.bild_settings[-1] if item.bild_settings else None
+
+        if existing_settings:
+            # Обновляем существующую запись
+            await rq.update_bild_settings(
+                settings_id=existing_settings.id,
+                os_type=data['os_type'],
+                raw_path=data['raw_path'],
+                folder_format=format_value
+            )
+            success_msg = "✅ Настройки успешно обновлены!"
+        else:
+            # Создаем новую запись
+            await rq.save_bild_settings(
+                item_id=item.id,
+                os_type=data['os_type'],
+                raw_path=data['raw_path'],
+                folder_format=format_value
+            )
+            success_msg = "✅ Настройки успешно сохранены!"
+
+        # Обновляем сообщение
+        await callback.message.edit_text(success_msg)
+        await state.clear()
+
+    except IndexError:
+        logging.error("Список bild_settings пуст или некорректен")
+        await callback.message.edit_text("❌ Ошибка: повреждены данные настроек")
+    except Exception as e:
+        logging.error(f"Ошибка сохранения: {str(e)}", exc_info=True)
+        await callback.message.edit_text("❌ Критическая ошибка при сохранении")
 
 # Отмена настройки
 @bild_router.callback_query(F.data == 'cancel_setup')

@@ -2,6 +2,7 @@ import json
 import logging
 from typing import Optional, Dict, Any, List, Tuple
 
+from sqlalchemy.ext.asyncio import session
 from sqlalchemy.orm import selectinload
 
 from app.database.models import async_session, TempChanges, Setting, BildSettings
@@ -151,6 +152,21 @@ async def get_item_by_tg_id(tg_id: int) -> Optional[Item]:
             .order_by(Item.id.desc())
         )
         return result.scalars().first()
+
+# Обновление настроек
+async def update_bild_settings(
+    settings_id: int,
+    os_type: str,
+    raw_path: str,
+    folder_format: str
+) -> None:
+    async with async_session() as session:
+        settings = await session.get(BildSettings, settings_id)
+        if settings:
+            settings.os_type = os_type
+            settings.raw_path = raw_path
+            settings.folder_format = folder_format
+            await session.commit()
 
 # async def get_item_by_tg_id(tg_id: int) -> Item | None:
 #     async with async_session() as session:
