@@ -2301,7 +2301,9 @@ async def handle_status_update(callback: CallbackQuery, status: str):
 
 @router.callback_query(F.data.in_({"tables_day", "tables_dist"}))  # Обрабатываем два callback_data
 async def handle_report_request(callback_query: types.CallbackQuery, bot: Bot):
-    await callback_query.answer()
+    # Уведомление о начале обработки
+    await callback_query.message.answer("⏳ Ваши данные обрабатываются...")
+    # await callback_query.answer()
     tg_id = callback_query.from_user.id
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
     temp_filename = f"TSV/report_{tg_id}_{timestamp}.tsv"
