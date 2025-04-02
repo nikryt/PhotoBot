@@ -1,5 +1,7 @@
 from aiogram import types
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
+
+import Texts
 # Импортируем определенную функцию, а не все для рабаты функции клавиатуры из БД
 from app.database.requests import get_roles
 # Импортируем билдер клавиатуры
@@ -170,6 +172,19 @@ async def settings_confirmation_keyboard():
     # ------------------------------------------------------------------------------------------------------------------
 
     # ------------------------------------------------------------------------------------------------------------------
+    # Клавиатуры Помощь
+    # ------------------------------------------------------------------------------------------------------------------
+help = InlineKeyboardMarkup(inline_keyboard=[
+    [InlineKeyboardButton(text=Texts.Buttons.PHOTO, callback_data='Photo')],
+    [InlineKeyboardButton(text='Изменить ваше имя EN', callback_data='EN')],
+    [InlineKeyboardButton(text='Изменить ваш телефон', callback_data='phone')],
+    [InlineKeyboardButton(text='Изменить ваши инициалы', callback_data='idn')],
+    [InlineKeyboardButton(text='Изменить ваши контакты', callback_data='contact')],
+    [InlineKeyboardButton(text='Изменить вашу роль', callback_data='role')],
+    [InlineKeyboardButton(text='Оставить так и подтвердить', callback_data='yes')]])
+
+
+    # ------------------------------------------------------------------------------------------------------------------
     # Клавиатуры, которые генерируются функциями
     # ------------------------------------------------------------------------------------------------------------------
 
@@ -268,20 +283,59 @@ async def create_keyboard(
     keyboard = ReplyKeyboardBuilder()
 
     for index, text in enumerate(btns, start=0):
-
         if request_contact and request_contact == index:
             keyboard.add(KeyboardButton(text=text, request_contact=True))
-
         elif request_location and request_location == index:
             keyboard.add(KeyboardButton(text=text, request_location=True))
         else:
-
             keyboard.add(KeyboardButton(text=text))
 
     return keyboard.adjust(*sizes).as_markup(
             resize_keyboard=True, input_field_placeholder=placeholder)
 
 
+async def create_inline_keyboard(
+        *btns: str,
+        callback_data: dict[int, str] = None,
+        url: dict[int, str] = None,
+        sizes: tuple[int, ...] = (2,),
+):
+    """
+    Создает инлайн-клавиатуру с кнопками.
+
+    Параметры:
+        *btns: тексты кнопок
+        callback_data: словарь {индекс кнопки: callback_data}
+        url: словарь {индекс кнопки: URL}
+        sizes: размеры рядов (по умолчанию (2,))
+
+    Пример использования:
+    create_inline_keyboard(
+        "Меню",
+        "О магазине",
+        "Варианты оплаты",
+        "Варианты доставки",
+        "Наш сайт",
+        callback_data={0: "menu", 1: "about", 2: "payment", 3: "delivery"},
+        url={4: "https://example.com"},
+        sizes=(2, 2, 1)
+    )
+    """
+    keyboard = InlineKeyboardBuilder()
+    callback_data = callback_data or {}
+    url = url or {}
+
+    for index, text in enumerate(btns):
+        if index in callback_data:
+            keyboard.button(text=text, callback_data=callback_data[index])
+        elif index in url:
+            keyboard.button(text=text, url=url[index])
+        else:
+            # Используем текст кнопки как callback_data по умолчанию
+            keyboard.button(text=text, callback_data=text)
+
+    keyboard.adjust(*sizes)
+    return keyboard.as_markup()
 
 # # функция для клавиатур в зависимости от роли
 # async def get_role_keyboard(role: str) -> ReplyKeyboardMarkup:

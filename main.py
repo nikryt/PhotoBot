@@ -2,18 +2,17 @@ import os
 import asyncio
 import logging
 
-
 from aiogram import Bot, Dispatcher, types
 # Для базы данных импортируем
 from app.database.models import async_main
-
 # Импортируем объект router из другого файла app/handlers.py
 from app.handlers import router
 # Импортируем объект router из другого файла app/handlers_gr.py
 from app.handles_gr import gr_router
-from  app.admin_private import admin_router
+from app.admin_private import admin_router
 from app.handlers_manager import manager_router
 from app.handlers_bild import bild_router
+from app.handlers_help import help_router
 # заменил на env
 #from config import TOKEN
 #from config import ID_GS
@@ -36,6 +35,7 @@ async def main():
     dp.include_router(admin_router)
     dp.include_router(manager_router)
     dp.include_router(bild_router)
+    dp.include_router(help_router)
     # Создаём кнопку меню с командами
     await  bot.set_my_commands(commands=private, scope=types.BotCommandScopeAllPrivateChats())
     # # Удаление кнопок

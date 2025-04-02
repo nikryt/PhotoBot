@@ -18,7 +18,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.enums import ContentType, ChatAction
 from aiogram.enums import ParseMode
 #Импортировали тексты из отдельного файла
-from Texts import Messages, StatesText, Help
+from Texts import Messages
 from app.database.models import Item
 from app.Filters.chat_types import ChatTypeFilter # импортировали наши личные фильтры
 
@@ -59,7 +59,7 @@ class Register(StatesGroup):
     mailcontact2 = State()
     tel2 = State()
     role2 = State()
-    texts = StatesText.REGISTER
+    texts = Texts.StatesText.REGISTER
 
 class Gen(StatesGroup):
     wait = State()
@@ -172,17 +172,6 @@ async def cmd_start(message: Message, state: FSMContext, bot: Bot):
 #     # Записываем в БД пользователя с его id
 #     await rq.set_user(message.from_user.id)
 # # Конец старого приветсвия без проверки на регистрацию
-
-
-@router.message(Command('help'))
-async def  cmd_help(message: Message, state: FSMContext, bot: Bot):
-    await mes_user_history(message, state)
-    await send_typing_and_message(
-        message.chat.id, bot, # Передаём chat.id и bot как позиционный аргумент
-        text=Help.MAIN, # Передаём text как именованный аргумент
-        state=state # Передаём state как именованный аргумент, указали state явно
-    )
-
 
 # Общая логика для обработки регистрации вызов ко команде или нажатию инлайн кнопки (callback)
 async def register_handler(message: Message, state: FSMContext, bot: Bot, tg_id: int = None):
