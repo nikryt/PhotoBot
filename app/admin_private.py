@@ -26,6 +26,13 @@ async def admin_keyboard(message: types.Message):
         reply_markup=await kb.admin_keyboard(status)
     )
 
+# отправляем методом ответа на сообщение стикер по его ID
+#     await message.reply_sticker(sticker='CAACAgIAAxkBAAPYZ36b1AUNHQg55cEEfzilVTX1lCYAArkRAAJClVFLVmGP6JmH07A2BA', reply_markup=ReplyKeyboardRemove())
+# Получаем ID пользователя и Имя из самого первого сообщения
+#    await message.reply(f'Привет :) \nТвой ID: {message.from_user.id}\nИмя: {message.from_user.first_name}\n'
+#                        f'Фамилия: {message.from_user.last_name}\nНик: @{message.from_user.username}')
+#   await message.reply('Как дела?')
+
 
 #=======================================================================================================================
 # START Получить ID медиа данных

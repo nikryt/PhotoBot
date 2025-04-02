@@ -1,4 +1,5 @@
 import logging
+from html.parser import HTMLParser
 
 from aiogram.exceptions import TelegramBadRequest
 from dotenv import load_dotenv
@@ -21,15 +22,11 @@ from Texts import Messages, StatesText, Help
 from app.database.models import Item
 from app.Filters.chat_types import ChatTypeFilter # импортировали наши личные фильтры
 
-
 import app.keyboards as kb
 import app.database.requests as rq
 import app.Sheets.function as fu
 import app.SerialNumber as sn
 import app.Utils.validators as vl
-
-
-
 
 #Объект класса router Router
 router = Router()
@@ -72,6 +69,7 @@ class Find(StatesGroup):
     wait = State()    # Ожидание ввода кода
     send = State()    # Отправка результатов
     exclude = State() # Фильтрация результатов
+    output_format = State() # Вывод в виде одного сообщения single или отдельно каждая съемка multiple
 
 class AdminApproval(StatesGroup):
     waiting = State()
@@ -139,7 +137,6 @@ async def cmd_start(message: Message, state: FSMContext, bot: Bot):
         await state.clear()
 
     else:
-
         await message.answer_photo(
             photo='AgACAgIAAxkBAAIzc2fkS212HK92krQwBN0jZ_V9_vkwAAJO6jEbAiMhSypAR-6ivIdJAQADAgADeQADNgQ',
             caption=Messages.START.format(name=message.from_user.full_name),
@@ -176,13 +173,6 @@ async def cmd_start(message: Message, state: FSMContext, bot: Bot):
 #     await rq.set_user(message.from_user.id)
 # # Конец старого приветсвия без проверки на регистрацию
 
-
-# отправляем методом ответа на сообщение стикер по его ID
-#     await message.reply_sticker(sticker='CAACAgIAAxkBAAPYZ36b1AUNHQg55cEEfzilVTX1lCYAArkRAAJClVFLVmGP6JmH07A2BA', reply_markup=ReplyKeyboardRemove())
-# Получаем ID пользователя и Имя из самого первого сообщения
-#    await message.reply(f'Привет :) \nТвой ID: {message.from_user.id}\nИмя: {message.from_user.first_name}\n'
-#                        f'Фамилия: {message.from_user.last_name}\nНик: @{message.from_user.username}')
-#   await message.reply('Как дела?')
 
 @router.message(Command('help'))
 async def  cmd_help(message: Message, state: FSMContext, bot: Bot):
@@ -321,12 +311,10 @@ async def menu_core_handler(source: Message | CallbackQuery, state: FSMContext, 
         else:
             await message.answer(error_text)
 
-
 # Обработчик команды /menu
 @router.message(Command('menu'))
 async def menu_command(message: Message, state: FSMContext, bot: Bot):
     await menu_core_handler(message, state, bot)
-
 
 # Обработчик callback menu_personal
 @router.callback_query(F.data == 'menu_personal')
@@ -407,14 +395,12 @@ async def delete_all_previous_messages(chat_id: int, state: FSMContext, bot: Bot
 async def send_typing_and_message(chat_id: int, bot: Bot, text: str, state: FSMContext = None, parse_mode=None, reply_markup=None):
     """
     Отправляет сообщение с анимацией печати и добавляет его в историю сообщений.
-
     Args:
         chat_id (int): ID чата.
         bot (Bot): Объект бота.
         text (str): Текст сообщения.
         state (FSMContext): Состояние FSM.
         reply_markup: Клавиатура для сообщения.
-
     Returns:
         Message: Отправленное сообщение.
         :param parse_mode:
@@ -624,33 +610,6 @@ async def cancel_heandler(message: types.Message, state: FSMContext) -> None:
 
 # Вопросы для регистрации пользователя
 
-#Тестирую удаление всех сообщений, оставил прошлую версию
-# @router.message(StateFilter(None), Command('register'))
-# async def register(message: Message, state: FSMContext):
-#     await state.clear()
-#     await message.answer('Начнём регистрацию.')
-#     await asyncio.sleep(1)
-#     await state.set_state(Register.nameRU)
-#     new_message = await message.answer('Введите ваше ФИО на русском языке', reply_markup=ReplyKeyboardRemove())
-#     await state.update_data(last_bot_message_id=new_message.message_id)
-
-# @router.message(DialogState.active)
-# async def handle_dialog(message: types.Message, state: FSMContext):
-#     # Добавляем сообщение пользователя в историю
-#     data = await state.get_data()
-#     history = data["message_history"] + [message.message_id]
-#
-#     # Удаляем ВСЕ предыдущие сообщения
-#     await delete_all_previous_messages(message.chat.id, state)
-#     # Показываем анимацию печати
-#     await bot.send_chat_action(message.chat.id, ChatActions.TYPING)
-#     await asyncio.sleep(1)
-#     # Отправляем новое сообщение бота
-#     new_msg = await message.answer(f"✅ Принято: {message.text}")
-#     # Обновляем историю только новым сообщением бота
-#     await state.update_data(message_history=[new_msg.message_id])
-
-
 @router.message(Register.nameRU)
 async def register_nameRU(message: Message, state: FSMContext, bot: Bot):
     await mes_user_history(message, state)
@@ -698,63 +657,6 @@ async def register_nameRU(message: Message, state: FSMContext, bot: Bot):
         state, reply_markup=kb.back_cancel
     )
     await state.set_state(Register.mailcontact)
-
-#Тестирую удаление всех сообщений, оставил прошлую версию
-# @router.message(Register.nameRU)
-# async def register_nameRU(message: Message, state: FSMContext, bot: Bot):
-#     if not re.match(r"^[А-Яа-яЁё\-\' ]+$", message.text):
-#         return await message.answer("Недопустимые символы в имени, исправьте и введтие корректно имя")
-#     else:
-#         nameRU = await registr_fio(message.text)
-#         nameEN = await transliterate_russian_to_eng(message.text)
-#         initials = await get_initials(nameEN)
-#         await state.update_data(nameRU=nameRU, tg_id=message.from_user.id, nameEN=nameEN, idn=initials)
-#         data = await state.get_data()
-#         last_bot_message_id = data.get("last_bot_message_id")
-#         if last_bot_message_id:
-#             await delete_message_safe(message.chat.id, last_bot_message_id, bot)
-#         # Удаляем сообщение пользователя
-#         await delete_message_safe(message.chat.id, message.message_id, bot)
-#         # Показываем анимацию "печатается"
-#         await bot.send_chat_action(chat_id=message.chat.id, action=ChatAction.TYPING)
-#         await asyncio.sleep(1)  # Имитация задержки печати
-#         # Отправляем новое сообщение
-#         new_message = await message.answer(
-#             f'Ваше имя RU: {nameRU}\n'
-#             f'Ваше имя EN: {nameEN}\n'
-#             f'Ваши 🪪 Инициалы: {initials}\n\n'
-#             f'Введите 📫 Контакты  по которым с вами можно связаться, почта или социальные сети'
-#         )
-#         # Обновляем message_id последнего сообщения бота в состоянии
-#         await state.update_data(last_bot_message_id=new_message.message_id)
-#         await state.set_state(Register.mailcontact)
-#
-
-#-----------------------------------------------------------------------------------------------------------------------
-# @router.message(Register.nameEN)
-# async def register_nameEN(message: Message, state: FSMContext):
-#     await state.update_data(nameEN=message.text)
-#     await state.set_state(Register.idn)
-#     await message.answer('Введите ваши 🪪 Инициалы на латинице, они будут подставленны в имя файла ваших фотографий, как пример вот так KNA')
-#
-#
-# @router.message(Register.idn)
-# async def register_idn(message: Message, state: FSMContext):
-#     # Очищаем ввод от всех символов, кроме букв, и приводим к верхнему регистру
-#     clean_idn = re.sub(r'[^A-Za-z]', '', message.text).upper()
-#     # Проверяем длину и наличие только букв
-#     if len(clean_idn) != 3:
-#         await message.answer(
-#             "❌ 🪪 Инициалы должны состоять ровно из трёх латинских букв.\n"
-#             "Пример: KNA\nПопробуйте ещё раз:"
-#         )
-#         return  # Оставляем пользователя в состоянии Register.idn
-#
-#     # Сохраняем очищенные данные
-#     await state.update_data(idn=clean_idn)
-#     await state.set_state(Register.mailcontact)
-#     await message.answer('Введите 📫 Контакты  по которым с вами можно связаться, почта или социальные сети')
-#-----------------------------------------------------------------------------------------------------------------------
 
 @router.message(Register.mailcontact)
 async def register_mailcontact(message: Message, state: FSMContext, bot: Bot):
@@ -975,11 +877,7 @@ async def handle_media_group(message: Message, bot: Bot, state: FSMContext):
     media_group_id = message.media_group_id
     username = message.from_user.username
     data = await state.get_data()
-    await send_typing_and_message(
-        message.chat.id, bot,
-        f'Обрабатываю...',
-        state
-    )
+    await send_typing_and_message(message.chat.id, bot, Texts.Messages.PROCESSING_FILES, state)
     await mes_user_history(message, state)
     try:
         if media_group_id not in media_groups_cache:
@@ -1011,7 +909,7 @@ async def handle_media_group(message: Message, bot: Bot, state: FSMContext):
         # Проверяем лимит в 3 файла
         if len(group_data["documents"]) > 3:
             group_data["invalid"] = True
-            await message.answer("❌ Максимум 3 файла в группе!")
+            await message.answer(Texts.Messages.MEDIA_GROUP_LIMIT)
             return
 
         await asyncio.sleep(1)
@@ -1041,7 +939,7 @@ async def handle_media_group(message: Message, bot: Bot, state: FSMContext):
                 # Сохраняем в FSM
                 fsm_data[f"serial{i + 1}"] = serial
                 fsm_data[f"photofile{i + 1}"] = group_data["documents"][i]["file_id"]
-                results.append(f"📁 {file_name}\n🔢 Серийный номер: {serial}")
+                results.append(Messages.FILE_INFO.format(file_name=file_name, serial=serial))
 
             # Обновляем FSM
             await state.update_data(fsm_data)
@@ -1051,23 +949,16 @@ async def handle_media_group(message: Message, bot: Bot, state: FSMContext):
                 state
             )
             if i + 1  == 2:
-                await send_typing_and_message(
-                    message.chat.id, bot,
-                    f'Спасибо, вы отправили {i + 1} фотографий, этого достаточно для {i + 1} камер, завершите регистрацию нажав на кнопку внизу.\n\n'
-                    f'Если у вас {i + 2} камеры, пришлите еще один файл с третьего фотоаппарата.',
-                    state, reply_markup=kb.getphoto)
+                await send_typing_and_message(message.chat.id, bot, Messages.PHOTO_UPLOAD_COMPLETE_2,
+                                              state, reply_markup=kb.getphoto)
                 await state.set_state(Register.photofile3)
             else:
-                await send_typing_and_message(
-                    message.chat.id, bot,
-                    f'Спасибо, вы отправили {i + 1} фотографий, этого достаточно для {i + 1} камер, завершите регистрацию нажав на кнопку внизу.\n\n'
-                    f'Если у вас {i + 2} камеры, свяжитесь с рукводством.',
-                    state, reply_markup=kb.getphoto)
+                await send_typing_and_message(message.chat.id, bot, Messages.PHOTO_UPLOAD_COMPLETE_3,
+                                              state, reply_markup=kb.getphoto)
                 await state.set_state(Register.verify)
 
-
     except Exception as e:
-        await message.answer(f"⚠️ Ошибка, программист хочет денег: {str(e)}")
+        await message.answer(f"⚠️ Ошибка в handle_media_group, программист хочет денег: {str(e)}")
 
     finally:
         if media_group_id in media_groups_cache:
@@ -1080,12 +971,8 @@ async def register_photofile(message: types.Message, state: FSMContext, bot: Bot
     serial = await sn.main_serial(message)
     await state.update_data(photofile1=message.document.file_id)
     await state.update_data(serial1=serial)
-    await message.answer('Вы отправили один файл.\nОтправьте фотографию  с другой камеры так же файлом, или завершите отправку фотографий '
-                         'нажав на кнопку ниже.',
-                         reply_markup=kb.getphoto)
+    await message.answer(Texts.Messages.PHOTO_1, parse_mode=ParseMode.HTML ,reply_markup=kb.getphoto)
     await state.set_state(Register.photofile2)
-
-
 
 @router.message(Register.photofile2, F.document)
 async def register_photofile(message: types.Message, state: FSMContext, bot: Bot):
@@ -1096,9 +983,7 @@ async def register_photofile(message: types.Message, state: FSMContext, bot: Bot
     await state.update_data(photofile2=message.document.file_id)
     await state.set_state(Register.photofile3)
     await save_document(message, bot)
-    await message.answer('Вы отправили 2 файла.\nВсего принимается 3 файла. Отправьте фотографию  с другой камеры так же файлом, или '
-                         'завершите отправку фотографий нажав на кнопку ниже.',
-                         reply_markup=kb.getphoto)
+    await message.answer(Texts.Messages.PHOTO_2, parse_mode=ParseMode.HTML ,reply_markup=kb.getphoto)
     await state.set_state(Register.photofile3)
 
 @router.message(Register.photofile3, F.document)
@@ -1111,8 +996,7 @@ async def register_photofile(message: types.Message, state: FSMContext, bot: Bot
         await state.update_data(serial3=serial)
         await state.update_data(photofile3=message.document.file_id)
         await save_document(message, bot)
-        await message.answer('Спасибо вы отправили 3 фотографии, этого достаточно',
-                             reply_markup=kb.getphoto)
+        await message.answer(Texts.Messages.PHOTO_3, parse_mode=ParseMode.HTML ,reply_markup=kb.getphoto)
         await state.set_state(Register.verify)
     else:
         await state.set_state(Register.verify)
@@ -1458,14 +1342,6 @@ async def schedule_pers(callback_query: types.CallbackQuery, state: FSMContext):
     await state.set_state(Find.exclude)
 
 
-
-# #Поиск по таблице
-# @router.message(F.text.lower() == "расписание")
-# async def deepseek(message: Message, state: FSMContext):
-#     await message.answer('Напиши что ты хочешь найти?', reply_markup=kb.find)
-#     # Устанавливаем состояние ожидания выбора слов исключений
-#     await state.set_state(Find.exclude)
-
 # Выполняет поиск по инициалам "ABC" и отправляет результаты без клавиатуры.
 @router.callback_query(F.data == 'general')
 async def handle_general_search(callback: CallbackQuery):
@@ -1493,7 +1369,7 @@ async def handle_general_search(callback: CallbackQuery):
 
         # Формируем детали только для непустых значений
         details = []
-        labels = ["Событие", "Место", "Вertime"]  # Порядок соответствует reversed(above)
+        labels = ["Время", "Место", "Событие"]  # Порядок соответствует reversed(above)
 
         for label, val in zip(labels, reversed(above)):
             if val.strip():  # Добавляем только непустые значения
@@ -1501,7 +1377,7 @@ async def handle_general_search(callback: CallbackQuery):
 
         # Формируем сообщение (гарантировано есть код и хотя бы одна деталь)
         response = (
-           f"📌 Результат {i}:\n"
+           f"📌 Съемка {i}:\n"
            f"💡 Код: {value}\n"
            "📚 Детали:\n"
            + "\n".join(details))
@@ -1512,7 +1388,7 @@ async def handle_general_search(callback: CallbackQuery):
 @router.callback_query(Find.exclude)
 async def process_exclude_words(callback: CallbackQuery, state: FSMContext):
     # Игнорируем невалидные callback_data
-    if callback.data not in {'ready', 'clear', 'new', 'all'}:
+    if callback.data not in {'ready', 'clear', 'new', 'all', 'texts'}:
         await callback.answer("⚠️ Действие недоступно")
         return
 
@@ -1522,6 +1398,7 @@ async def process_exclude_words(callback: CallbackQuery, state: FSMContext):
     # Инициализируем обе переменные
     exclude_words = []
     include_values = []
+    output_format = "multiple"  # Значение по умолчанию
 
     # Определяем список исключений на основе callback_data
     exclude_words = []
@@ -1531,10 +1408,17 @@ async def process_exclude_words(callback: CallbackQuery, state: FSMContext):
         include_values = ["ОТМЕНА"]
     elif callback.data == "new":
         exclude_words = ["СНЯТО", "ОТМЕНА", "СНИМАЮТ"]
+    elif callback.data == "texts":
+        output_format = "single"  # Устанавливаем текстовый формат
     # Если callback_data == "exclude_none", список исключений останется пустым
 
     # Сохраняем список исключений в state
-    await state.update_data(exclude_words=exclude_words, include_values=include_values)
+    # Обновляем состояние с новыми параметрами
+    await state.update_data(
+        exclude_words=exclude_words,
+        include_values=include_values,
+        output_format=output_format
+    )
 
     # Получаем текущие данные состояния
     data = await state.get_data()
@@ -1566,148 +1450,13 @@ async def process_exclude_words(callback: CallbackQuery, state: FSMContext):
     await find_all_text_code(callback.message, state)  # Вызываем функцию поиска
 
 
-
-# # Вывод каждого кода отдельным сообщением
-# @router.message(Find.send)
-# async def find_all_text_code(message: Message, state: FSMContext):
-#     # Получаем список исключений и инициалы из state
-#     data = await state.get_data()
-#     exclude_words: List[str] = data.get("exclude_words", [])
-#     initials: str = data.get("initials", "")
-#
-#     if not initials:
-#         await message.answer("🔎 Инициалы не найдены.")
-#         await state.clear()
-#         return
-#
-#         # Выполняем поиск
-#     results = await fu.find_all_text_code(prefix=initials, exclude_words=exclude_words)
-#
-#     # results = await fu.find_all_text_code(prefix=message.text, exclude_words=exclude_words)
-#
-#     # Дополнительная фильтрация на случай если все above_values стали пустыми
-#     filtered_results = [
-#         (row, col, val, above)
-#         for row, col, val, above in results
-#         if any(above)  # Оставляем только записи где есть хотя бы одно значение выше
-#     ]
-#
-#     if not filtered_results:
-#         await message.answer("🔎 Ничего не найдено или все результаты не имеют данных выше 😔")
-#         await state.clear()
-#         return
-#
-#     labels = ["Время", "Место", "Название"]  # Кастомные названия для строк
-#     # Отправляем общее количество результатов
-#     await message.answer(f"🔍 Найдено результатов: {len(filtered_results)}")
-#
-#     # Отправляем каждый результат отдельным сообщением
-#     for i, (row, col, value, above) in enumerate(filtered_results, 1):
-#         response = (
-#             f"📌 Результат {i} из {len(filtered_results)}:\n"
-#             # f"📍 Строка: {row} | Колонка: {col}\n" # номер строки из таблицы
-#             f"💡 Код съемки: {value}\n"
-#         )
-#
-#         # Добавляем информацию о ячейках выше
-#         if above:
-#             response += "📚 Съемка:\n"
-#             for label, val in zip(labels[-len(above):], reversed(above)):
-#                 response += f"   ▫️ {label}: {val}\n"
-#         # if any(above):
-#         #     response += "⬆️ Выше:\n"
-#         #     for label, val in zip(labels, reversed(above)):
-#         #         if val:
-#         #             response += f"   ▪️ {label}: {val}\n"
-#             response += f"✅ Персональный код: {value}\n\n"
-#             # Создаем клавиатуру с динамическими параметрами
-#             keyboard = await kb.create_task_keyboard(row=row, col=col, code=value)
-#             await message.answer(response, reply_markup=keyboard)
-#             await asyncio.sleep(0.3)  # Задержка между сообщениями
-#
-#     await state.clear()
-
-
-# # Новая функция с учётом редактирования Вывод каждого кода отдельным сообщением
-# @router.message(Find.send)
-# async def find_all_text_code(message: Message, state: FSMContext):
-#     data = await state.get_data()
-#     exclude_words = data.get("exclude_words", [])
-#     include_values = data.get("include_values", [])
-#     initials = data.get("initials", "")
-#     logging.info(f'Инициалы в FSM: {initials}')
-#
-#     if not initials:
-#         await message.answer("🔎 Инициалы не найдены.")
-#         await state.clear()
-#         return
-#
-#     try:
-#         results = await fu.find_all_text_code(
-#             prefix=initials,
-#             exclude_words=exclude_words,
-#             include_values=include_values,
-#             search_range="A1:AF67",
-#         )
-#
-#         filtered_results = [
-#             (row, col, val, above)
-#             for row, col, val, above in results
-#             if any(above)
-#         ]
-#
-#         if not filtered_results:
-#             await message.answer("🔎 Ничего не найдено")
-#             await state.set_state(Find.exclude)
-#             return
-#
-#         status_msg = await message.answer(f"🔍 Найдено результатов: {len(filtered_results)}")
-#
-#         # Создаем список для хранения ID сообщений
-#         message_ids = []
-#
-#         for i, (row, col, value, above) in enumerate(filtered_results, 1):
-#             below_value = await fu.get_cell_value(row + 1, col)
-#
-#             response = (
-#                 f"📌 Результат {i}:\n"
-#                 f"💡 Код: {value}\n"
-#                 f"✅ Статус: {below_value}\n"
-#                 "📚 Детали:\n"
-#             )
-#
-#             for label, val in zip(["Время", "Место", "Событие"], reversed(above)):
-#                 response += f"   ▫️ {label}: {val}\n"
-#
-#             # Сначала отправляем сообщение
-#             sent_message = await message.answer(response)
-#
-#             # Создаем клавиатуру с REAL message_id
-#             keyboard = await kb.create_task_keyboard(
-#                 row=row,
-#                 col=col,
-#                 code=value,
-#                 message_id=sent_message.message_id  # Используем реальный ID
-#             )
-#
-#             # Обновляем сообщение с клавиатурой
-#             await sent_message.edit_reply_markup(reply_markup=keyboard)
-#             await asyncio.sleep(0.2)
-#
-#         # Сохраняем ID всех сообщений в state
-#         await state.update_data(message_ids=message_ids)
-#
-#     except Exception as e:
-#         await message.answer(f"⚠️ Ошибка поиска: {str(e)}")
-#
-#     await state.clear()
-
 @router.message(Find.send)
 async def find_all_text_code(message: Message, state: FSMContext):
     data = await state.get_data()
     exclude_words = data.get("exclude_words", [])
     include_values = data.get("include_values", [])
     initials = data.get("initials", "")
+    output_format = data.get("output_format", "multiple")  # Получаем формат вывода
 
     try:
         results = await fu.find_all_text_code(
@@ -1715,38 +1464,55 @@ async def find_all_text_code(message: Message, state: FSMContext):
             exclude_words=exclude_words,
             include_values=include_values,
             search_range="A1:AF67",
-            return_below_value=False  # Отключаем возврат below_value
+            return_below_value=False
         )
 
-        # Фильтруем только результаты с непустыми above
         filtered_results = [res for res in results if res[3]]
 
         if not filtered_results:
             await message.answer("🔎 Ничего не найдено")
             return
 
-        for i, (row, col, value, above) in enumerate(filtered_results, 1):
-            below_value = await fu.get_cell_value(row + 1, col)  # Получаем статус отдельно
+        if output_format == "single":
+            # Собираем все результаты в один текст
+            full_response = []
+            for i, (row, col, value, above) in enumerate(filtered_results, 1):
+                below_value = await fu.get_cell_value(row + 1, col)
+                part = (
+                    f"📌 <u>Съёмка {i}:</u>\n"
+                    # f"💡 Код: <code>{value}</code>\n"
+                    # f"✅ Статус: {below_value or 'еще не указан'}\n"
+                    "📚 Детали:\n"
+                )
+                details = []
+                for label, val in zip(["Время", "Место", "Событие"], reversed(above)):
+                    if val.strip():
+                        details.append(f"   ▫️ {label}: {val.strip()}")
+                part += "\n".join(details) if details else "   └ Нет данных"
+                full_response.append(part)
 
-            response = (
-                f"📌 Результат {i}:\n"
-                f"💡 Код: {value}\n"
-                f"✅ Статус: {below_value or 'не указан'}\n"
-                "📚 Детали:\n"
-            )
+            # Отправляем одним сообщением без клавиатуры
+            await message.answer("\n\n".join(full_response), parse_mode=ParseMode.HTML)
+        else:
+            # Стандартный вывод с клавиатурой
+            for i, (row, col, value, above) in enumerate(filtered_results, 1):
+                below_value = await fu.get_cell_value(row + 1, col)
+                response = (
+                    f"📌 <u>Съемка {i}:</u>\n"
+                    f"💡 Код: <code>{value}</code>\n"
+                    f"✅ Статус: {below_value or 'еще не указан'}\n"
+                    "📚 Детали:\n"
+                )
+                details = []
+                for label, val in zip(["Время", "Место", "Событие"], reversed(above)):
+                    if val.strip():
+                        details.append(f"   ▫️ {label}: {val.strip()}")
+                response += "\n".join(details) if details else "   └ Нет данных"
 
-            # Формируем только непустые значения
-            details = []
-            for label, val in zip(["Событие", "Место", "Время"], reversed(above)):
-                if val.strip():
-                    details.append(f"   ▫️ {label}: {val.strip()}")
-
-            response += "\n".join(details) if details else "   └ Нет данных"
-
-            sent_msg = await message.answer(response)
-            keyboard = await kb.create_task_keyboard(row, col, value, sent_msg.message_id)
-            await sent_msg.edit_reply_markup(reply_markup=keyboard)
-            await asyncio.sleep(0.2)
+                sent_msg = await message.answer(response, parse_mode=ParseMode.HTML)
+                keyboard = await kb.create_task_keyboard(row, col, value, sent_msg.message_id)
+                await sent_msg.edit_reply_markup(reply_markup=keyboard)
+                await asyncio.sleep(0.2)
 
     except Exception as e:
         await message.answer(f"⚠️ Ошибка: {str(e)}")

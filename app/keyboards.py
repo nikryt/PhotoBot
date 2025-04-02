@@ -55,6 +55,7 @@ cancel = InlineKeyboardMarkup(inline_keyboard=[
 
 find = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text=Buttons.GENERAL, callback_data='general')],
+    [InlineKeyboardButton(text=Buttons.ALL_TEXTS, callback_data='texts')],
     [InlineKeyboardButton(text=Buttons.ALL, callback_data='all'), InlineKeyboardButton(text=Buttons.DONE, callback_data='ready')],
     [InlineKeyboardButton(text=Buttons.ERROR, callback_data='clear'), InlineKeyboardButton(text=Buttons.NEW, callback_data='new')]
 ])
