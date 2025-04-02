@@ -1,6 +1,6 @@
 from aiogram.enums import ParseMode
 from aiogram.filters import Command
-from sqlalchemy.orm import defer
+
 
 import Texts
 from aiogram import Router, F, Bot
@@ -30,6 +30,19 @@ async def  cmd_help(message: Message, state: FSMContext, bot: Bot):
         state=state # Передаём state как именованный аргумент, указали state явно
     )
 
+# Новый обработчик для кнопки Назад
+@help_router.callback_query(F.data == "help_back")
+async def back_to_main_help(callback: CallbackQuery, bot: Bot, state: FSMContext):
+    # Создаем оригинальную клавиатуру из команды /help
+    keyboard = await create_inline_keyboard(
+        Texts.Help.PHOTO_HELP,
+        Texts.Help.BILD_HELP,
+        callback_data={0: "Photo", 1: "Bild"}
+    )
+
+    await callback.message.edit_text(text=Texts.Help.MAIN, reply_markup=keyboard)
+    await callback.answer()
+
 # Обработчик нажатия на кнопку "Photo"
 @help_router.callback_query(F.data == "Photo")
 async def photo_help(callback: CallbackQuery, bot: Bot, state: FSMContext):
@@ -53,18 +66,7 @@ async def photo_help(callback: CallbackQuery, bot: Bot, state: FSMContext):
     )
     await callback.answer()
 
-# Новый обработчик для кнопки Назад
-@help_router.callback_query(F.data == "help_back")
-async def back_to_main_help(callback: CallbackQuery, bot: Bot, state: FSMContext):
-    # Создаем оригинальную клавиатуру из команды /help
-    keyboard = await create_inline_keyboard(
-        Texts.Help.PHOTO_HELP,
-        Texts.Help.BILD_HELP,
-        callback_data={0: "Photo", 1: "Bild"}
-    )
 
-    await callback.message.edit_text(text=Texts.Help.MAIN, reply_markup=keyboard)
-    await callback.answer()
 
 @help_router.callback_query(F.data == "camera_setup")
 async def camera_setup_help(callback: CallbackQuery):
