@@ -1,4 +1,6 @@
+from aiogram.enums import ParseMode
 from aiogram.filters import Command
+from sqlalchemy.orm import defer
 
 import Texts
 from aiogram import Router, F, Bot
@@ -51,7 +53,6 @@ async def photo_help(callback: CallbackQuery, bot: Bot, state: FSMContext):
     )
     await callback.answer()
 
-
 # Новый обработчик для кнопки Назад
 @help_router.callback_query(F.data == "help_back")
 async def back_to_main_help(callback: CallbackQuery, bot: Bot, state: FSMContext):
@@ -63,4 +64,19 @@ async def back_to_main_help(callback: CallbackQuery, bot: Bot, state: FSMContext
     )
 
     await callback.message.edit_text(text=Texts.Help.MAIN, reply_markup=keyboard)
+    await callback.answer()
+
+@help_router.callback_query(F.data == "camera_setup")
+async def camera_setup_help(callback: CallbackQuery):
+    new_keyboard = await create_inline_keyboard(
+        Texts.Help.ADD_MARKS,
+        Texts.Help.BACK,
+        callback_data={
+            0: "add_marks",
+            1: "help_back"  # Новый callback для кнопки Назад
+        },
+        sizes=(2,)
+    )
+
+    await callback.message.edit_text(text=Texts.Help.CAMERA_SETUP_TEXT, parse_mode=ParseMode.HTML, reply_markup=new_keyboard)
     await callback.answer()
