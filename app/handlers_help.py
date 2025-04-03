@@ -52,33 +52,68 @@ async def photo_help(callback: CallbackQuery, bot: Bot, state: FSMContext):
         Texts.Help.ADD_MARKS,
         Texts.Help.BACK,
         callback_data={
-            0: "camera_setup",
+            0: "camera_select",
             1: "add_marks",
-            2: "help_back"  # Новый callback для кнопки Назад
+            2: "help_back"
         },
         sizes=(2, 1)
     )
 
     # Редактируем и текст, и клавиатуру
     await callback.message.edit_text(
-        text=Texts.Help.PHOTO_HELP_TEXT,  # Новый текст для раздела
+        text=Texts.Help.PHOTO_HELP_TEXT,
         reply_markup=new_keyboard
     )
     await callback.answer()
 
 
+@help_router.callback_query(F.data == "camera_select")
+async def camera_select_vendor(callback: CallbackQuery):
+    new_keyboard = await create_inline_keyboard(
+        Texts.Help.CAMERA_NIKON,
+        Texts.Help.CAMERA_CANON,
+        Texts.Help.CAMERA_SONY,
+        Texts.Help.CAMERA_FUJIFILM,
+        Texts.Help.BACK,
+        callback_data={
+            0: "nikon",
+            1: "canon",
+            2: "sony",
+            3: "fujifilm",
+            4: "help_back"
+        },
+        sizes=(2,2,1)
+    )
 
-@help_router.callback_query(F.data == "camera_setup")
-async def camera_setup_help(callback: CallbackQuery):
+    await callback.message.edit_text(text=Texts.Help.CAMERA_SELECT, parse_mode=ParseMode.HTML, reply_markup=new_keyboard)
+    await callback.answer()
+
+@help_router.callback_query(F.data == "nikon")
+async def camera_setup_nikon(callback: CallbackQuery):
     new_keyboard = await create_inline_keyboard(
         Texts.Help.ADD_MARKS,
         Texts.Help.BACK,
         callback_data={
             0: "add_marks",
-            1: "help_back"  # Новый callback для кнопки Назад
+            1: "help_back"
         },
         sizes=(2,)
     )
 
-    await callback.message.edit_text(text=Texts.Help.CAMERA_SETUP_TEXT, parse_mode=ParseMode.HTML, reply_markup=new_keyboard)
+    await callback.message.edit_text(text=Texts.Help.CAMERA_SETUP_NIKON, parse_mode=ParseMode.HTML, reply_markup=new_keyboard)
+    await callback.answer()
+
+@help_router.callback_query(F.data == "canon")
+async def camera_setup_nikon(callback: CallbackQuery):
+    new_keyboard = await create_inline_keyboard(
+        Texts.Help.ADD_MARKS,
+        Texts.Help.BACK,
+        callback_data={
+            0: "add_marks",
+            1: "help_back"
+        },
+        sizes=(2,)
+    )
+
+    await callback.message.edit_text(text=Texts.Help.CAMERA_SETUP_CANON, parse_mode=ParseMode.HTML, reply_markup=new_keyboard)
     await callback.answer()
