@@ -5,7 +5,7 @@ from aiogram.filters import Command
 import Texts
 from aiogram import Router, F, Bot
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, CallbackQuery, InputFile
+from aiogram.types import Message, CallbackQuery, InputFile, ReplyKeyboardRemove
 
 from app.handlers import send_typing_and_message, mes_user_history
 from app.keyboards import create_inline_keyboard
@@ -23,12 +23,14 @@ async def  cmd_help(message: Message, state: FSMContext, bot: Bot):
             1: "Bild"
         }
     )
+
     await send_typing_and_message(
-        message.chat.id, bot, # Передаём chat.id и bot как позиционный аргумент
-        text=Texts.Help.MAIN, # Передаём text как именованный аргумент
-        reply_markup=keyboard,
-        state=state # Передаём state как именованный аргумент, указали state явно
+    message.chat.id, bot, # Передаём chat.id и bot как позиционный аргумент
+    text=Texts.Help.MAIN, # Передаём text как именованный аргумент
+    reply_markup=keyboard,
+    state=state # Передаём state как именованный аргумент, указали state явно
     )
+
 
 # Новый обработчик для кнопки Назад
 @help_router.callback_query(F.data == "help_back")
@@ -128,6 +130,69 @@ async def camera_setup_nikon(callback: CallbackQuery):
         },
         sizes=(2,)
     )
+    # Удаляем исходное сообщение с кнопкой
+    await callback.message.delete()
 
-    await callback.message.edit_text(text=Texts.Help.CAMERA_SETUP_CANON, parse_mode=ParseMode.HTML, reply_markup=new_keyboard)
+    # Загружаем фото (используйте правильный путь/URL/file_id)
+    photo = "AgACAgIAAxkBAAI3wWfuubZjmYfQaBJkTO-gUhAWM1U1AALr6zEbzrp4S6T3XEYdasthAQADAgADeAADNgQ"  # Или URL, file_id
+
+    # Отправляем новое сообщение с фото
+    await callback.message.answer_photo(
+        photo=photo,
+        caption=Texts.Help.CAMERA_SETUP_CANON,
+        parse_mode=ParseMode.HTML,
+        reply_markup=new_keyboard
+    )
+    await callback.answer()
+
+@help_router.callback_query(F.data == "sony")
+async def camera_setup_nikon(callback: CallbackQuery):
+    new_keyboard = await create_inline_keyboard(
+        Texts.Buttons.ADD_MARKS,
+        Texts.Buttons.BACK,
+        callback_data={
+            0: "add_marks",
+            1: "help_back"
+        },
+        sizes=(2,)
+    )
+    # Удаляем исходное сообщение с кнопкой
+    await callback.message.delete()
+
+    # Загружаем фото (используйте правильный путь/URL/file_id)
+    photo = "AgACAgIAAxkBAAI38Gfuyybqqk0Ez_JC8-USIcBJHMc2AALI7DEbzrp4SwABIRV7mU5RIQEAAwIAA3kAAzYE"  # Или URL, file_id
+
+    # Отправляем новое сообщение с фото
+    await callback.message.answer_photo(
+        photo=photo,
+        caption=Texts.Help.CAMERA_SETUP_SONY,
+        parse_mode=ParseMode.HTML,
+        reply_markup=new_keyboard
+    )
+    await callback.answer()
+
+@help_router.callback_query(F.data == "fujifilm")
+async def camera_setup_nikon(callback: CallbackQuery):
+    new_keyboard = await create_inline_keyboard(
+        Texts.Buttons.ADD_MARKS,
+        Texts.Buttons.BACK,
+        callback_data={
+            0: "add_marks",
+            1: "help_back"
+        },
+        sizes=(2,)
+    )
+    # Удаляем исходное сообщение с кнопкой
+    await callback.message.delete()
+
+    # Загружаем фото (используйте правильный путь/URL/file_id)
+    photo = "AgACAgIAAxkBAAI39Wfuz5A0EyaeOwt-RT1McGPOIeEVAALf7DEbzrp4S38nn9ZGyAndAQADAgADeAADNgQ"  # Или URL, file_id
+
+    # Отправляем новое сообщение с фото
+    await callback.message.answer_photo(
+        photo=photo,
+        caption=Texts.Help.CAMERA_SETUP_FUJIFILM,
+        parse_mode=ParseMode.HTML,
+        reply_markup=new_keyboard
+    )
     await callback.answer()
