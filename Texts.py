@@ -277,7 +277,6 @@ class Caption:
     INGEST_SNAP_WIN = ("📁 Поместить файл по этому адресу:\n\n"
                        "<code>C:\\%USERPROFILE%\\AppData\\Roaming\\Camera Bits, Inc\\Photo Mechanic\\IngestDialogSettings</code>\n\n")
 
-    XMP_IPTC_WIN = "IPTC шаблон для загрузки вызвать <b>Ctrl + I</b> и выбрать этот файл"
 
     #MacOS
     INGEST_SNAP_MAC = ("📁 Поместить файл INGEST по указанному адресу:\n\n"

@@ -2,7 +2,7 @@ import json
 import logging
 from typing import Optional, Dict, Any, List, Tuple
 
-from sqlalchemy.ext.asyncio import session
+
 from sqlalchemy.orm import selectinload
 
 from app.database.models import async_session, TempChanges, Setting, BildSettings
@@ -341,6 +341,85 @@ async def get_all_photographers() -> List[Tuple[str, str]]:
         )
         logging.info(result)
         return result.all()  # Возвращаем список кортежей (idn, nameRU)
+
+#======================================================================================================================
+# # Функция для импорта записей о пользоваетлях
+#======================================================================================================================
+#Добавим функцию для получения всех пользователей.
+async def get_all_users() -> List[Item]:
+    """Возвращает всех пользователей из таблицы Item"""
+    async with async_session() as session:
+        result = await session.execute(select(Item))
+        return result.scalars().all()
+
+async def get_user_by_id(user_id: int) -> Optional[Item]:
+    """Возвращает пользователя по ID с настройками"""
+    async with async_session() as session:
+        result = await session.execute(
+            select(Item)
+            .options(selectinload(Item.bild_settings))
+            .where(Item.id == user_id)
+        )
+        return result.scalars().first()
+
+
+async def create_item_from_data(data: dict) -> dict:
+    """Создает запись Item из словаря данных"""
+    async with async_session() as session:
+        try:
+            # Удаляем переданный ID
+            data.pop("id", None)
+
+            # Извлекаем данные
+            serials = data.pop("serials", [])
+            photos = data.pop("photos", [])
+            bild_settings = data.pop("bild_settings", [])
+
+            # Заполняем поля Item
+            item_data = {
+                "serial1": serials[0] if len(serials) > 0 else None,
+                "serial2": serials[1] if len(serials) > 1 else None,
+                "serial3": serials[2] if len(serials) > 2 else None,
+                "photo1": photos[0] if len(photos) > 0 else None,
+                "photo2": photos[1] if len(photos) > 1 else None,
+                "photo3": photos[2] if len(photos) > 2 else None
+            }
+            item_data.update(data)
+
+            # Создаем и добавляем Item
+            new_item = Item(**item_data)
+            session.add(new_item)
+            await session.flush()  # Получаем ID здесь
+
+            # Сохраняем ID до коммита
+            item_id = new_item.id
+
+            # Добавляем BildSettings
+            for setting in bild_settings:
+                session.add(BildSettings(
+                    item_id=item_id,
+                    os_type=setting.get("os_type"),
+                    raw_path=setting.get("raw_path"),
+                    folder_format=setting.get("folder_format")
+                ))
+
+            await session.commit()
+
+            # Возвращаем данные без обращения к объекту
+            return {
+                "id": item_id,
+                "nameRU": item_data["nameRU"],
+                **item_data
+            }
+
+        except Exception as e:
+            await session.rollback()
+            logging.error(f"Ошибка: {str(e)}", exc_info=True)
+            raise
+
+#======================================================================================================================
+# # Функция для импорта записей о пользоваетлях
+#======================================================================================================================
 
 # функция очистки дублей при запросе в личном меню на изменение данных.
 async def delete_duplicates(tg_id: int):

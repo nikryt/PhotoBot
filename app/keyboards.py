@@ -79,6 +79,10 @@ async def admin_keyboard(registration_enabled: bool) -> InlineKeyboardMarkup:
             callback_data='toggle_registration'
         )],
         [InlineKeyboardButton(text="Можно всех посмотреть", callback_data='view_all')],
+        [
+            InlineKeyboardButton(text="📥 Импорт из БД", callback_data='import_db'),
+            InlineKeyboardButton(text="📤 Экспорт в БД", callback_data='export_db')
+        ],
         [InlineKeyboardButton(text="DeepSeek", callback_data='deepseek')],
         [InlineKeyboardButton(text="👥 Добавить редакторов", callback_data='add_editors_list')]
     ]
@@ -119,6 +123,17 @@ async def confirmation_keyboard(editor_id: int, name_ru: str) -> InlineKeyboardM
         callback_data=f"add_editor_{editor_id}"
     )
     builder.button(text="❌ Отмена", callback_data="cancel_action")
+    builder.adjust(1)
+    return builder.as_markup()
+
+# Новая функция для клавиатуры со всеми пользователями
+async def all_users_keyboard(users: list) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    for user in users:
+        builder.button(
+            text=f"{user.nameRU}",
+            callback_data=f"export_user_{user.id}"
+        )
     builder.adjust(1)
     return builder.as_markup()
 

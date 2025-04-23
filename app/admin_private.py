@@ -1,7 +1,10 @@
+import json
+import logging
+
 from aiogram import F, Router, types, Bot
 from aiogram.enums import ParseMode
 from aiogram.exceptions import TelegramBadRequest
-from aiogram.filters import Command
+from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
@@ -43,13 +46,13 @@ async def admin_keyboard(message: types.Message):
 async def get_photo(message: Message):
     await message.answer(f'ID фото: {message.photo[-1].file_id}')
 
-# Отвечаем на документ его ID
-@admin_router.message(F.document)
-async def get_document(message: Message):
-    await message.answer(f'ID документа: {message.document.file_id}')
-
-async def process_document(message: types.Message, bot: Bot):
-    await save_document(message, bot)
+# # Отвечаем на документ его ID
+# @admin_router.message(F.document)
+# async def get_document(message: Message):
+#     await message.answer(f'ID документа: {message.document.file_id}')
+#
+# async def process_document(message: types.Message, bot: Bot):
+#     await save_document(message, bot)
 
 
 # Отвечаем на стикер его ID и ID чата
@@ -214,3 +217,95 @@ async def add_editor_final(callback: CallbackQuery):
         await callback.message.answer(f"❌ Не удалось добавить {editor.nameRU}")
 
     await callback.answer()
+
+
+#======================================================================================================================
+# обработчики для импорта/экспорта и загрузки файлов
+
+# Обработчик импорта
+@admin_router.callback_query(F.data == 'import_db')
+async def import_db_handler(callback: CallbackQuery):
+    users = await rq.get_all_users()
+    if not users:
+        await callback.message.answer("❌ В базе нет пользователей")
+        return
+    await callback.message.answer(
+        "👥 Выберите пользователя:",
+        reply_markup=await kb.all_users_keyboard(users)
+    )
+    await callback.answer()
+
+
+# Обработчик выгрузки данных пользователя
+@admin_router.callback_query(F.data.startswith('export_user_'))
+async def export_user_handler(callback: CallbackQuery):
+    user_id = int(callback.data.split('_')[-1])
+    user = await rq.get_user_by_id(user_id)  # Нужно добавить эту функцию в requests.py
+    if not user:
+        await callback.message.answer("❌ Пользователь не найден")
+        return
+
+    # Формируем JSON
+    user_data = {
+        "id": user.id,
+        "name": user.name,
+        "nameRU": user.nameRU,
+        "nameEN": user.nameEN,
+        "idn": user.idn,
+        "mailcontact": user.mailcontact,
+        "tel": user.tel,
+        "role": user.role,
+        "serials": [user.serial1, user.serial2, user.serial3],
+        "photos": [user.photo1, user.photo2, user.photo3],
+        "bild_settings": [
+            {
+                "os_type": setting.os_type,
+                "raw_path": setting.raw_path,
+                "folder_format": setting.folder_format
+            }
+            for setting in user.bild_settings
+        ]
+    }
+
+    # Сохраняем в файл
+    filename = f"user_{user.id}.json"
+    with open(filename, 'w', encoding='utf-8') as f:
+        json.dump(user_data, f, ensure_ascii=False, indent=2)
+
+    # Отправляем файл
+    with open(filename, 'rb') as file:
+        await callback.message.answer_document(
+            document=types.BufferedInputFile(file.read(), filename=filename),
+            caption=f"Данные пользователя {user.nameRU}"
+        )
+    await callback.answer()
+
+
+# Обработчик экспорта (ожидание файла)
+@admin_router.callback_query(F.data == 'export_db')
+async def export_db_handler(callback: CallbackQuery, state: FSMContext):
+    await callback.message.answer("📎 Отправьте JSON-файл для импорта в БД")
+    await state.set_state("wait_export_file")
+    await callback.answer()
+
+
+# Обработчик принятия файла
+@admin_router.message(F.document, StateFilter('wait_export_file'))
+async def handle_export_file(message: Message, bot: Bot, state: FSMContext):
+    try:
+        file = await bot.get_file(message.document.file_id)
+        file_data = await bot.download_file(file.file_path)
+        user_data = json.loads(file_data.read())
+
+        # Используем данные из JSON, а не объект
+        new_user_data = await rq.create_item_from_data(user_data)
+        await message.answer(f"✅ Успешно импортирован: {new_user_data['nameRU']}")
+
+    except Exception as e:
+        await message.answer(f"❌ Ошибка: {str(e)}")
+
+    await state.clear()
+
+
+# обработчики для импорта/экспорта и загрузки файлов
+#======================================================================================================================
