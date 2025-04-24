@@ -62,7 +62,7 @@ async def async_get_camera_serial_number(image_path):
                     return str(serial)
                 else:
                     print("Все доступные теги:", metadata.keys())
-                    return "Серийный номер не найден"
+                    return "SerialNumberNoFound"
         except Exception as e:
             return f"Ошибка: {str(e)}"
 

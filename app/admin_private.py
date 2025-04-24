@@ -1,6 +1,6 @@
 import json
-import logging
 
+from pathlib import Path
 from aiogram import F, Router, types, Bot
 from aiogram.enums import ParseMode
 from aiogram.exceptions import TelegramBadRequest
@@ -20,6 +20,10 @@ import app.Utils.validators as vl
 
 admin_router = Router()
 admin_router.message.filter(ChatTypeFilter(["private"]), IsAdmin())
+
+# Создаем папку ExportDB для экспорта, если её нет
+EXPORT_DIR = Path("ExportDB")
+EXPORT_DIR.mkdir(exist_ok=True, parents=True)
 
 @admin_router.message(Command("admin"))
 async def admin_keyboard(message: types.Message):
@@ -240,7 +244,8 @@ async def import_db_handler(callback: CallbackQuery):
 @admin_router.callback_query(F.data.startswith('export_user_'))
 async def export_user_handler(callback: CallbackQuery):
     user_id = int(callback.data.split('_')[-1])
-    user = await rq.get_user_by_id(user_id)  # Нужно добавить эту функцию в requests.py
+    user = await rq.get_user_by_id(user_id)
+
     if not user:
         await callback.message.answer("❌ Пользователь не найден")
         return
@@ -267,19 +272,28 @@ async def export_user_handler(callback: CallbackQuery):
         ]
     }
 
-    # Сохраняем в файл
-    filename = f"user_{user.id}.json"
-    with open(filename, 'w', encoding='utf-8') as f:
-        json.dump(user_data, f, ensure_ascii=False, indent=2)
+    # Сохраняем в папку ExportDB
+    filename = EXPORT_DIR / f"db_{user.nameEN}.json"
 
-    # Отправляем файл
-    with open(filename, 'rb') as file:
-        await callback.message.answer_document(
-            document=types.BufferedInputFile(file.read(), filename=filename),
-            caption=f"Данные пользователя {user.nameRU}"
-        )
+    try:
+        with open(filename, 'w', encoding='utf-8') as f:
+            json.dump(user_data, f, ensure_ascii=False, indent=2)
+
+        # Отправляем файл
+        with open(filename, 'rb') as file:
+            await callback.message.answer_document(
+                document=types.BufferedInputFile(
+                    file.read(),
+                    filename=f"db_{user.nameEN}.json"
+                ),
+                caption=f"Данные пользователя:\n1. {user.nameRU}\n"
+                        f"2. {user.role}"
+            )
+
+    except Exception as e:
+        await callback.message.answer(f"❌ Ошибка при экспорте: {str(e)}")
+
     await callback.answer()
-
 
 # Обработчик экспорта (ожидание файла)
 @admin_router.callback_query(F.data == 'export_db')
