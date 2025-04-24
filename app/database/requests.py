@@ -364,9 +364,16 @@ async def get_user_by_id(user_id: int) -> Optional[Item]:
 
 
 async def create_item_from_data(data: dict) -> dict:
-    """Создает запись Item из словаря данных"""
+    """Создает запись Item из словаря данных с проверкой дубликатов"""
     async with async_session() as session:
         try:
+            # Проверяем существование записи по name
+            existing_user = await session.scalar(
+                select(Item).where(Item.name == data.get("name"))
+            )
+            if existing_user:
+                raise ValueError(f"Пользователь {data.get('nameRU')} уже существует в БД")
+
             # Удаляем переданный ID
             data.pop("id", None)
 
@@ -389,12 +396,10 @@ async def create_item_from_data(data: dict) -> dict:
             # Создаем и добавляем Item
             new_item = Item(**item_data)
             session.add(new_item)
-            await session.flush()  # Получаем ID здесь
-
-            # Сохраняем ID до коммита
-            item_id = new_item.id
+            await session.flush()
 
             # Добавляем BildSettings
+            item_id = new_item.id
             for setting in bild_settings:
                 session.add(BildSettings(
                     item_id=item_id,
@@ -405,7 +410,6 @@ async def create_item_from_data(data: dict) -> dict:
 
             await session.commit()
 
-            # Возвращаем данные без обращения к объекту
             return {
                 "id": item_id,
                 "nameRU": item_data["nameRU"],
@@ -416,7 +420,6 @@ async def create_item_from_data(data: dict) -> dict:
             await session.rollback()
             logging.error(f"Ошибка: {str(e)}", exc_info=True)
             raise
-
 #======================================================================================================================
 # # Функция для импорта записей о пользоваетлях
 #======================================================================================================================

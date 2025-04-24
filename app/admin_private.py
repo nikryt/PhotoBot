@@ -10,7 +10,7 @@ from aiogram.types import CallbackQuery, Message
 
 from app.Filters.chat_types import ChatTypeFilter, IsAdmin  # импортировали наши личные фильтры
 from app.generate import ai_generate
-from app.handlers import Gen, save_document
+from app.handlers import Gen
 
 import app.keyboards as kb
 import app.database.requests as rq
@@ -311,15 +311,15 @@ async def handle_export_file(message: Message, bot: Bot, state: FSMContext):
         file_data = await bot.download_file(file.file_path)
         user_data = json.loads(file_data.read())
 
-        # Используем данные из JSON, а не объект
         new_user_data = await rq.create_item_from_data(user_data)
         await message.answer(f"✅ Успешно импортирован: {new_user_data['nameRU']}")
 
+    except ValueError as e:
+        await message.answer(f"⚠️ {str(e)}")
     except Exception as e:
-        await message.answer(f"❌ Ошибка: {str(e)}")
+        await message.answer(f"❌ Критическая ошибка: {str(e)}")
 
     await state.clear()
-
 
 # обработчики для импорта/экспорта и загрузки файлов
 #======================================================================================================================
