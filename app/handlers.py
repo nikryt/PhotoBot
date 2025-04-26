@@ -667,7 +667,8 @@ async def register_mailcontact(message: Message, state: FSMContext, bot: Bot):
         f'🪪 Ваше имя EN: {data["nameEN"]}\n'
         f'🪪 Ваши Инициалы: {data["idn"]}\n'
         f'📫 Ваши Контакты: {data["mailcontact"]}\n\n'
-        f'☎️ Поделитесь своим Телефоном нажав на кнопку ниже.',
+        f'☎️ Поделитесь своим Телефоном нажав на кнопку "Отправить номер" ниже 👇.\n'
+        f'Или введите вручную ваш номер телефона',
         state, reply_markup=kb.get_tel
     )
     await state.set_state(Register.tel)
@@ -964,7 +965,7 @@ async def register_photofile(message: types.Message, state: FSMContext, bot: Bot
         await state.set_state(Register.photofile2)
     except TelegramBadRequest as e:
         if "file is too big" in str(e):
-            await message.answer(Texts.Messages.BIG_FILE, parse_mode=ParseMode.HTML)
+            await send_typing_and_message(message.chat.id, bot, Messages.BIG_FILE, state, parse_mode=ParseMode.HTML)
         else:
             await message.answer(f"⚠️ Ошибка при обработке файла: {str(e)}")
 
@@ -979,7 +980,7 @@ async def register_photofile(message: types.Message, state: FSMContext, bot: Bot
         await state.set_state(Register.photofile3)
     except TelegramBadRequest as e:
         if "file is too big" in str(e):
-            await message.answer(Texts.Messages.BIG_FILE, parse_mode=ParseMode.HTML)
+            await send_typing_and_message(message.chat.id, bot, Messages.BIG_FILE, state, parse_mode=ParseMode.HTML)
         else:
             await message.answer(f"⚠️ Ошибка при обработке файла: {str(e)}")
 
@@ -996,7 +997,7 @@ async def register_photofile(message: types.Message, state: FSMContext, bot: Bot
             await state.set_state(Register.verify)
         except TelegramBadRequest as e:
             if "file is too big" in str(e):
-                await message.answer(Texts.Messages.BIG_FILE, parse_mode=ParseMode.HTML)
+                await send_typing_and_message(message.chat.id, bot, Messages.BIG_FILE, state, parse_mode=ParseMode.HTML)
             else:
                 await message.answer(f"⚠️ Ошибка при обработке файла: {str(e)}")
     else:
