@@ -955,38 +955,50 @@ async def handle_media_group(message: Message, bot: Bot, state: FSMContext):
 
 @router.message(Register.photofile1, F.document)
 async def register_photofile(message: types.Message, state: FSMContext, bot: Bot):
-    await mes_user_history(message, state)
-    await save_document(message, bot)
-    serial = await sn.main_serial(message)
-    await state.update_data(photofile1=message.document.file_id)
-    await state.update_data(serial1=serial)
-    await message.answer(Texts.Messages.PHOTO_1, parse_mode=ParseMode.HTML ,reply_markup=kb.getphoto)
-    await state.set_state(Register.photofile2)
+    try:
+        await mes_user_history(message, state)
+        await save_document(message, bot)
+        serial = await sn.main_serial(message)
+        await state.update_data(photofile1=message.document.file_id, serial1=serial)
+        await message.answer(Texts.Messages.PHOTO_1, parse_mode=ParseMode.HTML, reply_markup=kb.getphoto)
+        await state.set_state(Register.photofile2)
+    except TelegramBadRequest as e:
+        if "file is too big" in str(e):
+            await message.answer(Texts.Messages.BIG_FILE, parse_mode=ParseMode.HTML)
+        else:
+            await message.answer(f"⚠️ Ошибка при обработке файла: {str(e)}")
 
 @router.message(Register.photofile2, F.document)
 async def register_photofile(message: types.Message, state: FSMContext, bot: Bot):
-    await mes_user_history(message, state)
-    await save_document(message, bot)
-    serial = await sn.main_serial(message)
-    await state.update_data(serial2=serial)
-    await state.update_data(photofile2=message.document.file_id)
-    await state.set_state(Register.photofile3)
-    await save_document(message, bot)
-    await message.answer(Texts.Messages.PHOTO_2, parse_mode=ParseMode.HTML ,reply_markup=kb.getphoto)
-    await state.set_state(Register.photofile3)
+    try:
+        await mes_user_history(message, state)
+        await save_document(message, bot)
+        serial = await sn.main_serial(message)
+        await state.update_data(serial2=serial, photofile2=message.document.file_id)
+        await message.answer(Texts.Messages.PHOTO_2, parse_mode=ParseMode.HTML, reply_markup=kb.getphoto)
+        await state.set_state(Register.photofile3)
+    except TelegramBadRequest as e:
+        if "file is too big" in str(e):
+            await message.answer(Texts.Messages.BIG_FILE, parse_mode=ParseMode.HTML)
+        else:
+            await message.answer(f"⚠️ Ошибка при обработке файла: {str(e)}")
 
 @router.message(Register.photofile3, F.document)
 async def register_photofile(message: types.Message, state: FSMContext, bot: Bot):
     data = await state.get_data()
     await mes_user_history(message, state)
     if data["serial3"] == None or data["serial3"] == 'NoSerial':
-        await save_document(message, bot)
-        serial = await sn.main_serial(message)
-        await state.update_data(serial3=serial)
-        await state.update_data(photofile3=message.document.file_id)
-        await save_document(message, bot)
-        await message.answer(Texts.Messages.PHOTO_3, parse_mode=ParseMode.HTML ,reply_markup=kb.getphoto)
-        await state.set_state(Register.verify)
+        try:
+            await save_document(message, bot)
+            serial = await sn.main_serial(message)
+            await state.update_data(serial3=serial, photofile3=message.document.file_id)
+            await message.answer(Texts.Messages.PHOTO_3, parse_mode=ParseMode.HTML, reply_markup=kb.getphoto)
+            await state.set_state(Register.verify)
+        except TelegramBadRequest as e:
+            if "file is too big" in str(e):
+                await message.answer(Texts.Messages.BIG_FILE, parse_mode=ParseMode.HTML)
+            else:
+                await message.answer(f"⚠️ Ошибка при обработке файла: {str(e)}")
     else:
         await state.set_state(Register.verify)
 
