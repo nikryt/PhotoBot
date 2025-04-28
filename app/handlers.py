@@ -918,6 +918,7 @@ async def handle_media_group(message: Message, bot: Bot, state: FSMContext):
                 "photofile3": 'Не загружена'
             }
 
+            invalid_files = []
             results = []
             for i, file_path in enumerate(saved_files):
                 if i >= 3:  # Обрабатываем только первые 3 файла
@@ -930,22 +931,28 @@ async def handle_media_group(message: Message, bot: Bot, state: FSMContext):
                 fsm_data[f"serial{i + 1}"] = serial
                 fsm_data[f"photofile{i + 1}"] = group_data["documents"][i]["file_id"]
                 results.append(Messages.FILE_INFO.format(file_name=file_name, serial=serial))
-
-            # Обновляем FSM
-            await state.update_data(fsm_data)
-            await send_typing_and_message(
-                message.chat.id, bot,
-                "\n\n".join(results),
-                state
-            )
-            if i + 1  == 2:
-                await send_typing_and_message(message.chat.id, bot, Messages.PHOTO_UPLOAD_COMPLETE_2,
-                                              state, reply_markup=kb.getphoto)
-                await state.set_state(Register.photofile3)
+                if serial == "SerialNumberNoFound":
+                    invalid_files.append(file_name)
+            if invalid_files:
+                error_msg = Texts.Messages.SERIAL_NOT_FOUND_IN_GROUP.format(files=',\n'.join(invalid_files))
+                await send_typing_and_message(message.chat.id, bot, error_msg, state)
             else:
-                await send_typing_and_message(message.chat.id, bot, Messages.PHOTO_UPLOAD_COMPLETE_3,
-                                              state, reply_markup=kb.getphoto)
-                await state.set_state(Register.verify)
+
+                # Обновляем FSM
+                await state.update_data(fsm_data)
+                await send_typing_and_message(
+                    message.chat.id, bot,
+                    "\n\n".join(results),
+                    state
+                )
+                if i + 1  == 2:
+                    await send_typing_and_message(message.chat.id, bot, Messages.PHOTO_UPLOAD_COMPLETE_2,
+                                                  state, reply_markup=kb.getphoto)
+                    await state.set_state(Register.photofile3)
+                else:
+                    await send_typing_and_message(message.chat.id, bot, Messages.PHOTO_UPLOAD_COMPLETE_3,
+                                                  state, reply_markup=kb.getphoto)
+                    await state.set_state(Register.verify)
 
     except Exception as e:
         await message.answer(f"⚠️ Ошибка в handle_media_group, программист хочет денег: {str(e)}")
@@ -960,6 +967,9 @@ async def register_photofile(message: types.Message, state: FSMContext, bot: Bot
         await mes_user_history(message, state)
         await save_document(message, bot)
         serial = await sn.main_serial(message)
+        if serial == "SerialNumberNoFound":
+            await send_typing_and_message(message.chat.id, bot, Texts.Messages.SERIAL_NOT_FOUND_SINGLE, state)
+            return
         await state.update_data(photofile1=message.document.file_id, serial1=serial)
         await message.answer(Texts.Messages.PHOTO_1, parse_mode=ParseMode.HTML, reply_markup=kb.getphoto)
         await state.set_state(Register.photofile2)
@@ -975,6 +985,9 @@ async def register_photofile(message: types.Message, state: FSMContext, bot: Bot
         await mes_user_history(message, state)
         await save_document(message, bot)
         serial = await sn.main_serial(message)
+        if serial == "SerialNumberNoFound":
+            await send_typing_and_message(message.chat.id, bot, Texts.Messages.SERIAL_NOT_FOUND_SINGLE, state)
+            return
         await state.update_data(serial2=serial, photofile2=message.document.file_id)
         await message.answer(Texts.Messages.PHOTO_2, parse_mode=ParseMode.HTML, reply_markup=kb.getphoto)
         await state.set_state(Register.photofile3)
@@ -992,6 +1005,9 @@ async def register_photofile(message: types.Message, state: FSMContext, bot: Bot
         try:
             await save_document(message, bot)
             serial = await sn.main_serial(message)
+            if serial == "SerialNumberNoFound":
+                await send_typing_and_message(message.chat.id, bot, Texts.Messages.SERIAL_NOT_FOUND_SINGLE, state)
+                return
             await state.update_data(serial3=serial, photofile3=message.document.file_id)
             await message.answer(Texts.Messages.PHOTO_3, parse_mode=ParseMode.HTML, reply_markup=kb.getphoto)
             await state.set_state(Register.verify)

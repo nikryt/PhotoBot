@@ -57,7 +57,6 @@ async def async_get_camera_serial_number(image_path):
                          or metadata.get("MakerNotes:SerialNumber") \
                          or metadata.get("MakerNotes:CameraSerialNumber") \
                          or metadata.get("SerialNumber")
-
                 if serial:
                     return str(serial)
                 else:
@@ -65,7 +64,6 @@ async def async_get_camera_serial_number(image_path):
                     return "SerialNumberNoFound"
         except Exception as e:
             return f"Ошибка: {str(e)}"
-
     return await asyncio.to_thread(sync_task)
 
 
