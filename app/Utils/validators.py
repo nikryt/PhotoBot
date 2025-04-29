@@ -1,10 +1,11 @@
 import re
 import phonenumbers
+from aiogram.fsm.context import FSMContext
 from phonenumbers import NumberParseException, PhoneNumberFormat
 from pathlib import Path
 from typing import Tuple
 from typing import Optional, List, Dict, Any
-from Texts import Translit_en  # Импорт словаря транслитерации
+from Texts import Translit_en, Messages  # Импорт словаря транслитерации
 
 
 class ValidationError(Exception):
@@ -178,9 +179,10 @@ async def filter_emails(text: str) -> Optional[str]:
     cleaned_text = re.sub(email_pattern, '', text).strip()
 
     return cleaned_text if cleaned_text else None
+
 #=======================================================================================================================
 # Проверка путей операционных систем
-#=======================================================================================================================
+
 async def validate_windows_path(path: str) -> Tuple[bool, str]:
     """
     Валидация пути Windows
@@ -252,6 +254,24 @@ async def normalize_path(path: str, os_type: str) -> str:
     except Exception as e:
         raise ValueError(f"Ошибка нормализации пути: {str(e)}")
 
-#=======================================================================================================================
+
 # Проверка путей операционных систем
+#=======================================================================================================================
+
+#=======================================================================================================================
+# Проверка уникальности серийного номера присланых файлов
+
+async def check_duplicate_serial(state: FSMContext, new_serial: str) -> bool:
+    data = await state.get_data()
+    existing_serials = [data.get('serial1'), data.get('serial2'), data.get('serial3')]
+    return new_serial in existing_serials
+
+async def validate_serial(serial: str, state: FSMContext) -> dict:
+    if serial == "SerialNumberNoFound":
+        return {'valid': False, 'message': Messages.SERIAL_NOT_FOUND_SINGLE}
+    if await check_duplicate_serial(state, serial):
+        return {'valid': False, 'message': Messages.SERIAL_DUPLICATE}
+    return {'valid': True, 'message': ''}
+
+# Проверка уникальности серийного номера присланых файлов
 #=======================================================================================================================

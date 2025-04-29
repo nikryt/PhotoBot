@@ -920,6 +920,7 @@ async def handle_media_group(message: Message, bot: Bot, state: FSMContext):
 
             invalid_files = []
             results = []
+
             for i, file_path in enumerate(saved_files):
                 if i >= 3:  # Обрабатываем только первые 3 файла
                     break
@@ -967,8 +968,10 @@ async def register_photofile(message: types.Message, state: FSMContext, bot: Bot
         await mes_user_history(message, state)
         await save_document(message, bot)
         serial = await sn.main_serial(message)
-        if serial == "SerialNumberNoFound":
-            await send_typing_and_message(message.chat.id, bot, Texts.Messages.SERIAL_NOT_FOUND_SINGLE, state)
+        # Валидация
+        validation = await vl.validate_serial(serial, state)
+        if not validation['valid']:
+            await send_typing_and_message(message.chat.id, bot, validation['message'], state)
             return
         await state.update_data(photofile1=message.document.file_id, serial1=serial)
         await message.answer(
@@ -992,8 +995,9 @@ async def register_photofile(message: types.Message, state: FSMContext, bot: Bot
         await mes_user_history(message, state)
         await save_document(message, bot)
         serial = await sn.main_serial(message)
-        if serial == "SerialNumberNoFound":
-            await send_typing_and_message(message.chat.id, bot, Texts.Messages.SERIAL_NOT_FOUND_SINGLE, state)
+        validation = await vl.validate_serial(serial, state)
+        if not validation['valid']:
+            await send_typing_and_message(message.chat.id, bot, validation['message'], state)
             return
         await state.update_data(serial2=serial, photofile2=message.document.file_id)
         await message.answer(
@@ -1019,8 +1023,9 @@ async def register_photofile(message: types.Message, state: FSMContext, bot: Bot
         try:
             await save_document(message, bot)
             serial = await sn.main_serial(message)
-            if serial == "SerialNumberNoFound":
-                await send_typing_and_message(message.chat.id, bot, Texts.Messages.SERIAL_NOT_FOUND_SINGLE, state)
+            validation = await vl.validate_serial(serial, state)
+            if not validation['valid']:
+                await send_typing_and_message(message.chat.id, bot, validation['message'], state)
                 return
             await state.update_data(serial3=serial, photofile3=message.document.file_id)
             await message.answer(
