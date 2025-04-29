@@ -971,7 +971,14 @@ async def register_photofile(message: types.Message, state: FSMContext, bot: Bot
             await send_typing_and_message(message.chat.id, bot, Texts.Messages.SERIAL_NOT_FOUND_SINGLE, state)
             return
         await state.update_data(photofile1=message.document.file_id, serial1=serial)
-        await message.answer(Texts.Messages.PHOTO_1, parse_mode=ParseMode.HTML, reply_markup=kb.getphoto)
+        await message.answer(
+            Texts.Messages.PHOTO_1.format(
+                file_name=message.document.file_name,
+                serial=serial
+            ),
+            parse_mode=ParseMode.HTML,
+            reply_markup=kb.getphoto
+        )
         await state.set_state(Register.photofile2)
     except TelegramBadRequest as e:
         if "file is too big" in str(e):
@@ -989,7 +996,14 @@ async def register_photofile(message: types.Message, state: FSMContext, bot: Bot
             await send_typing_and_message(message.chat.id, bot, Texts.Messages.SERIAL_NOT_FOUND_SINGLE, state)
             return
         await state.update_data(serial2=serial, photofile2=message.document.file_id)
-        await message.answer(Texts.Messages.PHOTO_2, parse_mode=ParseMode.HTML, reply_markup=kb.getphoto)
+        await message.answer(
+            Texts.Messages.PHOTO_2.format(
+                file_name=message.document.file_name,
+                serial=serial
+            ),
+            parse_mode=ParseMode.HTML,
+            reply_markup=kb.getphoto
+        )
         await state.set_state(Register.photofile3)
     except TelegramBadRequest as e:
         if "file is too big" in str(e):
@@ -1009,7 +1023,14 @@ async def register_photofile(message: types.Message, state: FSMContext, bot: Bot
                 await send_typing_and_message(message.chat.id, bot, Texts.Messages.SERIAL_NOT_FOUND_SINGLE, state)
                 return
             await state.update_data(serial3=serial, photofile3=message.document.file_id)
-            await message.answer(Texts.Messages.PHOTO_3, parse_mode=ParseMode.HTML, reply_markup=kb.getphoto)
+            await message.answer(
+                Texts.Messages.PHOTO_3.format(
+                    file_name=message.document.file_name,
+                    serial=serial
+                ),
+                parse_mode=ParseMode.HTML,
+                reply_markup=kb.getphoto
+            )
             await state.set_state(Register.verify)
         except TelegramBadRequest as e:
             if "file is too big" in str(e):
