@@ -862,6 +862,107 @@ async def select_rol(callback_query: types.CallbackQuery, state: FSMContext, bot
     await state.set_state(Register.photofile1)
 
 # Если отправленны фотогарафии группой, то выполняется этот
+# @router.message(Register.photofile1, F.content_type.in_({ContentType.DOCUMENT, ContentType.PHOTO}), F.media_group_id)
+# async def handle_media_group(message: Message, bot: Bot, state: FSMContext):
+#     media_group_id = message.media_group_id
+#     username = message.from_user.username
+#     data = await state.get_data()
+#     await send_typing_and_message(message.chat.id, bot, Texts.Messages.PROCESSING_FILES, state)
+#     await mes_user_history(message, state)
+#     try:
+#         if media_group_id not in media_groups_cache:
+#             media_groups_cache[media_group_id] = {
+#                 "username": username,
+#                 "documents": [],
+#                 "processed": False,
+#                 "invalid": False
+#             }
+#
+#         group_data = media_groups_cache[media_group_id]
+#
+#         if group_data["processed"] or group_data["invalid"]:
+#             return
+#
+#         # Добавляем файл в группу
+#         if message.document:
+#             document_data = {
+#                 "file_id": message.document.file_id,
+#                 "file_name": message.document.file_name
+#             }
+#         elif message.photo:
+#             document_data = {
+#                 "file_id": message.photo[-1].file_id,
+#                 "file_name": None
+#             }
+#         group_data["documents"].append(document_data)
+#
+#         # Проверяем лимит в 3 файла
+#         if len(group_data["documents"]) > 3:
+#             group_data["invalid"] = True
+#             await message.answer(Texts.Messages.MEDIA_GROUP_LIMIT)
+#             return
+#
+#         await asyncio.sleep(1)
+#
+#         if not group_data["invalid"] and not group_data["processed"] and data["serial1"] == 'NoSerial':
+#             group_data["processed"] = True
+#             saved_files = await process_documents(group_data["documents"], username, bot)
+#
+#             # Инициализация данных FSM
+#             fsm_data = {
+#                 "serial1": None,
+#                 "serial2": None,
+#                 "serial3": None,
+#                 "photofile1": 'Не загружена',
+#                 "photofile2": 'Не загружена',
+#                 "photofile3": 'Не загружена'
+#             }
+#
+#             invalid_files = []
+#             results = []
+#
+#             for i, file_path in enumerate(saved_files):
+#                 if i >= 3:  # Обрабатываем только первые 3 файла
+#                     break
+#
+#                 serial = await sn.async_get_camera_serial_number(file_path)
+#                 file_name = os.path.basename(file_path)
+#
+#                 # Сохраняем в FSM
+#                 fsm_data[f"serial{i + 1}"] = serial
+#                 fsm_data[f"photofile{i + 1}"] = group_data["documents"][i]["file_id"]
+#                 results.append(Messages.FILE_INFO.format(file_name=file_name, serial=serial))
+#                 if serial == "SerialNumberNoFound":
+#                     invalid_files.append(file_name)
+#             if invalid_files:
+#                 error_msg = Texts.Messages.SERIAL_NOT_FOUND_IN_GROUP.format(files=',\n'.join(invalid_files))
+#                 await send_typing_and_message(message.chat.id, bot, error_msg, state)
+#             else:
+#
+#                 # Обновляем FSM
+#                 await state.update_data(fsm_data)
+#                 await send_typing_and_message(
+#                     message.chat.id, bot,
+#                     "\n\n".join(results),
+#                     state
+#                 )
+#                 if i + 1  == 2:
+#                     await send_typing_and_message(message.chat.id, bot, Messages.PHOTO_UPLOAD_COMPLETE_2,
+#                                                   state, reply_markup=kb.getphoto)
+#                     await state.set_state(Register.photofile3)
+#                 else:
+#                     await send_typing_and_message(message.chat.id, bot, Messages.PHOTO_UPLOAD_COMPLETE_3,
+#                                                   state, reply_markup=kb.getphoto)
+#                     await state.set_state(Register.verify)
+#
+#     except Exception as e:
+#         await message.answer(f"⚠️ Ошибка в handle_media_group, программист хочет денег: {str(e)}")
+#
+#     finally:
+#         if media_group_id in media_groups_cache:
+#             del media_groups_cache[media_group_id]
+
+
 @router.message(Register.photofile1, F.content_type.in_({ContentType.DOCUMENT, ContentType.PHOTO}), F.media_group_id)
 async def handle_media_group(message: Message, bot: Bot, state: FSMContext):
     media_group_id = message.media_group_id
@@ -883,7 +984,6 @@ async def handle_media_group(message: Message, bot: Bot, state: FSMContext):
         if group_data["processed"] or group_data["invalid"]:
             return
 
-        # Добавляем файл в группу
         if message.document:
             document_data = {
                 "file_id": message.document.file_id,
@@ -896,7 +996,6 @@ async def handle_media_group(message: Message, bot: Bot, state: FSMContext):
             }
         group_data["documents"].append(document_data)
 
-        # Проверяем лимит в 3 файла
         if len(group_data["documents"]) > 3:
             group_data["invalid"] = True
             await message.answer(Texts.Messages.MEDIA_GROUP_LIMIT)
@@ -908,7 +1007,6 @@ async def handle_media_group(message: Message, bot: Bot, state: FSMContext):
             group_data["processed"] = True
             saved_files = await process_documents(group_data["documents"], username, bot)
 
-            # Инициализация данных FSM
             fsm_data = {
                 "serial1": None,
                 "serial2": None,
@@ -920,43 +1018,95 @@ async def handle_media_group(message: Message, bot: Bot, state: FSMContext):
 
             invalid_files = []
             results = []
+            file_serial_list = []
+            existing_data = await state.get_data()
+            existing_serials = [existing_data.get(f'serial{i+1}') for i in range(3)]
 
             for i, file_path in enumerate(saved_files):
-                if i >= 3:  # Обрабатываем только первые 3 файла
+                if i >= 3:
                     break
 
                 serial = await sn.async_get_camera_serial_number(file_path)
                 file_name = os.path.basename(file_path)
-
-                # Сохраняем в FSM
                 fsm_data[f"serial{i + 1}"] = serial
                 fsm_data[f"photofile{i + 1}"] = group_data["documents"][i]["file_id"]
+                fsm_data[f"photo{i + 1}_name"] = group_data["documents"][i]["file_name"]
                 results.append(Messages.FILE_INFO.format(file_name=file_name, serial=serial))
+                file_serial_list.append((serial, file_name))
                 if serial == "SerialNumberNoFound":
                     invalid_files.append(file_name)
-            if invalid_files:
-                error_msg = Texts.Messages.SERIAL_NOT_FOUND_IN_GROUP.format(files=',\n'.join(invalid_files))
-                await send_typing_and_message(message.chat.id, bot, error_msg, state)
-            else:
 
-                # Обновляем FSM
-                await state.update_data(fsm_data)
-                await send_typing_and_message(
-                    message.chat.id, bot,
-                    "\n\n".join(results),
-                    state
+            error_messages = []
+
+            if invalid_files:
+                error_messages.append(Texts.Messages.SERIAL_NOT_FOUND_IN_GROUP.format(files=',\n'.join(invalid_files)))
+
+            group_serials = [s for s, _ in file_serial_list if s != "SerialNumberNoFound"]
+            existing_valid_serials = [s for s in existing_serials if s and s not in ("SerialNumberNoFound", 'NoSerial')]
+
+            # Проверка дубликатов внутри группы
+            seen = set()
+            duplicates_in_group = {}  # Храним в формате {serial: [file1, file2]}
+            for s, file_name in file_serial_list:
+                if s != "SerialNumberNoFound":
+                    if s in seen:
+                        if s not in duplicates_in_group:
+                            duplicates_in_group[s] = []
+                        duplicates_in_group[s].append(file_name)
+                    else:
+                        seen.add(s)
+
+            # Формирование сообщения о дубликатах внутри группы
+            if duplicates_in_group:
+                duplicates_messages = []
+                for serial, files in duplicates_in_group.items():
+                    duplicates_messages.append(
+                        f"Сер.номер: {serial} -> Файлы: {', '.join(files)}"
+                    )
+
+                error_messages.append(
+                    Messages.SERIAL_DUPLICATE_IN_GROUP.format(
+                        duplicates_list="\n".join(duplicates_messages)
+                    )
                 )
-                if i + 1  == 2:
-                    await send_typing_and_message(message.chat.id, bot, Messages.PHOTO_UPLOAD_COMPLETE_2,
-                                                  state, reply_markup=kb.getphoto)
-                    await state.set_state(Register.photofile3)
-                else:
-                    await send_typing_and_message(message.chat.id, bot, Messages.PHOTO_UPLOAD_COMPLETE_3,
-                                                  state, reply_markup=kb.getphoto)
-                    await state.set_state(Register.verify)
+
+            # Проверка дубликатов с существующими данными
+            existing_data = await state.get_data()
+            existing_serials = [
+                existing_data.get('serial1'),
+                existing_data.get('serial2'),
+                existing_data.get('serial3')
+            ]
+
+            for s, file_name in file_serial_list:
+                if s != "SerialNumberNoFound" and s in existing_serials:
+                    error_messages.append(
+                        Messages.SERIAL_DUPLICATE_EXISTING.format(file=file_name)
+                    )
+            if error_messages:
+                full_error = '\n\n'.join(error_messages)
+                await send_typing_and_message(message.chat.id, bot, full_error, state)
+                group_data["invalid"] = True
+                return
+
+            # Обновление состояния, если ошибок нет
+            await state.update_data(fsm_data)
+            await send_typing_and_message(
+                message.chat.id, bot,
+                "\n\n".join(results),
+                state
+            )
+            if len(saved_files) == 2:
+                await send_typing_and_message(message.chat.id, bot, Messages.PHOTO_UPLOAD_COMPLETE_2,
+                                             state, reply_markup=kb.getphoto)
+                await state.set_state(Register.photofile3)
+            else:
+                await send_typing_and_message(message.chat.id, bot, Messages.PHOTO_UPLOAD_COMPLETE_3,
+                                               state, reply_markup=kb.getphoto)
+                await state.set_state(Register.verify)
 
     except Exception as e:
-        await message.answer(f"⚠️ Ошибка в handle_media_group, программист хочет денег: {str(e)}")
+        await message.answer(f"⚠️ Ошибка в handle_media_group: {str(e)}")
 
     finally:
         if media_group_id in media_groups_cache:
@@ -968,12 +1118,13 @@ async def register_photofile(message: types.Message, state: FSMContext, bot: Bot
         await mes_user_history(message, state)
         await save_document(message, bot)
         serial = await sn.main_serial(message)
+        current_file = message.document.file_name
         # Валидация
-        validation = await vl.validate_serial(serial, state)
+        validation = await vl.validate_serial(serial, state, current_file)
         if not validation['valid']:
             await send_typing_and_message(message.chat.id, bot, validation['message'], state)
             return
-        await state.update_data(photofile1=message.document.file_id, serial1=serial)
+        await state.update_data(photofile1=message.document.file_id, serial1=serial, photo1_name=message.document.file_name)
         await message.answer(
             Texts.Messages.PHOTO_1.format(
                 file_name=message.document.file_name,
@@ -995,11 +1146,12 @@ async def register_photofile(message: types.Message, state: FSMContext, bot: Bot
         await mes_user_history(message, state)
         await save_document(message, bot)
         serial = await sn.main_serial(message)
-        validation = await vl.validate_serial(serial, state)
+        current_file = message.document.file_name
+        validation = await vl.validate_serial(serial, state, current_file)
         if not validation['valid']:
             await send_typing_and_message(message.chat.id, bot, validation['message'], state)
             return
-        await state.update_data(serial2=serial, photofile2=message.document.file_id)
+        await state.update_data(serial2=serial, photofile2=message.document.file_id, photo2_name=message.document.file_name)
         await message.answer(
             Texts.Messages.PHOTO_2.format(
                 file_name=message.document.file_name,
@@ -1023,11 +1175,12 @@ async def register_photofile(message: types.Message, state: FSMContext, bot: Bot
         try:
             await save_document(message, bot)
             serial = await sn.main_serial(message)
-            validation = await vl.validate_serial(serial, state)
+            current_file = message.document.file_name
+            validation = await vl.validate_serial(serial, state, current_file)
             if not validation['valid']:
                 await send_typing_and_message(message.chat.id, bot, validation['message'], state)
                 return
-            await state.update_data(serial3=serial, photofile3=message.document.file_id)
+            await state.update_data(serial3=serial, photofile3=message.document.file_id, photo3_name=message.document.file_name)
             await message.answer(
                 Texts.Messages.PHOTO_3.format(
                     file_name=message.document.file_name,

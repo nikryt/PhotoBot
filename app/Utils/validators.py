@@ -261,16 +261,38 @@ async def normalize_path(path: str, os_type: str) -> str:
 #=======================================================================================================================
 # Проверка уникальности серийного номера присланых файлов
 
-async def check_duplicate_serial(state: FSMContext, new_serial: str) -> bool:
-    data = await state.get_data()
-    existing_serials = [data.get('serial1'), data.get('serial2'), data.get('serial3')]
-    return new_serial in existing_serials
+# async def check_duplicate_serial(state: FSMContext, new_serial: str) -> bool:
+#     data = await state.get_data()
+#     existing_serials = [data.get('serial1'), data.get('serial2'), data.get('serial3')]
+#     return new_serial in existing_serials
 
-async def validate_serial(serial: str, state: FSMContext) -> dict:
+async def check_duplicate_serial(state: FSMContext, new_serial: str) -> tuple:
+    data = await state.get_data()
+    for i in range(1, 4):
+        if data.get(f'serial{i}') == new_serial:
+            return True, data.get(f'photo{i}_name', 'неизвестный файл')
+    return False, None
+
+# async def validate_serial(serial: str, state: FSMContext) -> dict:
+#     if serial == "SerialNumberNoFound":
+#         return {'valid': False, 'message': Messages.SERIAL_NOT_FOUND_SINGLE}
+#     if await check_duplicate_serial(state, serial):
+#         return {'valid': False, 'message': Messages.SERIAL_DUPLICATE}
+#     return {'valid': True, 'message': ''}
+
+async def validate_serial(serial: str, state: FSMContext, current_file: str) -> dict:
     if serial == "SerialNumberNoFound":
         return {'valid': False, 'message': Messages.SERIAL_NOT_FOUND_SINGLE}
-    if await check_duplicate_serial(state, serial):
-        return {'valid': False, 'message': Messages.SERIAL_DUPLICATE}
+
+    is_duplicate, existing_file = await check_duplicate_serial(state, serial)
+    if is_duplicate:
+        return {
+            'valid': False,
+            'message': Messages.SERIAL_DUPLICATE.format(
+                serial=serial,
+                existing_file=existing_file
+            )
+        }
     return {'valid': True, 'message': ''}
 
 # Проверка уникальности серийного номера присланых файлов
