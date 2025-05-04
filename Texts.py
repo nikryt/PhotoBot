@@ -34,6 +34,14 @@ class Messages:
     NAME_EN = "Введите ваше ФИО на английском языке"
     IDN = "Введите ваши инициалы на латинице (пример: KNA)"
     MAIL_CONTACT = "Введите контакты для связи (почта или соцсети)"
+    INVALID_CONTACT = (
+        "Некорректный формат контакта. Допустимо:\n"
+        "• Email (example@domain.ru)\n"
+        "• Телеграм (@username)\n"
+        "• Ссылки на VK/Facebook/Instagram\n"
+        "Примеры:\nnikryt@nikryt.ru\n@mytg\nvk.com/id123"
+    )
+
     PHONE_REQUEST = "Поделитесь своим телефоном:"
     ROLE_SELECT = "Выберите вашу роль:"
     DONE = "Подтвердите изменения."

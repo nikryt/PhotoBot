@@ -650,6 +650,13 @@ async def register_nameRU(message: Message, state: FSMContext, bot: Bot):
 @router.message(Register.mailcontact)
 async def register_mailcontact(message: Message, state: FSMContext, bot: Bot):
     await mes_user_history(message, state)
+    try:
+        contact = message.text.strip()
+        if not await vl.validate_contact(contact):
+            raise vl.ValidationError(Texts.Messages.INVALID_CONTACT)
+    except vl.ValidationError as e:
+        await send_typing_and_message(message.chat.id, bot, str(e), state)
+        return
     await delete_all_previous_messages(message.chat.id, state, bot)
     await state.update_data(mailcontact=message.text)
 

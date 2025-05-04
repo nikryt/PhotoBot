@@ -1,11 +1,13 @@
 import re
 import phonenumbers
+import validators
 from aiogram.fsm.context import FSMContext
 from phonenumbers import NumberParseException, PhoneNumberFormat
 from pathlib import Path
 from typing import Tuple
 from typing import Optional, List, Dict, Any
 from Texts import Translit_en, Messages  # Импорт словаря транслитерации
+from urllib.parse import urlparse
 
 
 class ValidationError(Exception):
@@ -296,4 +298,51 @@ async def validate_serial(serial: str, state: FSMContext, current_file: str) -> 
     return {'valid': True, 'message': ''}
 
 # Проверка уникальности серийного номера присланых файлов
+#=======================================================================================================================
+
+#=======================================================================================================================
+# Валидация почты и контактов
+
+
+class ValidationError(Exception):
+    pass
+
+
+async def validate_contact(contact: str) -> bool:
+    contact = contact.strip().lower()
+
+    # Проверка email
+    if validators.email(contact):
+        return True
+
+    # Проверка социальных упоминаний и URL
+    social_domains = {
+        'vk.com', 'facebook.com', 'instagram.com',
+        't.me', 'telegram.me', 'vkontakte.ru'
+    }
+
+    # Проверка @username формата
+    if re.search(r'(?:^|\s)(@[a-zA-Z0-9_]{5,32})\b', contact):
+        return True
+
+    # Проверка URL с извлечением домена
+    url_candidate = re.sub(r'^.*?(http|www)', 'http', contact, 1)  # Удаляем текст до URL
+    if not url_candidate.startswith(('http://', 'https://')):
+        url_candidate = 'http://' + url_candidate
+
+    if validators.url(url_candidate):
+        parsed = urlparse(url_candidate)
+        domain = parsed.hostname.replace('www.', '') if parsed.hostname else ''
+
+        # Проверка домена в белом списке
+        if domain in social_domains:
+            return True
+
+        # Проверка для Telegram (t.me/username)
+        if domain == 't.me' and re.match(r'^/[a-zA-Z0-9_]{5,32}$', parsed.path):
+            return True
+
+    return False
+
+# Валидация почты и контактов
 #=======================================================================================================================
