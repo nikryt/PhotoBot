@@ -1,3 +1,5 @@
+from typing import List, Dict
+
 from aiogram import types
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 
@@ -416,4 +418,62 @@ async def photographers_keyboard():
         )
 
     builder.adjust(1)
+    return builder.as_markup()
+
+
+# Клавиатуры для парсинга таблиц
+
+async def _generate_preview(parsed_data: List[Dict], message_text: str) -> str:
+    """Генерирует превью данных"""
+    preview = f"{message_text}\n\nПример данных:\n"
+
+    for i, event in enumerate(parsed_data[:5]):
+        time = event.get('Время', '')[:20] + "..." if len(event.get('Время', '')) > 20 else event.get('Время', '')
+        name = event.get('Название', '')[:30] + "..." if len(event.get('Название', '')) > 30 else event.get('Название',
+                                                                                                            '')
+        place = event.get('Место', '')[:20] + "..." if len(event.get('Место', '')) > 20 else event.get('Место', '')
+
+        preview += f"\n{i + 1}. ⏰ {time}\n   📝 {name}\n   📍 {place}\n"
+
+    if len(parsed_data) > 5:
+        preview += f"\n... и еще {len(parsed_data) - 5} записей"
+
+    return preview
+
+
+async def _get_project_selection_keyboard():
+    """Клавиатура для выбора проекта"""
+    from aiogram.utils.keyboard import InlineKeyboardBuilder
+
+    builder = InlineKeyboardBuilder()
+    builder.button(text="🅰️ Проект 1 (строка 31)", callback_data="project_1")
+    builder.button(text="🅱️ Проект 2 (строка 112)", callback_data="project_2")
+    builder.button(text="🔢 Другая строка", callback_data="custom_row")
+    builder.adjust(1)
+
+    return builder.as_markup()
+
+
+async def _get_sheet_selection_keyboard(available_sheets: List[str]):
+    """Клавиатура для выбора листа"""
+    from aiogram.utils.keyboard import InlineKeyboardBuilder
+
+    builder = InlineKeyboardBuilder()
+
+    for sheet_name in available_sheets:
+        builder.button(text=f"📄 {sheet_name}", callback_data=f"sheet_{sheet_name}")
+
+    builder.adjust(1)
+    return builder.as_markup()
+
+
+async def _get_confirmation_keyboard():
+    """Клавиатура для подтверждения записи"""
+    from aiogram.utils.keyboard import InlineKeyboardBuilder
+
+    builder = InlineKeyboardBuilder()
+    builder.button(text="✅ Записать", callback_data="confirm_write")
+    builder.button(text="❌ Отменить", callback_data="cancel_write")
+    builder.adjust(2)
+
     return builder.as_markup()
